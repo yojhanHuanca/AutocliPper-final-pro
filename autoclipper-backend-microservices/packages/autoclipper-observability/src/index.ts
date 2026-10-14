@@ -32,7 +32,11 @@ export class SafeExceptionFilter implements ExceptionFilter {
     const status = exception instanceof HttpException ? exception.getStatus() : 500;
     const codes: Record<number, string> = { 400: 'INVALID_REQUEST', 401: 'UNAUTHENTICATED', 403: 'FORBIDDEN', 404: 'RESOURCE_NOT_FOUND', 409: 'CONFLICT', 412: 'VERSION_CONFLICT', 413: 'PAYLOAD_TOO_LARGE', 415:'UNSUPPORTED_MEDIA', 428:'PRECONDITION_REQUIRED', 429: 'RATE_LIMITED', 503: 'DEPENDENCY_UNAVAILABLE' };
     if (status >= 500) logger.error({ code: 'REQUEST_FAILED', correlationId: response.locals['correlationId'], status });
-    response.status(status).json({ code: codes[status] ?? 'INTERNAL_ERROR', message: 'Request could not be completed', correlationId: response.locals['correlationId'] });
+    const detail = exception instanceof HttpException ? exception.getResponse() : undefined;
+    const explicit = typeof detail === 'object' && detail !== null && 'code' in detail ? detail.code : undefined;
+    const safeCodes: Record<string, number> = { GOOGLE_NOT_CONFIGURED: 503, ACCOUNT_LINK_REQUIRED: 409 };
+    const code = typeof explicit === 'string' && safeCodes[explicit] === status ? explicit : codes[status] ?? 'INTERNAL_ERROR';
+    response.status(status).json({ code, message: 'Request could not be completed', correlationId: response.locals['correlationId'] });
   }
 }
 

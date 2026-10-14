@@ -35,6 +35,8 @@ import {
 } from "../domain/credentials.js";
 import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
+import { GoogleIdentityAdapter } from "../infrastructure/google.js";
+import { googleProof } from "../domain/google-identity.js";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -62,6 +64,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly transport = mailTransport();
   readonly encryptionKey = process.env["AUTH_ENCRYPTION_KEY"] ?? "";
   readonly mfa = new MfaManager(this.encryptionKey);
+  readonly google = new GoogleIdentityAdapter();
   private dummyHash = "";
   private timer: NodeJS.Timeout | undefined;
   private sending: Promise<void> | undefined;
@@ -207,10 +210,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     );
     if (!user || !matches || !user.verified_at)
       throw new UnauthorizedException();
-    const access = opaqueToken(),
-      refresh = opaqueToken(),
-      session = randomUUID();
-    await this.tx(async (client) => {
+    const tokens = await this.tx(async (client) => {
       const locked = (
         await client.query<{ password_hash: string }>(
           "SELECT password_hash FROM users WHERE id=$1 FOR UPDATE",
@@ -220,23 +220,91 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       if (!locked || locked.password_hash !== user.password_hash)
         throw new UnauthorizedException();
       await this.mfa.verify(client, user.id, data.factor);
-      await client.query(
-        "INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')",
-        [session, user.id],
-      );
-      await client.query(
-        "INSERT INTO refresh_tokens(token_hash,session_id,expires_at) VALUES($1,$2,now()+interval '30 days')",
-        [digest(refresh), session],
-      );
-      await client.query(
-        "INSERT INTO access_tokens(token_hash,session_id,expires_at) VALUES($1,$2,now()+interval '15 minutes')",
-        [digest(access), session],
-      );
-      await this.audit(client, user.id, "session.login", req);
+      return this.newSession(client, user.id, req);
     });
-    setCookie(res, "access", access, 900000);
-    setCookie(res, "refresh", refresh, 2592000000);
+    this.sessionCookies(res, tokens);
     return { user: { id: user.id, email: user.email, name: user.name } };
+  }
+  private async newSession(client: pg.PoolClient, userId: string, req: Request) {
+    const access = opaqueToken(), refresh = opaqueToken(), session = randomUUID();
+    await client.query("INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')", [session,userId]);
+    await client.query("INSERT INTO refresh_tokens(token_hash,session_id,expires_at) VALUES($1,$2,now()+interval '30 days')", [digest(refresh),session]);
+    await client.query("INSERT INTO access_tokens(token_hash,session_id,expires_at) VALUES($1,$2,now()+interval '15 minutes')", [digest(access),session]);
+    await this.audit(client,userId,"session.login",req);
+    return {access,refresh};
+  }
+  private sessionCookies(res: Response, tokens: {access: string;refresh: string}) {
+    setCookie(res,"access",tokens.access,900000);
+    setCookie(res,"refresh",tokens.refresh,2592000000);
+  }
+  providers() { return { google: { configured: Boolean(this.google.clientId) } }; }
+  async googleChallenge(req: Request, res: Response, input: unknown) {
+    requireCsrf(req,this.config);
+    const data = body(z.object({purpose:z.enum(["sign_in","link"])}).strict(),input);
+    const clientId = this.google.configuredClientId();
+    await this.limit(req,"google:challenge");
+    const userId = data.purpose === "link" ? (await this.me(req)).id : "";
+    const nonce = opaqueToken();
+    const prior = cookie(req,"google_nonce");
+    if (/^[A-Za-z0-9_-]{43}$/.test(prior)) await this.redis.del(`identity:google:${digest(prior)}`);
+    await this.redis.set(`identity:google:${digest(nonce)}`,`${data.purpose}:${userId}`,"EX",300);
+    setCookie(res,"google_nonce",nonce,300000);
+    return {clientId,nonce,expiresInSeconds:300};
+  }
+  private async googleCredential(req: Request,res: Response,credential: string,purpose: "sign_in"|"link",userId = "") {
+    const nonce = cookie(req,"google_nonce");
+    if (!/^[A-Za-z0-9_-]{43}$/.test(nonce)) throw new UnauthorizedException();
+    const identity = await this.google.verify(credential,nonce);
+    const binding = await this.redis.getdel(`identity:google:${digest(nonce)}`);
+    setCookie(res,"google_nonce","",0);
+    if (binding !== `${purpose}:${userId}`) throw new UnauthorizedException();
+    return identity;
+  }
+  async googleSignIn(req: Request,res: Response,input: unknown) {
+    requireCsrf(req,this.config);
+    this.google.configuredClientId();
+    const data = body(googleProof,input);
+    await this.limit(req,"google:login");
+    const identity = await this.googleCredential(req,res,data.credential,"sign_in");
+    // New federated accounts have an unknowable local password. Password recovery
+    // can set a local password later without weakening Google's proof or 2FA.
+    const unusedHash = await this.hash(opaqueToken());
+    const result = await this.tx(async client => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`google:${identity.subject}`]);
+      let user = (await client.query<UserRow>("SELECT u.* FROM external_identities e JOIN users u ON u.id=e.user_id WHERE e.provider='google' AND e.subject=$1 FOR UPDATE OF u",[identity.subject])).rows[0];
+      if (!user) {
+        user = (await client.query<UserRow>("INSERT INTO users(id,email,name,password_hash,verified_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(email) DO NOTHING RETURNING *",[randomUUID(),identity.email,identity.name,unusedHash,identity.authoritativeEmail ? new Date() : null])).rows[0];
+        if (!user) throw new HttpException({code:"ACCOUNT_LINK_REQUIRED"},409);
+        await client.query("INSERT INTO external_identities(provider,subject,user_id,provider_email) VALUES('google',$1,$2,$3)",[identity.subject,user.id,identity.email]);
+        await this.audit(client,user.id,"google.registered",req);
+        if (!user.verified_at) await this.mail(client,user,"verify");
+      }
+      if (!user.verified_at) return {verificationRequired:true as const};
+      await this.mfa.verify(client,user.id,data.factor);
+      const tokens = await this.newSession(client,user.id,req);
+      await this.audit(client,user.id,"google.login",req);
+      return {verificationRequired:false as const,user:{id:user.id,email:user.email,name:user.name},tokens};
+    });
+    if (result.verificationRequired) return {verificationRequired:true};
+    this.sessionCookies(res,result.tokens);
+    return {user:result.user};
+  }
+  async linkGoogle(req: Request,res: Response,input: unknown) {
+    requireCsrf(req,this.config);
+    this.google.configuredClientId();
+    const data = body(googleProof.extend({password:z.string().min(1).max(128)}),input);
+    const current = await this.me(req);
+    await this.limit(req,`google:link:${current.id}`);
+    const identity = await this.googleCredential(req,res,data.credential,"link",current.id);
+    return this.sensitive(req,data.password,async (client,user) => {
+      await this.mfa.verify(client,user.id,data.factor);
+      const inserted = await client.query("INSERT INTO external_identities(provider,subject,user_id,provider_email) VALUES('google',$1,$2,$3) ON CONFLICT DO NOTHING RETURNING user_id",[identity.subject,user.id,identity.email]);
+      if (!inserted.rows[0]) {
+        const existing = (await client.query<{user_id:string}>("SELECT user_id FROM external_identities WHERE provider='google' AND subject=$1",[identity.subject])).rows[0];
+        if (existing?.user_id !== user.id) throw new ConflictException();
+      } else await this.audit(client,user.id,"google.linked",req);
+      return {linked:true};
+    });
   }
   async authenticate(raw: string): Promise<PublicUser> {
     if (!/^[A-Za-z0-9_-]{43}$/.test(raw)) throw new UnauthorizedException();

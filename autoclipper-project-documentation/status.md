@@ -20,10 +20,12 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | Métricas/logs y protección de métricas | IV | Scrape autenticado, rechazo 401; tracing distribuido pendiente |
 | CI etapa 1 con lint/tipos/tests/build/audit/contratos/Docker | IV | Run 38501990994 aprobado en quality e infrastructure; commit cf6912b |
 | CI del recorrido principal de etapa 2 | IV | Run 38509763878 aprobado en quality, infrastructure y business; commit 2a1e5d6 |
+| CI de 2FA, perfil y solicitudes de privacidad | IV | Run 38513828115 aprobado en los tres jobs; commit ddf3036 |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
-| Google / entrega externa de correo | PD + PC | Sin simulación; requieren implementación/configuración y prueba externa |
+| Google validado en servidor | IE + PC | SDK oficial, nonce de un uso, vínculo con prueba y MFA; pruebas con firmas locales explícitas. Client ID público anterior configurado localmente; origen Cloud/login externo sin verificar |
+| Entrega externa de correo | PC | SMTP local real verificado; no se probó un proveedor de entrega externa |
 | Sesiones/refresh/reutilización/revocación, Argon2id, CSRF | IV | Cookies HttpOnly, rotación, revocación de familia, origen y token CSRF comprobados |
 | 2FA/códigos, perfil/preferencias, solicitudes de privacidad | IV | TOTP/recovery reales, revocación de sesiones, CAS y aislamiento; ver identity-security.md |
 | Ejecución de exportación/eliminación integral de datos | PD | Solo se registran solicitudes con fulfillment=pending; falta coordinación entre servicios |

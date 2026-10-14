@@ -5,7 +5,7 @@ const api = process.env.API_BASE_URL ?? "http://127.0.0.1:3000";
 const mailpit = process.env.MAILPIT_URL ?? "http://127.0.0.1:19025";
 const origin = "http://localhost:4200";
 export const password = "AutoClipper-test-password-2026!";
-export function client() {
+export function client(baseUrl = api, defaultHeaders = {}) {
   const jar = new Map();
   let csrf;
   return {
@@ -16,9 +16,10 @@ export function client() {
         "content-type": "application/json",
         cookie: [...jar].map(([k, v]) => `${k}=${v}`).join(";"),
         ...(csrf ? { "x-csrf-token": csrf } : {}),
+        ...defaultHeaders,
         ...extra,
       };
-      const response = await fetch(`${api}/v1${path}`, {
+      const response = await fetch(`${baseUrl}/v1${path}`, {
         method,
         headers,
         ...(input === undefined ? {} : { body: JSON.stringify(input) }),

@@ -33,6 +33,10 @@ erDiagram
 
 La migración `0000_*` fue generada con Drizzle Kit y se ejecuta con owner. Runtime no tiene CREATE, privilegios de administración ni CONNECT a postgres/template1. Nuevos servicios tendrán **otra base, owner y runtime**, sin grants cruzados. Las credenciales del bootstrap no se pasan a aplicaciones.
 
+## Ampliación de identidad
+
+Las migraciones 0001–0003 agregan `users.preferences/profile_version`, `user_mfa` (secreto cifrado, alta pendiente y último paso TOTP), `recovery_codes` (hash/consumo), `privacy_requests` (tipo/estado/fechas, una solicitud requested por usuario/tipo), `security_audit` (usuario/acción/correlación/fecha) y `external_identities` (provider+subject único, user+provider único). El borrado de usuarios elimina las credenciales dependientes por FK; auditoría conserva eventos con usuario nulo. Eso no implementa la eliminación integral entre servicios. No se almacenan ID tokens de Google ni códigos de recuperación en texto claro.
+
 ## Diseño pendiente por servicio
 
 La tabla describe el alcance completo. Las entidades enumeradas como implementadas al inicio de este documento ya tienen migraciones y endpoints de etapa 2; las demás se implementarán con sus casos de uso y pruebas, evitando tablas sin comportamiento.

@@ -10,6 +10,7 @@
       "breakpoints": true
     },
     {"idx":1,"version":"7","when":1791951000000,"tag":"0001_identity_security","breakpoints":true},
-    {"idx":2,"version":"7","when":1791952000000,"tag":"0002_security_audit","breakpoints":true}
+    {"idx":2,"version":"7","when":1791952000000,"tag":"0002_security_audit","breakpoints":true},
+    {"idx":3,"version":"7","when":1791954000000,"tag":"0003_google_identities","breakpoints":true}
   ]
 }

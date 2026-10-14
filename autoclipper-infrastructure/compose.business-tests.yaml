@@ -13,6 +13,12 @@ services:
       API_BASE_URL: http://gateway:3000
       MAILPIT_URL: http://mailpit:8025
       TEST_TEMP_DIR: /tmp/fixtures
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY}
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
       IDENTITY_DATABASE_URL: postgresql://autoclipper_identity_runtime:${IDENTITY_RUNTIME_PASSWORD}@postgres:5432/autoclipper_identity
       WORKSPACE_DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
       PROJECT_DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project

@@ -78,6 +78,8 @@ Se detiene el worker de aplicación para que no consuma trabajos de la prueba; n
 
 La validación falla sin mostrar valores sensibles. Las credenciales generadas son hexadecimales y no requieren escaping en URLs. Si se suministran otras credenciales, codificar sus componentes URL correctamente.
 
+Google es opcional: `GOOGLE_CLIENT_ID` público en `.env` de infraestructura para Docker o `.env.identity` para ejecución nativa. Los ejemplos lo dejan vacío. `setup-stage2.mjs` lo traslada al crear un archivo identity nuevo si está definido en infraestructura; conserva archivos ya existentes. No se necesita ni se admite un secreto OAuth para validar ID tokens. Configuración y prueba externa pendientes se explican en [google-identity.md](google-identity.md).
+
 ## Migraciones y contratos
 
 ```powershell

@@ -52,6 +52,16 @@ class LoginDto {
   })
   factor?: string;
 }
+class GoogleChallengeDto {
+  @ApiProperty({enum:["sign_in","link"]}) purpose!: string;
+}
+class GoogleCredentialDto {
+  @ApiProperty({minLength:20,maxLength:12000}) credential!: string;
+  @ApiPropertyOptional({description:"TOTP or one-use recovery code if enabled."}) factor?: string;
+}
+class LinkGoogleDto extends GoogleCredentialDto {
+  @ApiProperty() password!: string;
+}
 class PasswordProofDto {
   @ApiProperty() password!: string;
 }
@@ -92,6 +102,24 @@ class ResetDto extends TokenDto {
 @Controller()
 export class IdentityController {
   constructor(@Inject(IdentityService) readonly service: IdentityService) {}
+  @Get("auth/providers")
+  @ApiOkResponse({schema:{type:"object",required:["google"],properties:{google:{type:"object",required:["configured"],properties:{configured:{type:"boolean"}}}}}})
+  providers() { return this.service.providers(); }
+  @Post("auth/google/challenge")
+  @HttpCode(200)
+  @ApiBody({type:GoogleChallengeDto})
+  @ApiOkResponse({schema:{type:"object",required:["clientId","nonce","expiresInSeconds"],properties:{clientId:{type:"string"},nonce:{type:"string"},expiresInSeconds:{type:"integer",example:300}}}})
+  googleChallenge(@Req() req:Request,@Res({passthrough:true}) res:Response,@Body() input:GoogleChallengeDto) { return this.service.googleChallenge(req,res,input); }
+  @Post("auth/google")
+  @HttpCode(200)
+  @ApiBody({type:GoogleCredentialDto})
+  @ApiOkResponse({schema:{oneOf:[{type:"object",required:["user"],properties:{user:{$ref:"#/components/schemas/PublicUserDto"}}},{type:"object",required:["verificationRequired"],properties:{verificationRequired:{type:"boolean",enum:[true]}}}]}})
+  googleLogin(@Req() req:Request,@Res({passthrough:true}) res:Response,@Body() input:GoogleCredentialDto) { return this.service.googleSignIn(req,res,input); }
+  @Post("auth/google/link")
+  @HttpCode(200)
+  @ApiBody({type:LinkGoogleDto})
+  @ApiOkResponse({schema:flagResponse("linked")})
+  linkGoogle(@Req() req:Request,@Res({passthrough:true}) res:Response,@Body() input:LinkGoogleDto) { return this.service.linkGoogle(req,res,input); }
   @Get("auth/2fa") @ApiOkResponse({ type: MfaStatusResponseDto }) statusMfa(
     @Req() req: Request,
   ) {

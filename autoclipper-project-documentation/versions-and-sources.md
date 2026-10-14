@@ -24,6 +24,7 @@ Consultadas durante la entrega del 13 de octubre de 2026 (America/Lima). Las ver
 | FFmpeg/FFprobe del host, usado en integración Windows | 8.1.1 |
 | Aplicaciones backend de etapa 2 | 0.2.0 |
 | Argon2 / Nodemailer | 0.45.1 / 10.1.0 |
+| OTPAuth / Google auth library | 9.5.2 / 11.3.0 |
 | AWS presigner | 3.1151.0 |
 | Mailpit | v1.31.5, imagen por digest |
 | Docker / Compose observados | 29.7.2 / 5.4.0 |

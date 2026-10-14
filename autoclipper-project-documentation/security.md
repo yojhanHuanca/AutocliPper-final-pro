@@ -1,6 +1,6 @@
 # Modelo de amenazas
 
-Estado actual: identidad, sesiones, CSRF, workspaces y autorización de recursos implementados y probados con dos usuarios en etapa 2; ver stage-2.md. No desplegado en producción ni abierto a Internet. Los controles avanzados, 2FA y la configuración final de producción siguen pendientes. La tabla siguiente conserva el análisis inicial de etapa 1; la matriz de estado actual prevalece sobre sus pendientes históricos.
+Estado actual: identidad, sesiones, CSRF, 2FA, perfil, solicitudes de privacidad, workspaces y autorización de recursos implementados y probados en etapa 2; ver stage-2.md e identity-security.md. No desplegado en producción ni abierto a Internet. La ejecución integral de privacidad y la configuración final de producción siguen pendientes. La tabla siguiente conserva el análisis inicial de etapa 1; la matriz de estado actual prevalece sobre sus pendientes históricos.
 
 | Amenaza | Control existente | Trabajo pendiente |
 |---|---|---|
@@ -27,4 +27,4 @@ Estado actual: identidad, sesiones, CSRF, workspaces y autorización de recursos
 
 ## Comprobaciones antes de producción
 
-Implementar y verificar identidad/2FA/sesiones, aislamiento de equipos, cuotas y fairness; limitar rutas administrativas por permisos explícitos; TLS y secretos externos; revisar IAM, egreso/red del worker y parser; restaurar backup en entorno aislado; medir carga con datos autorizados. Estas son condiciones pendientes de lanzamiento, no afirmaciones de funcionalidad existente.
+Revisar identidad/2FA/sesiones y aislamiento ya probados; completar fairness y cuotas comerciales; limitar rutas administrativas por permisos explícitos; TLS y secretos externos; revisar IAM, egreso/red del worker y parser; restaurar backup en entorno aislado; medir carga con datos autorizados. Estas son condiciones pendientes de lanzamiento, no una habilitación para producción.
