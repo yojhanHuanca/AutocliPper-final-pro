@@ -25,6 +25,8 @@ const media = base.extend({
   S3_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/),
   S3_FORCE_PATH_STYLE: boolean.default(true),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  MEDIA_WORKERS: z.enum(['inspection','render','all']).default('inspection'),
+  RENDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(180000),
   MAX_PROBE_BYTES: z.coerce.number().int().positive().max(1073741824).default(104857600),
   MAX_VIDEO_SECONDS: z.coerce.number().positive().max(14400).default(3600),
   PROBE_TIMEOUT_MS: z.coerce.number().int().min(100).max(120000).default(30000),

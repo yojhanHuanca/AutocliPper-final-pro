@@ -25,6 +25,7 @@ services:
     depends_on:
       gateway: {condition: service_healthy}
       project: {condition: service_healthy}
+      renderer: {condition: service_healthy}
     mem_limit: 512m
     cpus: 1
     cap_drop: [ALL]

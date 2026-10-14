@@ -1,6 +1,6 @@
 # Matriz de estado
 
-Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
+Entrega: etapas 1–2 y entrega multimedia de recortes explícitos de etapa 3. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) y [stage-3-media.md](stage-3-media.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
 
 | Capacidad | Estado | Evidencia / límite |
 |---|---|---|
@@ -21,6 +21,7 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | CI etapa 1 con lint/tipos/tests/build/audit/contratos/Docker | IV | Run 38501990994 aprobado en quality e infrastructure; commit cf6912b |
 | CI del recorrido principal de etapa 2 | IV | Run 38509763878 aprobado en quality, infrastructure y business; commit 2a1e5d6 |
 | CI de 2FA, perfil y solicitudes de privacidad | IV | Run 38513828115 aprobado en los tres jobs; commit ddf3036 |
+| CI del adaptador Google | IV | Run 38515503194 aprobado en los tres jobs; commit d029f74. No equivale a aceptación externa Google |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
@@ -36,9 +37,11 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | Cuota técnica de almacenamiento y reservas | IV | 11 reservas concurrentes: 10 admitidas y una rechazada; replay no duplica reserva |
 | Purga de objetos confirmados y cancelación de trabajos activos | PD | Abortado y limpieza de cargas pendientes implementados; no equivalen a cancelar inspecciones |
 | Importación de proveedores / SSRF | PD + PC | Sin importador ni acceso universal anunciado |
-| Extracción de audio/transcripción/análisis/segmentos | PD + PC | Candidatos de proveedor documentados; sin credenciales ni resultados IA inventados |
+| Extracción de audio WAV | IV | Audio real PCM mono 16 kHz, fuente validada, download autorizado y prueba FFprobe |
+| Transcripción/análisis/segmentos | PD + PC | Candidatos de proveedor documentados; sin credenciales ni resultados IA inventados |
 | Diarización/traducción/títulos/hashtags/prompt/costo IA | PD + PC | Dependen del adaptador elegido y sus capacidades reales |
-| Render/subtítulos/exportación/descarga video/SRT/VTT | PD | FFmpeg disponible; no existe generación de clips funcional todavía |
+| Recorte explícito/render/subtítulos aportados/video/SRT/VTT | IV | MP4 real, texto visible en frame, sidecars y URLs S3 privadas de 120s; no es selección ni transcripción IA |
+| Persistencia/recovery/cancelación de derivados/cuota | IV | Outbox, pérdida Redis restaurada, tres intentos máximos, cancelación activa/en cola y cuota conciliada una vez |
 | Edición versionada, CAS, revisiones, encuadre/marca/audio | PD | Modelo previsto, no implementado |
 | Preview/seguimiento/split-screen/unión de segmentos | PD | Sin promesas de equivalencia o soporte |
 | Comentarios/aprobaciones/enlaces de revisión/auditoría | PD | Etapa 4 |
@@ -48,11 +51,11 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | Proveedor de pagos | PC | Selección requiere entidad, país y necesidades comerciales |
 | Notificaciones/correo/preferencias/soporte | PD + PC | SMTP local y preferencia de correo verificados; entrega externa, eventos y soporte pendientes |
 | Administración autorizada/ajustes auditados | PD | Ninguna ruta global sin permisos |
-| Fairness y cuotas por workspace, workers separados por etapa | PD | Solo concurrencia por instancia y limiter global de inspección |
+| Fairness y cuotas por workspace, workers separados por etapa | PD | Inspector/renderer separados y cuatro derivados pendientes por workspace; fairness y workers STT/análisis pendientes |
 | Dump y restore PostgreSQL en base temporal | IV | pg_dump/pg_restore y comprobación de migración restaurada; base temporal retirada |
 | Restore integral/PITR/retención de negocio | PD | Procedimiento y políticas propuestas, ensayo completo pendiente |
 | Carga/seguridad avanzada/trazas/SBOM/producción | PD | Sin capacidad de millones ni resultados de carga anunciados |
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
 | Primera aceptación funcional de 8 pasos con IA | PD + PC | Cuenta/proyecto/upload/inspección/aislamiento reales disponibles; faltan IA, render y descarga de clip |
 
-Prioridad siguiente: cerrar funciones avanzadas pendientes de etapa 2 y continuar extracción/transcripción/selección/render con proveedor real. No habilitado para producción ni anunciado como plataforma completa.
+Prioridad siguiente: adaptadores reales de transcripción/análisis con configuración y presupuesto autorizados; conservar el flujo manual real de extracción/render/descarga. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.

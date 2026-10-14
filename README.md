@@ -1,6 +1,8 @@
 # AutoClipper
 
-Nueva implementación independiente del backend. **Entrega actual: etapa 2, recorrido funcional de cuenta a inspección**. Incluye identidad/sesiones, workspaces, roles, proyectos, carga PUT/multipart y validación multimedia real. La generación de clips con IA sigue pendiente.
+Nueva implementación independiente del backend. **Entrega actual: recortes explícitos, subtítulos aportados y extracción de audio**, además de identidad, workspaces, proyectos y carga segura. El recorrido cuenta → upload → inspección → render → descarga está verificado con videos de prueba. La transcripción y selección con IA siguen pendientes.
+
+Ver [entrega multimedia y evidencia](autoclipper-project-documentation/stage-3-media.md): trece unitarias/HTTP, dieciocho de infraestructura y treinta y cuatro de negocio aprobadas en la verificación local final.
 
 Identidad incluye 2FA TOTP, recuperación, perfil y solicitudes de privacidad. El adaptador Google valida credenciales en servidor; su prueba externa con una cuenta real sigue pendiente. Ver [límites de Google](autoclipper-project-documentation/google-identity.md) y [seguridad de identidad](autoclipper-project-documentation/identity-security.md).
 

@@ -21,6 +21,7 @@ Consultadas durante la entrega del 13 de octubre de 2026 (America/Lima). Las ver
 | Pino | 10.4.0 |
 | Prometheus client | @prometheus-io/client 0.16.1 |
 | FFmpeg/FFprobe en Docker | Debian 7:5.1.9-0+deb12u1 |
+| Fuente de subtítulos DejaVu | fonts-dejavu-core 2.37-6, snapshot Debian fijado |
 | FFmpeg/FFprobe del host, usado en integración Windows | 8.1.1 |
 | Aplicaciones backend de etapa 2 | 0.2.0 |
 | Argon2 / Nodemailer | 0.45.1 / 10.1.0 |

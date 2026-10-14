@@ -1,6 +1,6 @@
 # Arquitectura y decisiones
 
-La distribución desplegada actual y sus ajustes de etapa 2 están en [stage-2.md](stage-2.md). Identity, workspace y project tienen comportamiento ejecutable y bases separadas; análisis, publicación, billing y notification continúan pendientes.
+La distribución desplegada actual y sus ajustes de etapa 2 están en [stage-2.md](stage-2.md). La entrega multimedia agrega un renderer independiente del inspector, ambos de media, y coordinación durable desde proyectos: [stage-3-media.md](stage-3-media.md). Identity, workspace y project tienen comportamiento ejecutable y bases separadas; análisis, publicación, billing y notification continúan pendientes.
 
 Fecha de la entrega: 13 de octubre de 2026, America/Lima. Título académico: **AutoClipper: Plataforma inteligente basada en inteligencia artificial para la generación y gestión automatizada de clips de video para redes sociales**. Línea: Startup.
 

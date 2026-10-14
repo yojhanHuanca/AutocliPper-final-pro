@@ -6,7 +6,7 @@ import { DocumentBuilder, SwaggerModule,type OpenAPIObject } from '@nestjs/swagg
 import type { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { pino } from 'pino';
-import { collectDefaultMetrics, Histogram, Registry } from '@prometheus-io/client';
+import { collectDefaultMetrics, Histogram, Counter, Registry } from '@prometheus-io/client';
 import type { GatewayConfig } from '@autoclipper/configuration';
 
 export const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info', redact: {
@@ -24,6 +24,9 @@ export class ApplicationLogger implements LoggerService {
 export const registry = new Registry();
 collectDefaultMetrics({ register: registry });
 const requests = new Histogram({ name: 'autoclipper_http_duration_seconds', help: 'HTTP duration in seconds', labelNames: ['method', 'status'], registers: [registry], buckets: [0.01, 0.1, 0.5, 1, 5] });
+const derivativeDuration = new Histogram({name:'autoclipper_derivative_attempt_seconds',help:'Measured derivative attempt duration, including source verification and upload',labelNames:['operation','status'],registers:[registry],buckets:[0.1,1,5,15,30,60,180,600]});
+const derivativeBytes = new Counter({name:'autoclipper_derivative_produced_bytes_total',help:'Bytes in successfully published derivative artifacts',labelNames:['operation'],registers:[registry]});
+export function recordDerivativeAttempt(operation:'clip'|'audio',status:'succeeded'|'failed'|'cancelled'|'retry',seconds:number,bytes=0){derivativeDuration.observe({operation,status},seconds);if(bytes>0)derivativeBytes.inc({operation},bytes);}
 
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {

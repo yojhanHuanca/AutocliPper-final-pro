@@ -14,14 +14,17 @@ import {WorkspaceService} from '../apps/autoclipper-workspace-service/dist/appli
 import {ProjectController} from '../apps/autoclipper-project-service/dist/interfaces/project.controller.js';
 import {ProjectService} from '../apps/autoclipper-project-service/dist/application/project.service.js';
 
+import {ProcessingRuntime} from '../apps/autoclipper-media-processing-service/dist/application/processing-runtime.js';
+import {DerivativesController} from '../apps/autoclipper-project-service/dist/interfaces/derivatives.controller.js';
+
 // Contract generation must not instantiate database/queue clients or start workers.
 class MediaContractModule {}
-Module({ controllers: [OperationsController], providers: [{ provide: InspectionRuntime, useValue: {} }] })(MediaContractModule);
+Module({ controllers: [OperationsController], providers: [{ provide: InspectionRuntime, useValue: {} },{provide:ProcessingRuntime,useValue:{}}] })(MediaContractModule);
 const directory = new URL('../../autoclipper-project-documentation/contracts/', import.meta.url);
 await mkdir(directory, { recursive: true });
 const documents={};
-const contractModule=(controller,service)=>{class ContractModule{}Module({controllers:[controller],providers:[{provide:service,useValue:{}}]})(ContractModule);return ContractModule;};
-for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule(ProjectController,ProjectService)]]) {
+const contractModule=(controller,service)=>{class ContractModule{}Module({controllers:Array.isArray(controller)?controller:[controller],providers:[{provide:service,useValue:{}}]})(ContractModule);return ContractModule;};
+for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule([ProjectController,DerivativesController],ProjectService)]]) {
   const app = await NestFactory.create(module, { logger: false });
   try {
     const document = configureHttp(app, loadGatewayConfig(), name === 'gateway' ? 'api-gateway' : name==='media'?'media-processing-service':`${name}-service`);

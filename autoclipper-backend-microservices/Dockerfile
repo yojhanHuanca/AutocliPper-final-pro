@@ -14,6 +14,9 @@ RUN printf '%s\n' \
     && apt-get update -o APT::Update::Error-Mode=any \
     && apt-get install --yes --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 \
     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -o APT::Update::Error-Mode=any \
+    && apt-get install --yes --no-install-recommends fonts-dejavu-core=2.37-6 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/apps ./apps
 COPY --from=build --chown=node:node /app/packages ./packages

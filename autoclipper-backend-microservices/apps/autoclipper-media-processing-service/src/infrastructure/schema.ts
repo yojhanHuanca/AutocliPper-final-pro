@@ -9,6 +9,7 @@ import {
   jsonb,
   index,
   check,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { MediaMetadata } from "../domain/inspection.js";
 
@@ -53,6 +54,27 @@ export const inspectionTasks = pgTable(
     ),
   ],
 );
+
+export const processingTasks = pgTable("processing_tasks", {
+  id: uuid().primaryKey(), workspaceId: uuid("workspace_id").notNull(),
+  inspectionId: uuid("inspection_id").notNull().references(()=>inspectionTasks.id),
+  spec: jsonb().notNull(), requestHash: text("request_hash").notNull(),
+  status: text().notNull().default("queued"), correlationId: uuid("correlation_id").notNull(),
+  attempts: integer().notNull().default(0), cancelRequested: boolean("cancel_requested").notNull().default(false),
+  cleanupPending: boolean("cleanup_pending").notNull().default(false), result: jsonb(), errorCode:text("error_code"),
+  startedAt:timestamp("started_at",{withTimezone:true}), finishedAt:timestamp("finished_at",{withTimezone:true}),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
+},t=>[
+  index("processing_workspace_created_idx").on(t.workspaceId,t.createdAt),index("processing_status_idx").on(t.status),
+  check("processing_valid_status",sql`${t.status} IN ('queued','running','succeeded','failed','cancelled')`),
+  check("processing_terminal_finished",sql`(${t.status} IN ('succeeded','failed','cancelled')) = (${t.finishedAt} IS NOT NULL)`),
+  check("processing_success_result",sql`(${t.status} = 'succeeded') = (${t.result} IS NOT NULL)`),
+  check("processing_attempts_nonnegative",sql`${t.attempts} >= 0`),
+]);
+export const processingOutbox = pgTable("processing_outbox", {
+  taskId:uuid("task_id").primaryKey().references(()=>processingTasks.id,{onDelete:"cascade"}),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(), deliveredAt:timestamp("delivered_at",{withTimezone:true}),
+},t=>[index("processing_outbox_pending_idx").on(t.createdAt).where(sql`${t.deliveredAt} IS NULL`)]);
 export const inspectionOutbox = pgTable(
   "inspection_outbox",
   {

@@ -35,6 +35,7 @@ import {
   internalJson,
 } from "@autoclipper/http-security";
 import { logger } from "@autoclipper/observability";
+import { DerivativesManager } from "./derivatives.manager.js";
 
 type Project = {
   id: string;
@@ -90,6 +91,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   readonly mediaUrl = process.env["MEDIA_URL"] ?? "http://127.0.0.1:3001";
   readonly s3: S3Client;
   readonly signer: S3Client;
+  readonly derivatives: DerivativesManager;
   private timer: NodeJS.Timeout | undefined;
   private working: Promise<void> | undefined;
   constructor() {
@@ -111,6 +113,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     };
     this.s3 = new S3Client({ ...options, endpoint });
     this.signer = new S3Client({ ...options, endpoint: publicEndpoint });
+    this.derivatives = new DerivativesManager(this.pool,this.config,this.mediaUrl,this.bucket,this.s3,this.signer,(req,id,minimum)=>this.upload(req,id,minimum));
   }
   async onModuleInit() {
     this.pool.on("error", () =>
@@ -656,6 +659,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     });
   }
   private async dispatch() {
+    await this.derivatives.dispatch();
     const rows = await this.pool.query<Upload & { correlation_id: string }>(
       "SELECT u.*,r.correlation_id FROM inspection_requests r JOIN uploads u ON u.id=r.upload_id WHERE r.delivered_at IS NULL ORDER BY r.created_at LIMIT 25",
     );

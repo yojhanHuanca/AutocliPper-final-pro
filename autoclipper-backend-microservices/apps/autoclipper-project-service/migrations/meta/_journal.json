@@ -10,6 +10,7 @@
       "breakpoints": true
     },
     {"idx":1,"version":"7","when":1791948000000,"tag":"0001_signed_upload_expiry","breakpoints":true},
-    {"idx":2,"version":"7","when":1791949000000,"tag":"0002_multipart_manifest","breakpoints":true}
+    {"idx":2,"version":"7","when":1791949000000,"tag":"0002_multipart_manifest","breakpoints":true},
+    {"idx":3,"version":"7","when":1791960000000,"tag":"0003_processing_requests","breakpoints":true}
   ]
 }

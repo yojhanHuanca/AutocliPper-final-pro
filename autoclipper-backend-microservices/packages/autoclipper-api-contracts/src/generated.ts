@@ -628,6 +628,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/uploads/{id}/processing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DerivativesController_begin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/processing/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DerivativesController_status"];
+        put?: never;
+        post?: never;
+        delete: operations["DerivativesController_cancel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/processing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DerivativesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/processing/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DerivativesController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1009,6 +1073,75 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
             inspection?: components["schemas"]["InspectionDto"];
+        };
+        AudioProcessingSpecDto: {
+            /** @enum {number} */
+            version: 1;
+            /** @enum {string} */
+            kind: "audio";
+        };
+        SubtitleCueDto: {
+            /** @description Absolute timestamp in the source video, seconds. */
+            startSeconds: number;
+            endSeconds: number;
+            /** @description Plain user-provided text; markup and ASS commands are rejected. */
+            text: string;
+        };
+        UserSubtitlesDto: {
+            /** @enum {string} */
+            provenance: "user";
+            cues: components["schemas"]["SubtitleCueDto"][];
+        };
+        ClipProcessingSpecDto: {
+            /** @enum {number} */
+            version: 1;
+            /** @enum {string} */
+            kind: "clip";
+            startSeconds: number;
+            /** @description Must fit the video; clip length 0.1–120 seconds. */
+            endSeconds: number;
+            /** @enum {string} */
+            aspect: "source" | "vertical" | "square" | "horizontal";
+            subtitles?: components["schemas"]["UserSubtitlesDto"];
+        };
+        ProcessingSpecDto: {
+            /** @enum {number} */
+            version: 1;
+            /** @enum {string} */
+            kind: "audio" | "clip";
+            startSeconds?: number;
+            /** @description Clip length must be 0.1–120 seconds and fit the source. */
+            endSeconds?: number;
+            /** @enum {string} */
+            aspect?: "source" | "vertical" | "square" | "horizontal";
+            subtitles?: components["schemas"]["UserSubtitlesDto"];
+        };
+        ProcessingArtifactDto: {
+            /** @enum {string} */
+            kind: "video" | "audio" | "srt" | "vtt";
+            /** @description Bytes charged to workspace storage. */
+            bytes: number;
+            sha256: string;
+            contentType: string;
+        };
+        ProcessingStatusDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            attempts: number;
+            errorCode: string | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            cleanupPending: boolean;
+            spec: components["schemas"]["ProcessingSpecDto"];
+            artifacts: components["schemas"]["ProcessingArtifactDto"][];
+            durationSeconds: number | null;
+            width?: number;
+            height?: number;
+            sampleRate?: number;
         };
         ErrorResponse: {
             code: string;
@@ -4687,6 +4820,410 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DerivativesController_begin: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AudioProcessingSpecDto"] | components["schemas"]["ClipProcessingSpecDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        status: string;
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DerivativesController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessingStatusDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DerivativesController_cancel: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        cancellationRequested: boolean;
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DerivativesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ProcessingStatusDto"][];
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DerivativesController_download: {
+        parameters: {
+            query: {
+                kind: "video" | "audio" | "srt" | "vtt";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                        /** @example 120 */
+                        expiresInSeconds: number;
+                        contentType: string;
+                        bytes: number;
+                        sha256: string;
+                    };
+                };
             };
             /** @description Classified error with a safe correlation identifier */
             400: {

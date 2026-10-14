@@ -70,7 +70,7 @@ export async function probeLocal(
   }
 }
 
-export async function inspectObject(
+export async function withInspectedSource<T>(
   s3: S3Client,
   config: MediaConfig,
   task: {
@@ -80,17 +80,20 @@ export async function inspectObject(
     expectedEtag: string;
     expectedSha256?: string | null;
   },
+  work: (path: string, directory: string, metadata: Awaited<ReturnType<typeof probeLocal>>) => Promise<T>,
+  signal?: AbortSignal,
 ) {
   validateObjectKey(task.objectKey, task.workspaceId);
   if (task.expectedBytes > config.MAX_PROBE_BYTES)
     throw new InspectionError("MEDIA_LIMIT_EXCEEDED", false);
   const abort = new AbortController();
+  const combined = signal ? AbortSignal.any([abort.signal, signal]) : abort.signal;
   const timer = setTimeout(() => abort.abort(), config.PROBE_TIMEOUT_MS);
   let directory: string | undefined;
   try {
     const head = await s3.send(
       new HeadObjectCommand({ Bucket: config.S3_BUCKET, Key: task.objectKey }),
-      { abortSignal: abort.signal },
+      { abortSignal: combined },
     );
     if (
       head.ContentLength !== task.expectedBytes ||
@@ -107,7 +110,7 @@ export async function inspectObject(
         Key: task.objectKey,
         IfMatch: task.expectedEtag,
       }),
-      { abortSignal: abort.signal },
+      { abortSignal: combined },
     );
     if (!object.Body) throw new InspectionError("EMPTY_OBJECT", false);
     let bytes = 0;
@@ -128,16 +131,21 @@ export async function inspectObject(
       object.Body as Readable,
       limit,
       createWriteStream(path, { flags: "wx", mode: 0o600 }),
-      { signal: abort.signal },
+      { signal: combined },
     );
     if (bytes !== task.expectedBytes)
       throw new InspectionError("OBJECT_CHANGED", false);
     if (task.expectedSha256 && hash.digest("hex") !== task.expectedSha256)
       throw new InspectionError("CHECKSUM_MISMATCH", false);
     clearTimeout(timer);
-    return await probeLocal(path, config);
+    const metadata = await probeLocal(path, config);
+    return await work(path, directory, metadata);
   } finally {
     clearTimeout(timer);
     if (directory) await rm(directory, { recursive: true, force: true });
   }
+}
+
+export async function inspectObject(s3: S3Client, config: MediaConfig, task: Parameters<typeof withInspectedSource>[2]) {
+  return withInspectedSource(s3, config, task, async (_path, _directory, metadata) => metadata);
 }

@@ -14,3 +14,4 @@ export class ReadinessResponse {
   @ApiProperty({ enum: ['ok', 'unavailable'] }) status!: 'ok' | 'unavailable';
   @ApiProperty({ type: 'object', additionalProperties: { type: 'string', enum: ['ok', 'unavailable'] } }) checks!: Record<string, 'ok' | 'unavailable'>;
 }
+export * from "./processing.js";

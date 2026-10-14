@@ -95,6 +95,36 @@ services:
       postgres: { condition: service_healthy }
     restart: 'no'
 
+  renderer:
+    profiles: ['app']
+    image: autoclipper-backend:0.2.0
+    build: *backend-build
+    environment:
+      <<: *media-environment
+      PORT: 3005
+      MEDIA_WORKERS: render
+      TEMP_DIR: /tmp/render
+    command: ['node','apps/autoclipper-media-processing-service/dist/main.js']
+    depends_on:
+      migrate-media: {condition: service_completed_successfully}
+      storage-init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3005/v1/health/ready',{signal:AbortSignal.timeout(10000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 12s
+      retries: 6
+    user: '1000:1000'
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,uid=1000,gid=1000']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 96
+    mem_limit: 512m
+    cpus: 1
+    stop_grace_period: 210s
+    restart: unless-stopped
+
   media:
     profiles: ['app']
     image: autoclipper-backend:0.2.0

@@ -63,6 +63,7 @@ export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
     this.queue.on("error", () =>
       logger.error({ code: "QUEUE_CONNECTION_FAILED" }),
     );
+    if(this.config.MEDIA_WORKERS!=="render") {
     this.worker = new Worker(INSPECTION_QUEUE, (job) => this.process(job), {
       connection: {
         ...redisConnection(this.config.REDIS_URL),
@@ -74,6 +75,7 @@ export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
       maxStalledCount: 2,
     });
     this.worker.on("error", () => logger.error({ code: "WORKER_ERROR" }));
+    }
     await this.queue.waitUntilReady();
     await this.dispatch();
     this.timer = setInterval(() => {
@@ -278,7 +280,7 @@ export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
         }
       }),
     );
-    if (!this.worker?.isRunning() || this.stopping)
+    if ((this.config.MEDIA_WORKERS!=="render"&&!this.worker?.isRunning()) || this.stopping)
       checks["worker"] = "unavailable";
     else checks["worker"] = "ok";
     return {

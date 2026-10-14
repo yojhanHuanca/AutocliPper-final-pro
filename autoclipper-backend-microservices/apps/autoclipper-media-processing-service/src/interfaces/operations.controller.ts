@@ -24,12 +24,14 @@ import {
 } from "@autoclipper/api-contracts";
 import { registry } from "@autoclipper/observability";
 import { InspectionRuntime } from "../application/inspection-runtime.js";
+import { ProcessingRuntime } from "../application/processing-runtime.js";
 
 @ApiTags("operations")
 @Controller()
 export class OperationsController {
   constructor(
     @Inject(InspectionRuntime) private readonly runtime: InspectionRuntime,
+    @Inject(ProcessingRuntime) private readonly processing: ProcessingRuntime,
   ) {}
   @Get("health/live")
   @ApiOkResponse({ type: HealthResponse })
@@ -43,6 +45,8 @@ export class OperationsController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<ReadinessResponse> {
     const result = await this.runtime.readiness();
+    try{result.checks["processing"]=await this.processing.readiness()?"ok":"unavailable";}catch{result.checks["processing"]="unavailable";}
+    if(result.checks["processing"]!=="ok")result.status="unavailable";
     if (result.status !== "ok") response.status(503);
     return result;
   }

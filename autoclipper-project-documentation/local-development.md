@@ -80,6 +80,8 @@ La validación falla sin mostrar valores sensibles. Las credenciales generadas s
 
 Google es opcional: `GOOGLE_CLIENT_ID` público en `.env` de infraestructura para Docker o `.env.identity` para ejecución nativa. Los ejemplos lo dejan vacío. `setup-stage2.mjs` lo traslada al crear un archivo identity nuevo si está definido en infraestructura; conserva archivos ya existentes. No se necesita ni se admite un secreto OAuth para validar ID tokens. Configuración y prueba externa pendientes se explican en [google-identity.md](google-identity.md).
 
+La entrega multimedia agrega el contenedor `renderer`, sin puerto publicado, y `MEDIA_WORKERS=render` separado del inspector (`inspection`, predeterminado). `RENDER_TIMEOUT_MS` limita FFmpeg, por defecto 180000 ms. El perfil `app` incluye ambos workers. Para ejecutar la suite aislada contra las dependencias locales, detener primero `project`, `media` y `renderer`; restaurar el stack al terminar. Recorrido, comandos y evidencia: [stage-3-media.md](stage-3-media.md).
+
 ## Migraciones y contratos
 
 ```powershell

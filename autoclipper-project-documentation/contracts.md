@@ -2,7 +2,7 @@
 
 Actualización etapa 2: el OpenAPI del gateway ya reúne los endpoints implementados de identidad, workspaces, proyectos y cargas, con DTO, cookies, CSRF, errores e idempotencia. Los detalles y ejemplos de autenticación están en [stage-2.md](stage-2.md). Las secciones históricas de operación de etapa 1 se mantienen abajo; los mecanismos allí marcados como previstos deben contrastarse con la matriz actual.
 
-Los JSON en `contracts/` se generan desde controladores reales. Registro, sesiones, workspaces, proyectos y carga están implementados; no se incluyen endpoints ficticios de render, IA ni publicación.
+Los JSON en `contracts/` se generan desde controladores reales. Registro, sesiones, workspaces, proyectos, carga y derivados explícitos están implementados. `POST /uploads/{id}/processing` admite audio o clip v1; estado/cancelación/descarga viven bajo `/processing/{id}` y el historial bajo `/projects/{id}/processing`. Sus DTO, timestamps y límites están en [stage-3-media.md](stage-3-media.md). No se incluyen endpoints ficticios de IA ni publicación.
 
 | Servicio | Método/ruta | Resultado |
 |---|---|---|

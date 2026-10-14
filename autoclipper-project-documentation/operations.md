@@ -2,6 +2,8 @@
 
 Actualización: etapa 1 publicada en cf6912b y CI 38501990994 aprobado. La operación de las aplicaciones de negocio y sus límites actuales está en stage-2.md. El remoto privado fue confirmado mediante API y la publicación de commits está autorizada; no hay despliegues de producción.
 
+La entrega multimedia separa `media` (inspección) y `renderer` (audio/recortes). Consultar [stage-3-media.md](stage-3-media.md) para reserva/conciliación, cancelación, limpieza pendiente, límites y pruebas. El renderer publica métricas internas de duración real y bytes; se comprobó scrape autenticado 200 con ambas series después de ejecutar trabajos. Conservar alertas sobre tareas fallidas con `cleanupPending=true`, reservas sin conciliar y outbox pendiente. Los IDs de cola se retienen para deduplicación; no hay una política final de purga de resultados/colas para producción.
+
 ## Entornos
 
 Desarrollo: Compose, puertos loopback, secretos aleatorios, Swagger explícito. Pruebas: mismas dependencias reales, fixtures efímeras con IDs propios y limpieza selectiva. Producción: aún sin configuración final ni despliegue; se requieren DNS/TLS, secret manager, IAM por servicio, backups, proveedores y observabilidad central.
