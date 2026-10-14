@@ -89,6 +89,8 @@ La suite de 49 usó el archivo de aceptación actualizado montado en solo lectur
 
 Los casos nuevos comprobaron dos usuarios y roles reader/editor/owner, comentarios con timestamp y creación idempotente, borrado propio con CAS y denegación a otro editor, solicitud/aprobación concurrentes, aprobación obsoleta, reset tras edición/restauración, devolución administrativa, grants sin acceso general ni datos de equipo, video real y SHA descargado, rechazo de exportación de otra revisión, revocación duplicada, expiración, pérdida de permiso del creador, papelera, límite público 429 y protección SQL de aprobaciones/auditoría. No se publicaron videos ni se enviaron invitaciones fuera de Mailpit.
 
+CI comprobado para SHA `93dfc02bff39fd3323b2cb7d03e18def3f29218c`: [run 38638350096](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38638350096), quality/infrastructure/business success, incluidos contratos actuales, dependencias reales, suite completa de negocio y recuperación de análisis con fixtures explícitos. CI conserva las suites de infraestructura/recuperación sobre este SHA y no descarga modelos ni ejecuta ASR real. El flujo whisper.cpp de seis tests se acreditó localmente. Stack propio restaurado healthy con ASR local; 199 archivos candidatos revisados sin coincidencias con secretos locales.
+
 Desde backend: `npm run verify`, `npm run openapi:export`, `npm run client:types`. Desde infraestructura:
 
 ```powershell

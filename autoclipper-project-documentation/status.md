@@ -25,6 +25,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | CI de audio/recortes/subtítulos aportados/descargas | IV | Run 38572734981 aprobado en los tres jobs; commit cc49427 |
 | CI de servicio de análisis y transcripción/render vinculados | IV | Run 38621706578 aprobado en quality, infrastructure y business; commit a392e6d. ASR real acreditado por prueba local opt-in |
 | CI de edición versionada, encuadre y plantillas | IV | Run 38629797508 aprobado en los tres jobs; commit 721336e. Editor con ASR real acreditado localmente, sin pesos en CI |
+| CI de comentarios, revisión/aprobaciones y enlaces limitados | IV | Run 38638350096 aprobado en quality/infrastructure/business; commit 93dfc02. ASR real conservado por prueba local de seis tests |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
