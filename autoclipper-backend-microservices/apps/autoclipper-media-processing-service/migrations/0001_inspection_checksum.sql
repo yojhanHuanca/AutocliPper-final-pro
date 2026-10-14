@@ -1,0 +1,1 @@
+ALTER TABLE "inspection_tasks" ADD COLUMN "expected_sha256" text;

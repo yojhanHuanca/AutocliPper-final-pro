@@ -1,5 +1,7 @@
 # Desarrollo local
 
+La guía de la entrega actual está en [stage-2.md](stage-2.md): se requiere combinar `compose.yaml` y `compose.business.yaml` para disponer de autenticación, workspaces y proyectos. Los comandos de infraestructura/pruebas multimedia de este documento también sirven para comprobar esas dependencias por separado.
+
 Requisitos: Docker Desktop con motor Linux, Compose, Git. Para desarrollo en host: Node **24.21.0**, npm **11.12.1**, FFmpeg/FFprobe. Windows observado tenía Node 25.9.0: usar `nvm use 24.21.0` si ya está instalado o contenedores. No es necesario cambiar globalmente el Node del equipo.
 
 ## Arranque completamente en contenedores
@@ -9,11 +11,11 @@ Desde la raíz de este repositorio, PowerShell:
 ```powershell
 Set-Location autoclipper-infrastructure
 node setup-local.mjs
-docker compose --profile app up -d --build
-docker compose ps
+docker compose -f compose.yaml -f compose.business.yaml --profile app up -d --build
+docker compose -f compose.yaml -f compose.business.yaml --profile app ps
 ```
 
-`setup-local.mjs` crea `.env` local de infraestructura, `.env.media` y `.env.gateway` ignorados por Git con secretos aleatorios. Nunca imprime sus valores. Falla si ya existen: no sobrescribir archivos para resolverlo; usar los existentes. Si una creación se interrumpe parcialmente, recuperar de manera explícita los archivos antes de reintentar. No borrar volúmenes para solucionar contraseñas sin confirmar que no contienen datos necesarios.
+`setup-local.mjs` crea los archivos de entorno ignorados por Git con secretos aleatorios e invoca setup-stage2.mjs para las aplicaciones de negocio. Nunca imprime valores. Falla si los archivos iniciales ya existen: usar `setup-stage2.mjs` para ampliar una instalación de etapa 1. Si una creación se interrumpe parcialmente, recuperar explícitamente los archivos antes de reintentar. No borrar volúmenes para solucionar contraseñas sin confirmar que no contienen datos necesarios.
 
 Servicios: gateway [http://localhost:3000/v1/health/live](http://localhost:3000/v1/health/live), media [http://localhost:3001/v1/health/ready](http://localhost:3001/v1/health/ready). Swagger en `/docs` y JSON en `/openapi.json`, habilitados solo para desarrollo. PostgreSQL `127.0.0.1:15432`, Redis `127.0.0.1:16379`, S3 `127.0.0.1:19000`. Todos los puertos publicados se limitan a loopback.
 

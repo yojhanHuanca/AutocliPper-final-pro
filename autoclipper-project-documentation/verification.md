@@ -1,12 +1,14 @@
 # Evidencia de verificación — etapa 1
 
+Registro histórico de la primera entrega. Posteriormente el usuario autorizó publicación y continuación: cf6912b fue subido al remoto privado, con CI remoto 38501990994 aprobado. La evidencia funcional ampliada está en stage-2.md; la etapa 1 dejó de estar limitada a cambios sin publicar.
+
 Fecha de trabajo: 13 de octubre de 2026, America/Lima. Algunos logs de contenedores usan UTC del 14 de octubre; no son otra fecha de entrega. Resultados obtenidos ejecutando comandos reales en este workspace, sin proveedores simulados de infraestructura o multimedia.
 
 ## Entorno y aislamiento del proyecto
 
 `Get-Location` confirmó `C:\estudio\4_ciclo\proyecto\AutocliPper-final-pro`. La inspección inicial encontró carpeta vacía, ningún AGENTS.md aplicable en sus ancestros y `git rev-parse` sin repositorio padre. Se ejecutó `git init --initial-branch=main` en esta ruta. No se abrió ni modificó el proyecto Java anterior.
 
-Durante el trabajo apareció el commit inicial `66097ec` y un remoto GitHub desde otra sesión. Se conservaron. No se ejecutó push, no se creó un remoto mediante esta implementación ni se comprobó su visibilidad.
+Durante el trabajo inicial apareció el commit 66097ec y un remoto GitHub desde otra sesión. Se conservaron. Esa entrega inicial no hizo push; la comprobación de privacidad y publicación posterior autorizadas se registran arriba.
 
 `node --version`, `npm --version`, `docker --version`, `docker compose version`, `ffmpeg -version`, `psql --version` identificaron el entorno. Docker estaba detenido y `docker desktop start` permitió usar el motor Linux. Node del host 25.9.0 emitió advertencias de engines; Node 24.21.0 se utilizó explícitamente para pruebas y es el runtime Docker.
 

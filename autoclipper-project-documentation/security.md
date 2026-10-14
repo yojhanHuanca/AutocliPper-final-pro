@@ -1,6 +1,6 @@
 # Modelo de amenazas
 
-Estado de etapa 1: infraestructura de desarrollo e inspección interna. No habilitada para usuarios reales ni abierta a Internet. La seguridad de identidad, workspaces y controles de negocio sigue pendiente y se probará antes de exponer operaciones.
+Estado actual: identidad, sesiones, CSRF, workspaces y autorización de recursos implementados y probados con dos usuarios en etapa 2; ver stage-2.md. No desplegado en producción ni abierto a Internet. Los controles avanzados, 2FA y la configuración final de producción siguen pendientes. La tabla siguiente conserva el análisis inicial de etapa 1; la matriz de estado actual prevalece sobre sus pendientes históricos.
 
 | Amenaza | Control existente | Trabajo pendiente |
 |---|---|---|

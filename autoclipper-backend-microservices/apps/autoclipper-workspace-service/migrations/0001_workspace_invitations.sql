@@ -1,0 +1,3 @@
+CREATE TABLE invitations(id uuid PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,email text NOT NULL,role text NOT NULL CHECK(role IN ('admin','editor','reader')),token_hash text UNIQUE NOT NULL,idempotency_key uuid NOT NULL,request_hash text NOT NULL,expires_at timestamptz NOT NULL DEFAULT now()+interval '7 days',accepted_at timestamptz,revoked_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(workspace_id,idempotency_key));
+--> statement-breakpoint
+CREATE TABLE invitation_outbox(id uuid PRIMARY KEY REFERENCES invitations(id) ON DELETE CASCADE,payload text NOT NULL,attempts integer NOT NULL DEFAULT 0,delivered_at timestamptz,next_attempt_at timestamptz NOT NULL DEFAULT now());

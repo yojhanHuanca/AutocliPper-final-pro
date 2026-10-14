@@ -1,11 +1,11 @@
 # Alcance y prioridades
 
-Esta entrega implementa la etapa 1 e inicia la inspección multimedia interna para verificar la base técnica. No equivale a producto completo ni satisface aún la aceptación de una cuenta que genera clips con IA real.
+La etapa 1 está publicada y su CI remoto pasó. La entrega de etapa 2 implementa el recorrido de cuenta a inspección descrito en stage-2.md, con pendientes avanzados explícitos. No equivale a producto completo ni satisface todavía la aceptación de clips con IA real.
 
 | Etapa | Entrega y criterio de salida | Estado |
 |---|---|---|
 | 1 | Repo independiente, workspace estricto, NestJS, dependencias Docker, roles/migraciones, salud/contratos, pruebas reales y CI básica | Implementada; ver evidencia y pendientes operativos |
-| 2 | Identidad completa, workspaces/roles, proyectos, carga directa/multipart segura y confirmación real; tests de aislamiento | Pendiente de desarrollo |
+| 2 | Identidad, workspaces/roles, proyectos, carga directa/multipart y aislamiento | Recorrido prioritario implementado/verificado; 2FA, Google, privacidad y gestión avanzada pendientes |
 | 3 | Extracción, proveedor real de transcripción, selección validada, render/subtítulos, estado y descarga; flujo real completo | Inspección interna implementada; demás pendiente |
 | 4 | Especificación de edición versionada, concurrencia, revisiones, marca, comentarios, aprobación y review links | Pendiente |
 | 5 | OAuth y publicación/calendario por proveedor permitido, zonas IANA, dedupe y conciliación | Pendiente; revisión oficial y credenciales al implementar |

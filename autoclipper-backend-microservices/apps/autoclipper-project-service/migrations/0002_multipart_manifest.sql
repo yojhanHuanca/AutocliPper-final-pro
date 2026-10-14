@@ -1,0 +1,1 @@
+CREATE TABLE upload_parts(upload_id uuid NOT NULL REFERENCES uploads(id) ON DELETE CASCADE,part_number integer NOT NULL CHECK(part_number>0),expected_bytes integer NOT NULL CHECK(expected_bytes>0),sha256 text NOT NULL,PRIMARY KEY(upload_id,part_number));

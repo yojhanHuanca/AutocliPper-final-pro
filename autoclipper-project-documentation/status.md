@@ -1,6 +1,6 @@
 # Matriz de estado
 
-Entrega: etapa 1. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Los diseños escritos no se contabilizan como funciones implementadas.
+Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
 
 | Capacidad | Estado | Evidencia / límite |
 |---|---|---|
@@ -18,15 +18,20 @@ Entrega: etapa 1. Estados: **IV** implementado y verificado; **IE** implementado
 | Reintentos limitados y errores clasificados | IV | Archivo inválido permanente y objeto ausente tras 3 intentos |
 | Limpieza de temporales y S3 privado | IV | Directorio vacío después de trabajos y GET anónimo 403 |
 | Métricas/logs y protección de métricas | IV | Scrape autenticado, rechazo 401; tracing distribuido pendiente |
-| CI con lint/tipos/tests/build/audit/contratos/Docker | IE | Workflow preparado; ejecución remota no lanzada ni comprobada |
+| CI etapa 1 con lint/tipos/tests/build/audit/contratos/Docker | IV | Run 38501990994 aprobado en quality e infrastructure; commit cf6912b |
+| CI de la ampliación de etapa 2 | IE | Job business agregado; comprobar resultado del commit de entrega |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
-| Publicación del trabajo en remoto | PC | Remoto externo detectado; sin push de esta implementación; visibilidad no verificada |
-| Registro/verificación, login/reset, Google | PD + PC | Requiere implementación, correo/dominio y clientId Google |
-| Sesiones/refresh/reutilización/revocación, Argon2id | PD | Diseño de cookies y CSRF documentado; ninguna sesión funcional |
-| 2FA/recuperación, perfil/preferencias, exportar/eliminar datos | PD | Entidades y política previstas |
-| Workspaces/equipos/invitaciones/roles/propiedad | PD | No se afirma autorización multiusuario por el prefijo S3 |
-| Proyectos/carpetas/etiquetas/búsqueda/favoritos | PD | Sin endpoints de negocio |
-| Upload firmado/multipart/recuperación/confirmación y cuotas | PD | Bucket y verificación técnica disponibles; flujo de usuario pendiente |
+| Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
+| Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
+| Google / entrega externa de correo | PD + PC | Sin simulación; requieren implementación/configuración y prueba externa |
+| Sesiones/refresh/reutilización/revocación, Argon2id, CSRF | IV | Cookies HttpOnly, rotación, revocación de familia, origen y token CSRF comprobados |
+| 2FA/códigos, perfil/preferencias, solicitudes de privacidad | PD | No se anuncian como implementados |
+| Workspaces/equipos/invitaciones/roles/propiedad | IV | Comprobación servidor, invitación ligada a email, transferencia y restricciones en PostgreSQL |
+| Proyectos CRUD, búsqueda y concurrencia | IV | Acceso denegado a otro usuario y versión contra sobrescritura |
+| Carpetas/etiquetas/favoritos y paginación por cursor completa | PD | Listado actual acotado a 100 y búsqueda; capacidades adicionales pendientes |
+| Upload firmado/multipart/reanudación/confirmación | IV | PUT y multipart de dos partes reales, tamaño firmado, HEAD y SHA-256 final en worker |
+| Cuota técnica de almacenamiento y reservas | IV | 11 reservas concurrentes: 10 admitidas y una rechazada; replay no duplica reserva |
+| Purga de objetos confirmados y cancelación de trabajos activos | PD | Abortado y limpieza de cargas pendientes implementados; no equivalen a cancelar inspecciones |
 | Importación de proveedores / SSRF | PD + PC | Sin importador ni acceso universal anunciado |
 | Extracción de audio/transcripción/análisis/segmentos | PD + PC | Candidatos de proveedor documentados; sin credenciales ni resultados IA inventados |
 | Diarización/traducción/títulos/hashtags/prompt/costo IA | PD + PC | Dependen del adaptador elegido y sus capacidades reales |
@@ -45,6 +50,6 @@ Entrega: etapa 1. Estados: **IV** implementado y verificado; **IE** implementado
 | Restore integral/PITR/retención de negocio | PD | Procedimiento y políticas propuestas, ensayo completo pendiente |
 | Carga/seguridad avanzada/trazas/SBOM/producción | PD | Sin capacidad de millones ni resultados de carga anunciados |
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
-| Primera aceptación funcional de 8 pasos | PD + PC | No satisfecha: faltan identidad/proyectos/upload usuario/IA/render/descarga/aislamiento real |
+| Primera aceptación funcional de 8 pasos con IA | PD + PC | Cuenta/proyecto/upload/inspección/aislamiento reales disponibles; faltan IA, render y descarga de clip |
 
-Prioridad siguiente: identidad, workspaces y permisos de recursos antes de admitir cargas de usuarios. Ver scope.md para la secuencia completa.
+Prioridad siguiente: cerrar funciones avanzadas pendientes de etapa 2 y continuar extracción/transcripción/selección/render con proveedor real. No habilitado para producción ni anunciado como plataforma completa.

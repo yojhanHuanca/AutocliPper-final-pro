@@ -1,5 +1,7 @@
 # Modelo de datos y evolución
 
+Actualización etapa 2: identity, workspace y project ya tienen bases, roles y migraciones propias. Ver stage-2.md. Identity posee users/sessions/access_tokens/refresh_tokens/verification_tokens/mail_outbox; workspace posee workspaces/memberships/invitations/invitation_outbox/workspace_audit; project posee projects/workspace_storage/uploads/upload_parts/inspection_requests. Las filas por entidad avanzada del diseño siguiente no implican que esas funciones estén implementadas.
+
 ## Implementado: media-processing
 
 `inspection_tasks`: UUID PK, workspace UUID, clave del objeto, bytes esperados positivos, ETag esperado, estado enum, correlationId UUID, intentos no negativos, resultado JSON tipado, código de error, inicio/fin/creación timestamptz. Índices por workspace/creación y estado. Una restricción exige fecha de fin exactamente para estados terminales; otra exige resultado solo en succeeded.
@@ -33,7 +35,7 @@ La migración `0000_*` fue generada con Drizzle Kit y se ejecuta con owner. Runt
 
 ## Diseño pendiente por servicio
 
-Estas entidades todavía no tienen migraciones ni endpoints. Se diseñarán con casos de uso y pruebas en su etapa, evitando tablas sin comportamiento.
+La tabla describe el alcance completo. Las entidades enumeradas como implementadas al inicio de este documento ya tienen migraciones y endpoints de etapa 2; las demás se implementarán con sus casos de uso y pruebas, evitando tablas sin comportamiento.
 
 | Dueño | Entidades y restricciones previstas |
 |---|---|

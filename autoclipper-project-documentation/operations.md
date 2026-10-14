@@ -1,5 +1,7 @@
 # Operación, despliegue y recuperación
 
+Actualización: etapa 1 publicada en cf6912b y CI 38501990994 aprobado. La operación de las aplicaciones de negocio y sus límites actuales está en stage-2.md. El remoto privado fue confirmado mediante API y la publicación de commits está autorizada; no hay despliegues de producción.
+
 ## Entornos
 
 Desarrollo: Compose, puertos loopback, secretos aleatorios, Swagger explícito. Pruebas: mismas dependencias reales, fixtures efímeras con IDs propios y limpieza selectiva. Producción: aún sin configuración final ni despliegue; se requieren DNS/TLS, secret manager, IAM por servicio, backups, proveedores y observabilidad central.
@@ -43,4 +45,4 @@ Propuesta pendiente: resultados operativos y eventos 30 días, jobs BullMQ termi
 
 ## Repositorio remoto
 
-El repositorio local es independiente, rama main. Tras la inspección inicial apareció el commit `66097ec` y el remoto `https://github.com/yojhanHuanca/AutocliPper-final-pro.git`, configurados fuera de las acciones de esta implementación. Se conservaron, sin ejecutar push ni cambiar visibilidad. No se verificó su visibilidad ni estado remoto. Confirmar esos datos antes de publicar código. CI se entrega como workflow GitHub Actions; su ejecución remota todavía no está verificada.
+El repositorio es independiente, rama main, remoto https://github.com/yojhanHuanca/AutocliPper-final-pro. Su visibilidad privada fue confirmada mediante API antes de publicar. La etapa 1 se publicó autorizadamente en cf6912b y su CI remoto 38501990994 pasó. Los cambios de etapa 2 se publican solo tras las pruebas locales; el resultado remoto se registra en la evidencia correspondiente. No se creó ni cambió infraestructura de producción.

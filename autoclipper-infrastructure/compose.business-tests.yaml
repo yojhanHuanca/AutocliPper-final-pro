@@ -1,0 +1,25 @@
+services:
+  project:
+    environment:
+      S3_PUBLIC_ENDPOINT: http://storage:9000
+  business-verification:
+    image: autoclipper-verification:0.2.0
+    build:
+      context: ../autoclipper-backend-microservices
+      dockerfile: Dockerfile
+      target: verification
+    command: ['node','--test','--test-concurrency=1','tests/business/*.test.mjs','tests/acceptance/*.test.mjs']
+    environment:
+      API_BASE_URL: http://gateway:3000
+      MAILPIT_URL: http://mailpit:8025
+      TEST_TEMP_DIR: /tmp/fixtures
+      IDENTITY_DATABASE_URL: postgresql://autoclipper_identity_runtime:${IDENTITY_RUNTIME_PASSWORD}@postgres:5432/autoclipper_identity
+      WORKSPACE_DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
+      PROJECT_DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project
+    depends_on:
+      gateway: {condition: service_healthy}
+      project: {condition: service_healthy}
+    mem_limit: 512m
+    cpus: 1
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']

@@ -33,7 +33,7 @@ jobs:
       - run: npm audit --audit-level=moderate
       - run: npm run openapi:export && npm run client:types
       - name: Contracts must be committed and current
-        run: git diff --exit-code -- ../autoclipper-project-documentation/contracts packages/autoclipper-api-contracts/src/generated.ts
+        run: git diff --exit-code -- ../autoclipper-project-documentation/contracts packages/autoclipper-api-contracts/src/generated.ts apps/autoclipper-api-gateway/contracts
 
   infrastructure:
     runs-on: ubuntu-24.04
@@ -55,3 +55,27 @@ jobs:
         if: always()
         working-directory: autoclipper-infrastructure
         run: docker compose --profile app --profile test down
+
+  business:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.21.0'
+      - run: node autoclipper-infrastructure/setup-local.mjs
+      - name: Build application and verification images
+        working-directory: autoclipper-infrastructure
+        run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app build media business-verification
+      - name: Test real accounts, permissions and uploads
+        working-directory: autoclipper-infrastructure
+        run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app run --rm business-verification
+      - name: Show dependency state on failure
+        if: failure()
+        working-directory: autoclipper-infrastructure
+        run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app ps --all
+      - name: Stop ephemeral business infrastructure
+        if: always()
+        working-directory: autoclipper-infrastructure
+        run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app down

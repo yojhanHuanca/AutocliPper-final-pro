@@ -1,0 +1,15 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791946000000,
+      "tag": "0000_workspace",
+      "breakpoints": true
+    },
+    {"idx":1,"version":"7","when":1791947000000,"tag":"0001_workspace_invitations","breakpoints":true},
+    {"idx":2,"version":"7","when":1791950000000,"tag":"0002_owner_invariant","breakpoints":true}
+  ]
+}

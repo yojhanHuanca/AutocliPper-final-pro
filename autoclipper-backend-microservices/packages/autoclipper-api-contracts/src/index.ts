@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+export * from './business.js';
 export type { paths, components, operations } from './generated.js';
 
 export class HealthResponse {

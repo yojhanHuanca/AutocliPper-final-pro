@@ -1,0 +1,133 @@
+x-environment: &environment
+  NODE_ENV: development
+  HOST: 0.0.0.0
+  ENABLE_DOCS: 'true'
+  COOKIE_AUTH: 'true'
+  CORS_ORIGIN: http://localhost:4200
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Run setup-local.mjs}
+  CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY:?Run setup-stage2.mjs}
+  IDENTITY_URL: http://identity:3002
+  WORKSPACE_URL: http://workspace:3003
+
+x-application: &application
+  image: autoclipper-backend:0.2.0
+  user: '1000:1000'
+  read_only: true
+  tmpfs: ['/tmp:rw,noexec,nosuid,size=32m,uid=1000,gid=1000']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  mem_limit: 384m
+  cpus: 1
+  pids_limit: 96
+  restart: unless-stopped
+
+services:
+  mailpit:
+    image: axllent/mailpit:v1.31.5@sha256:94f6b70c1436defae6799d9ac7ff0eeff9540465b842026d5cdb018f1c0234ea
+    ports: ['127.0.0.1:11025:1025','127.0.0.1:19025:8025']
+    mem_limit: 128m
+    cpus: 0.5
+
+  business-databases:
+    image: postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c
+    environment:
+      PGPASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_USER: autoclipper_bootstrap
+      PGHOST: postgres
+      IDENTITY_OWNER_PASSWORD: ${IDENTITY_OWNER_PASSWORD}
+      IDENTITY_RUNTIME_PASSWORD: ${IDENTITY_RUNTIME_PASSWORD}
+      WORKSPACE_OWNER_PASSWORD: ${WORKSPACE_OWNER_PASSWORD}
+      WORKSPACE_RUNTIME_PASSWORD: ${WORKSPACE_RUNTIME_PASSWORD}
+      PROJECT_OWNER_PASSWORD: ${PROJECT_OWNER_PASSWORD}
+      PROJECT_RUNTIME_PASSWORD: ${PROJECT_RUNTIME_PASSWORD}
+    volumes: ['./postgres/init-business.sh:/init-business.sh:ro']
+    entrypoint: ['bash','/init-business.sh']
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: 'no'
+
+  migrate-identity:
+    image: autoclipper-backend:0.2.0
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://autoclipper_identity_owner:${IDENTITY_OWNER_PASSWORD}@postgres:5432/autoclipper_identity
+    command: ['node','scripts/migrate-service.mjs','identity']
+    depends_on:
+      business-databases: {condition: service_completed_successfully}
+  migrate-workspace:
+    image: autoclipper-backend:0.2.0
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://autoclipper_workspace_owner:${WORKSPACE_OWNER_PASSWORD}@postgres:5432/autoclipper_workspace
+    command: ['node','scripts/migrate-service.mjs','workspace']
+    depends_on:
+      business-databases: {condition: service_completed_successfully}
+  migrate-project:
+    image: autoclipper-backend:0.2.0
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://autoclipper_project_owner:${PROJECT_OWNER_PASSWORD}@postgres:5432/autoclipper_project
+    command: ['node','scripts/migrate-service.mjs','project']
+    depends_on:
+      business-databases: {condition: service_completed_successfully}
+
+  identity:
+    <<: *application
+    command: ['node','apps/autoclipper-identity-service/dist/main.js']
+    environment:
+      <<: *environment
+      PORT: '3002'
+      DATABASE_URL: postgresql://autoclipper_identity_runtime:${IDENTITY_RUNTIME_PASSWORD}@postgres:5432/autoclipper_identity
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY}
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      SMTP_FROM: AutoClipper <no-reply@autoclipper.test>
+    ports: ['127.0.0.1:3002:3002']
+    depends_on:
+      migrate-identity: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      mailpit: {condition: service_started}
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3002/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  workspace:
+    <<: *application
+    command: ['node','apps/autoclipper-workspace-service/dist/main.js']
+    environment:
+      <<: *environment
+      PORT: '3003'
+      DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY}
+    ports: ['127.0.0.1:3003:3003']
+    depends_on:
+      migrate-workspace: {condition: service_completed_successfully}
+      identity: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3003/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  project:
+    <<: *application
+    command: ['node','apps/autoclipper-project-service/dist/main.js']
+    environment:
+      <<: *environment
+      PORT: '3004'
+      DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project
+      MEDIA_URL: http://media:3001
+      S3_ENDPOINT: http://storage:9000
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:19000
+      S3_REGION: us-east-1
+      S3_BUCKET: autoclipper-media
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    ports: ['127.0.0.1:3004:3004']
+    depends_on:
+      migrate-project: {condition: service_completed_successfully}
+      workspace: {condition: service_healthy}
+      media: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3004/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6

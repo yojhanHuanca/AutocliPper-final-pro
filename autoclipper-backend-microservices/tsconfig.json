@@ -1,12 +1,38 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/autoclipper-configuration" },
-    { "path": "packages/autoclipper-api-contracts" },
-    { "path": "packages/autoclipper-event-contracts" },
-    { "path": "packages/autoclipper-observability" },
-    { "path": "packages/autoclipper-testing" },
-    { "path": "apps/autoclipper-api-gateway" },
-    { "path": "apps/autoclipper-media-processing-service" }
+    {
+      "path": "packages/autoclipper-configuration"
+    },
+    {
+      "path": "packages/autoclipper-api-contracts"
+    },
+    {
+      "path": "packages/autoclipper-event-contracts"
+    },
+    {
+      "path": "packages/autoclipper-observability"
+    },
+    {
+      "path": "packages/autoclipper-testing"
+    },
+    {
+      "path": "apps/autoclipper-api-gateway"
+    },
+    {
+      "path": "apps/autoclipper-media-processing-service"
+    },
+    {
+      "path": "packages/autoclipper-http-security"
+    },
+    {
+      "path": "apps/autoclipper-identity-service"
+    },
+    {
+      "path": "apps/autoclipper-workspace-service"
+    },
+    {
+      "path": "apps/autoclipper-project-service"
+    }
   ]
 }

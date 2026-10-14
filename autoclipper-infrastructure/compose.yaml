@@ -26,8 +26,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run setup-local.mjs}
       MEDIA_OWNER_PASSWORD: ${MEDIA_OWNER_PASSWORD:?Run setup-local.mjs}
       MEDIA_RUNTIME_PASSWORD: ${MEDIA_RUNTIME_PASSWORD:?Run setup-local.mjs}
+      IDENTITY_OWNER_PASSWORD: ${IDENTITY_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      IDENTITY_RUNTIME_PASSWORD: ${IDENTITY_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
+      WORKSPACE_OWNER_PASSWORD: ${WORKSPACE_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      WORKSPACE_RUNTIME_PASSWORD: ${WORKSPACE_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
+      PROJECT_OWNER_PASSWORD: ${PROJECT_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      PROJECT_RUNTIME_PASSWORD: ${PROJECT_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
     ports: ['127.0.0.1:15432:5432']
-    volumes: ['postgres-data:/var/lib/postgresql', './postgres/init-media.sh:/docker-entrypoint-initdb.d/10-media.sh:ro']
+    volumes: ['postgres-data:/var/lib/postgresql', './postgres/init-media.sh:/docker-entrypoint-initdb.d/10-media.sh:ro','./postgres/init-business.sh:/docker-entrypoint-initdb.d/20-business.sh:ro']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U autoclipper_bootstrap -d postgres']
       interval: 5s
@@ -68,7 +74,7 @@ services:
 
   storage-init:
     profiles: ['app']
-    image: autoclipper-backend:0.1.0
+    image: autoclipper-backend:0.2.0
     build: &backend-build
       context: ../autoclipper-backend-microservices
       dockerfile: Dockerfile
@@ -80,7 +86,7 @@ services:
 
   migrate-media:
     profiles: ['app']
-    image: autoclipper-backend:0.1.0
+    image: autoclipper-backend:0.2.0
     build: *backend-build
     environment:
       MIGRATION_DATABASE_URL: postgresql://autoclipper_media_owner:${MEDIA_OWNER_PASSWORD:?Run setup-local.mjs}@postgres:5432/autoclipper_media
@@ -91,7 +97,7 @@ services:
 
   media:
     profiles: ['app']
-    image: autoclipper-backend:0.1.0
+    image: autoclipper-backend:0.2.0
     build: *backend-build
     environment: *media-environment
     command: ['node', 'apps/autoclipper-media-processing-service/dist/main.js']
@@ -119,7 +125,7 @@ services:
 
   verification:
     profiles: ['test']
-    image: autoclipper-verification:0.1.0
+    image: autoclipper-verification:0.2.0
     build:
       context: ../autoclipper-backend-microservices
       dockerfile: Dockerfile
@@ -139,7 +145,7 @@ services:
 
   gateway:
     profiles: ['app']
-    image: autoclipper-backend:0.1.0
+    image: autoclipper-backend:0.2.0
     build: *backend-build
     environment:
       NODE_ENV: development
@@ -147,6 +153,11 @@ services:
       PORT: 3000
       ENABLE_DOCS: 'true'
       CORS_ORIGIN: http://localhost:4200
+      COOKIE_AUTH: 'true'
+      IDENTITY_URL: http://identity:3002
+      WORKSPACE_URL: http://workspace:3003
+      PROJECT_URL: http://project:3004
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Run setup-local.mjs}
     command: ['node', 'apps/autoclipper-api-gateway/dist/main.js']
     ports: ['127.0.0.1:3000:3000']
     user: '1000:1000'

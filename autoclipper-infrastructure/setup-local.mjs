@@ -19,3 +19,4 @@ const media = [
 await writeFile(new URL('../autoclipper-backend-microservices/.env.media', directory), media, { flag: 'wx', mode: 0o600 });
 await writeFile(new URL('../autoclipper-backend-microservices/.env.gateway', directory), 'NODE_ENV=development\nHOST=127.0.0.1\nPORT=3000\nENABLE_DOCS=true\nCORS_ORIGIN=http://localhost:4200\n', { flag: 'wx', mode: 0o600 });
 console.log(`Local environment files created; values were not printed. Infrastructure: ${fileURLToPath(directory)}`);
+await import('./setup-stage2.mjs');

@@ -22,6 +22,10 @@ Consultadas durante la entrega del 13 de octubre de 2026 (America/Lima). Las ver
 | Prometheus client | @prometheus-io/client 0.16.1 |
 | FFmpeg/FFprobe en Docker | Debian 7:5.1.9-0+deb12u1 |
 | FFmpeg/FFprobe del host, usado en integración Windows | 8.1.1 |
+| Aplicaciones backend de etapa 2 | 0.2.0 |
+| Argon2 / Nodemailer | 0.45.1 / 10.1.0 |
+| AWS presigner | 3.1151.0 |
+| Mailpit | v1.31.5, imagen por digest |
 | Docker / Compose observados | 29.7.2 / 5.4.0 |
 
 Node del host observado: 25.9.0. No es el runtime fijado. Las pruebas de integración se ejecutan explícitamente con Node 24.21.0 y también dentro de Docker cuando se indica en la evidencia. Las comprobaciones de npm en Node 25 emiten advertencias de engines; no se ocultan ni cambian los requisitos para eliminarlas.

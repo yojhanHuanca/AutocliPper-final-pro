@@ -1,5 +1,7 @@
 # Arquitectura y decisiones
 
+La distribución desplegada actual y sus ajustes de etapa 2 están en [stage-2.md](stage-2.md). Identity, workspace y project tienen comportamiento ejecutable y bases separadas; análisis, publicación, billing y notification continúan pendientes.
+
 Fecha de la entrega: 13 de octubre de 2026, America/Lima. Título académico: **AutoClipper: Plataforma inteligente basada en inteligencia artificial para la generación y gestión automatizada de clips de video para redes sociales**. Línea: Startup.
 
 ## Contexto
@@ -23,10 +25,10 @@ Cada servicio tendrá base y roles propios. No se comparten entidades Drizzle ni
 
 | Servicio | Responsabilidad y datos propios | Entrega actual |
 |---|---|---|
-| api-gateway | Borde HTTP, CORS, correlación, contratos públicos | Health y errores; sin rutas de negocio todavía |
-| identity | Usuarios, identidades, sesiones, verificaciones, 2FA, perfil y privacidad | Diseñado, sin aplicación creada |
-| workspace | Workspaces, membresías, invitaciones y transferencia de propiedad | Diseñado |
-| project | Proyectos, carpetas, etiquetas, favoritos, descripciones de edición, revisiones, comentarios y revisiones compartidas | Diseñado |
+| api-gateway | Borde HTTP, CORS, correlación, contratos públicos | Rutas públicas a servicios fijos, cookies/CSRF documentados; sin lógica de negocio |
+| identity | Usuarios, identidades, sesiones, verificaciones, 2FA, perfil y privacidad | Registro/verificación/login/reset/sesiones y SMTP local; avanzadas pendientes |
+| workspace | Workspaces, membresías, invitaciones y transferencia de propiedad | Implementado con aislamiento y restricciones de propietario |
+| project | Proyectos, carpetas, etiquetas, favoritos, descripciones de edición, revisiones, comentarios y revisiones compartidas | CRUD, concurrencia, carga PUT/multipart, cuota de almacenamiento y outbox; gestión avanzada pendiente |
 | media-processing | Inspección, trabajos multimedia, render y objetos derivados | Inspección interna real; render pendiente |
 | content-analysis | Transcripciones, segmentos propuestos, prompts/modelos y estimación de uso IA | Diseñado |
 | social-publishing | Conexiones OAuth, tokens cifrados, programación y conciliación externa | Diseñado |
@@ -35,7 +37,7 @@ Cada servicio tendrá base y roles propios. No se comparten entidades Drizzle ni
 
 La administración será un conjunto de casos de uso autorizados en el servicio dueño de los datos. No se agrega otro servicio central con acceso de escritura a todas las bases. Los tickets se ubican en notification inicialmente; se separarán si su carga o responsabilidad lo requiere.
 
-No se crearon siete aplicaciones vacías. Los cinco paquetes compartidos contienen únicamente configuración, DTO operativos, un contrato de evento, instrumentación y una utilidad de espera para pruebas. Cada aplicación existente tiene entrada y comando independientes. Se comparte imagen base para reducir mantenimiento; se pueden desplegar instancias por aplicación sin ejecutar las demás.
+No se crearon aplicaciones vacías. Los paquetes compartidos contienen configuración, contratos públicos/eventos, instrumentación, utilidades de prueba y seguridad HTTP acotada. Cada aplicación existente tiene entrada y comando independientes. Se comparte imagen base para reducir mantenimiento; se pueden desplegar instancias por aplicación sin ejecutar las demás.
 
 ## Decisiones (ADR)
 
@@ -48,7 +50,7 @@ No se crearon siete aplicaciones vacías. Los cinco paquetes compartidos contien
 7. **Pagos sin proveedor seleccionado.** Evitar una elección incompatible con el país/entidad legal. La etapa 6 implementará consumo interno y contratos antes de cobros. No hay precios definitivos ni transacciones reales.
 8. **Node LTS 24; NestJS 12; TypeScript 5.9.** Se evita Node 25 del host para producción. TypeScript 5.9 satisface los peers de Swagger, ESLint y el generador de tipos; no se adopta TypeScript 7 solo por ser más reciente. Node 24 se usa en contenedores y pruebas de integración.
 
-## Servicios desplegados
+## Subconjunto técnico desplegado en etapa 1
 
 ```mermaid
 flowchart TB
@@ -63,7 +65,7 @@ flowchart TB
   end
 ```
 
-El gateway es stateless: su readiness solo certifica que responde, no disponibilidad del producto. Media comprueba tabla migrada, Redis, bucket, binarios FFmpeg/FFprobe y worker. El worker se escala replicando el servicio; `WORKER_CONCURRENCY` limita cada instancia. No hay todavía aislamiento de concurrencia por workspace ni workers de transcripción/análisis/render.
+El gateway es stateless; desde etapa 2 su readiness consulta identity/workspace/project cuando COOKIE_AUTH está habilitado. Media comprueba tabla migrada, Redis, bucket, binarios FFmpeg/FFprobe y worker. El worker se escala replicando el servicio; WORKER_CONCURRENCY limita cada instancia. No hay todavía reparto justo por workspace ni workers de transcripción/análisis/render.
 
 ## Flujo técnico implementado
 

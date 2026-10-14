@@ -11,6 +11,7 @@ const base = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   CORS_ORIGIN: url.default('http://localhost:4200'),
   ENABLE_DOCS: boolean.default(false),
+  COOKIE_AUTH: boolean.default(false),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info')
 });
 
