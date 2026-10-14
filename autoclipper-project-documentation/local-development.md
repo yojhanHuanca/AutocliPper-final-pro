@@ -1,0 +1,91 @@
+# Desarrollo local
+
+Requisitos: Docker Desktop con motor Linux, Compose, Git. Para desarrollo en host: Node **24.21.0**, npm **11.12.1**, FFmpeg/FFprobe. Windows observado tenía Node 25.9.0: usar `nvm use 24.21.0` si ya está instalado o contenedores. No es necesario cambiar globalmente el Node del equipo.
+
+## Arranque completamente en contenedores
+
+Desde la raíz de este repositorio, PowerShell:
+
+```powershell
+Set-Location autoclipper-infrastructure
+node setup-local.mjs
+docker compose --profile app up -d --build
+docker compose ps
+```
+
+`setup-local.mjs` crea `.env` local de infraestructura, `.env.media` y `.env.gateway` ignorados por Git con secretos aleatorios. Nunca imprime sus valores. Falla si ya existen: no sobrescribir archivos para resolverlo; usar los existentes. Si una creación se interrumpe parcialmente, recuperar de manera explícita los archivos antes de reintentar. No borrar volúmenes para solucionar contraseñas sin confirmar que no contienen datos necesarios.
+
+Servicios: gateway [http://localhost:3000/v1/health/live](http://localhost:3000/v1/health/live), media [http://localhost:3001/v1/health/ready](http://localhost:3001/v1/health/ready). Swagger en `/docs` y JSON en `/openapi.json`, habilitados solo para desarrollo. PostgreSQL `127.0.0.1:15432`, Redis `127.0.0.1:16379`, S3 `127.0.0.1:19000`. Todos los puertos publicados se limitan a loopback.
+
+PostgreSQL inicializa roles y base únicamente al crear el volumen. El servicio one-shot `migrate-media` aplica migraciones antes del worker y termina con código cero. `storage-init` crea el bucket privado y la política para abortar multipart incompleto al día. Redis usa AOF y noeviction; alcanzar el límite provoca backpressure y requiere intervención/capacidad, no expulsión silenciosa de jobs.
+
+## Desarrollo y pruebas en host
+
+```powershell
+Set-Location autoclipper-infrastructure
+docker compose up -d postgres redis storage
+Set-Location ../autoclipper-backend-microservices
+npm ci
+npm run verify
+node --env-file=.env.media apps/autoclipper-media-processing-service/dist/infrastructure/migrate.js
+node --env-file=.env.media scripts/storage-init.mjs
+node --env-file=.env.media --test --test-concurrency=1 tests/integration/*.test.mjs
+```
+
+En terminales separadas:
+
+```powershell
+node --env-file=.env.gateway apps/autoclipper-api-gateway/dist/main.js
+node --env-file=.env.media apps/autoclipper-media-processing-service/dist/main.js
+```
+
+Si el Node del host no es 24, los mismos comandos `node` pueden ejecutarse con `npm exec --yes --package=node@24.21.0 -- node ...`. No usar `npm run start:*` sin cargar el entorno correspondiente.
+
+## Prueba real dentro de Docker
+
+```powershell
+# Desde autoclipper-infrastructure; app habilita el inicializador requerido.
+docker compose --profile app stop media
+docker compose --profile app --profile test run --build --rm verification
+docker compose --profile app up -d --no-build
+```
+
+Se detiene el worker de aplicación para que no consuma trabajos de la prueba; no ejecutar en un entorno compartido con usuarios o trabajos reales. El verificador usa su propio worker y puerto interno 3101. Se prueba migración doble, permisos de base, S3 privado, FFmpeg real, cola/outbox, reinicio, pérdida de entrada Redis, duplicados, fallos permanentes/transitorios, limpieza y readiness con FFprobe ausente. **No es la aceptación funcional con cuentas y clips IA**. Las pruebas fallan si faltan dependencias o entorno; no se omiten silenciosamente.
+
+## Variables
+
+| Variable | Uso |
+|---|---|
+| HOST / PORT | Dirección de escucha; loopback en host, 0.0.0.0 dentro del contenedor |
+| NODE_ENV / ENABLE_DOCS | Entorno y exposición explícita de Swagger |
+| CORS_ORIGIN | Un único origen Angular permitido; nunca `*` con cookies |
+| DATABASE_URL | Rol runtime, solo base media |
+| MIGRATION_DATABASE_URL | Rol owner; solo migraciones/pruebas, no worker de producción |
+| REDIS_URL | Redis autenticado; `rediss` para TLS |
+| S3_ENDPOINT / S3_REGION / S3_BUCKET | Endpoint compatible S3 y bucket privado |
+| S3_ACCESS_KEY / S3_SECRET_KEY | Credencial local; gestor de secretos en producción |
+| S3_FORCE_PATH_STYLE | true para RustFS local |
+| INTERNAL_TOKEN | Autorización de `/v1/metrics`; al menos 32 caracteres |
+| WORKER_CONCURRENCY | 1–8, por proceso; valor local 2 |
+| MAX_PROBE_BYTES | Máximo descargable; 100 MiB predeterminado, tope de configuración 1 GiB |
+| MAX_VIDEO_SECONDS | Duración permitida; 3600 segundos local |
+| PROBE_TIMEOUT_MS | Timeout de descarga y timeout separado de FFprobe; 30000 ms cada uno |
+| FFPROBE_PATH / FFMPEG_PATH | Binarios confiables administrados por el operador, nunca por el usuario |
+| TEMP_DIR | Directorio de temporales; `/tmp/media` en contenedor |
+| TEST_TEMP_DIR | Directorio de fixtures solo en pruebas |
+
+La validación falla sin mostrar valores sensibles. Las credenciales generadas son hexadecimales y no requieren escaping en URLs. Si se suministran otras credenciales, codificar sus componentes URL correctamente.
+
+## Migraciones y contratos
+
+```powershell
+npm run db:generate
+npm run build
+node --env-file=.env.media apps/autoclipper-media-processing-service/dist/infrastructure/migrate.js
+npm run openapi:export
+npm run client:types
+```
+
+Revisar siempre SQL generado. `client:types` genera tipos de OpenAPI, no una aplicación Angular ni un cliente HTTP completo. Angular podrá consumirlos mediante HttpClient y sus interceptores. No editar a mano los archivos generados.
+
+Parada conservando datos: `docker compose --profile app down`. No usar `down -v` sobre datos necesarios. Los logs pueden consultarse con `docker compose logs --tail 100 media gateway`; no publicar `.env` ni la salida completa de `docker compose config`, porque expande secretos.

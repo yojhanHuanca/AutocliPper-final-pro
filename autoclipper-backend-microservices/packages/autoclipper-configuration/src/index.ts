@@ -2,24 +2,27 @@ import { z } from 'zod';
 
 const boolean = z.enum(['true', 'false']).transform(v => v === 'true');
 const url = z.url();
+function hasProtocol(value: string, protocols: string[]): boolean {
+  try { return protocols.includes(new URL(value).protocol); } catch { return false; }
+}
 const base = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   CORS_ORIGIN: url.default('http://localhost:4200'),
-  ENABLE_DOCS: boolean.default('false'),
+  ENABLE_DOCS: boolean.default(false),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info')
 });
 
 const media = base.extend({
-  DATABASE_URL: url.refine(v => ['postgres:', 'postgresql:'].includes(new URL(v).protocol)),
-  REDIS_URL: url.refine(v => ['redis:', 'rediss:'].includes(new URL(v).protocol)),
+  DATABASE_URL: url.refine(v => hasProtocol(v, ['postgres:', 'postgresql:'])),
+  REDIS_URL: url.refine(v => hasProtocol(v, ['redis:', 'rediss:'])),
   S3_ENDPOINT: url,
   S3_REGION: z.string().min(1).default('us-east-1'),
   S3_ACCESS_KEY: z.string().min(16),
   S3_SECRET_KEY: z.string().min(32),
   S3_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/),
-  S3_FORCE_PATH_STYLE: boolean.default('true'),
+  S3_FORCE_PATH_STYLE: boolean.default(true),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
   MAX_PROBE_BYTES: z.coerce.number().int().positive().max(1073741824).default(104857600),
   MAX_VIDEO_SECONDS: z.coerce.number().positive().max(14400).default(3600),

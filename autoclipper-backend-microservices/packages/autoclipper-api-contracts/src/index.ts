@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+export type { paths, components, operations } from './generated.js';
 
 export class HealthResponse {
   @ApiProperty({ enum: ['ok'] }) status!: 'ok';

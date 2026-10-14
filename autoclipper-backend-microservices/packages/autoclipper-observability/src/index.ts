@@ -1,11 +1,12 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import type { Server } from 'node:http';
 import { Catch, HttpException, type ArgumentsHost, type ExceptionFilter, type INestApplication, type LoggerService } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { pino } from 'pino';
-import { collectDefaultMetrics, Histogram, Registry } from 'prom-client';
+import { collectDefaultMetrics, Histogram, Registry } from '@prometheus-io/client';
 import type { GatewayConfig } from '@autoclipper/configuration';
 
 export const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info', redact: {
@@ -36,6 +37,11 @@ export class SafeExceptionFilter implements ExceptionFilter {
 }
 
 export function configureHttp(app: INestApplication, config: GatewayConfig, service: string) {
+  const server = app.getHttpServer() as Server;
+  server.headersTimeout = 5000;
+  server.requestTimeout = 10000;
+  server.keepAliveTimeout = 5000;
+  server.maxRequestsPerSocket = 1000;
   app.setGlobalPrefix('v1');
   app.enableShutdownHooks();
   app.use(helmet());
