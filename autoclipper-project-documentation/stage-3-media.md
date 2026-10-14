@@ -87,6 +87,8 @@ Logs correlacionados registran duración medida y bytes publicados, sin texto de
 
 Resultados locales observados: lint/build y trece pruebas unitarias/HTTP aprobados; suite Docker de infraestructura con dieciocho tests, incluidos dos padres, aprobada; suite Docker de negocio con treinta y cuatro tests, incluidos cuatro padres, aprobada. Cero fallos en esas ejecuciones finales. Los fixtures son videos de colores y una señal sinusoidal generados con FFmpeg; su texto declara origen de usuario y no se presenta como transcripción ni IA.
 
+Código publicado en `cc4942796d7585cf7449d74b6392a9b3e2d7bb7e`. CI remoto [38572734981](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38572734981) terminó aprobado en quality, infrastructure y business. El run anterior para el mismo SHA fue cancelado por concurrencia; no se contabiliza como una ejecución aprobada. El stack local quedó restaurado con los servicios HTTP y ambos workers saludables.
+
 Infraestructura comprobó recuperación de entrada Redis perdida después de acuse de outbox, replay/reinicio sin duplicar el resultado, cancelación en cola y activa, archivo modificado con fallo permanente, fuente ausente con tres intentos, timestamps y workspace inválidos, y temporales vacíos. Negocio comprobó cuenta → upload → inspección → recorte → MP4/SRT/VTT descargables, hashes reales, glyphs blancos visibles en un frame del video azul (subtítulos efectivamente quemados), WAV mono 16 kHz, idempotencia concurrente, cuota conciliada una vez, cancelación sin cargo, acceso denegado a otro usuario y bloqueo de URLs nuevas al enviar a papelera. La regresión de identidad, Google con fixture explícito, roles y carga multipart permaneció aprobada.
 
 ```powershell

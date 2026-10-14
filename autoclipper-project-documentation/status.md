@@ -22,6 +22,7 @@ Entrega: etapas 1–2 y entrega multimedia de recortes explícitos de etapa 3. E
 | CI del recorrido principal de etapa 2 | IV | Run 38509763878 aprobado en quality, infrastructure y business; commit 2a1e5d6 |
 | CI de 2FA, perfil y solicitudes de privacidad | IV | Run 38513828115 aprobado en los tres jobs; commit ddf3036 |
 | CI del adaptador Google | IV | Run 38515503194 aprobado en los tres jobs; commit d029f74. No equivale a aceptación externa Google |
+| CI de audio/recortes/subtítulos aportados/descargas | IV | Run 38572734981 aprobado en los tres jobs; commit cc49427 |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
