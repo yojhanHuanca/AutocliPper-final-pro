@@ -1,8 +1,8 @@
 # AutoClipper
 
-Nueva implementación independiente del backend. **Entrega actual: recortes explícitos, subtítulos aportados y extracción de audio**, además de identidad, workspaces, proyectos y carga segura. El recorrido cuenta → upload → inspección → render → descarga está verificado con videos de prueba. La transcripción y selección con IA siguen pendientes.
+Nueva implementación independiente del backend. **Entrega actual: transcripción real local con whisper.cpp y clips subtitulados**, además de identidad, workspaces, proyectos, carga segura y recortes explícitos. Se verificó cuenta → upload → inspección → audio → IA real → clip → descarga y denegación a otro usuario. El intervalo del clip se eligió manualmente; selección automática LLM, traducción y diarización externa real siguen pendientes.
 
-Ver [entrega multimedia y evidencia](autoclipper-project-documentation/stage-3-media.md): trece unitarias/HTTP, dieciocho de infraestructura y treinta y cuatro de negocio aprobadas en la verificación local final.
+Ver [transcripción, arquitectura, comandos y evidencia](autoclipper-project-documentation/stage-3-analysis.md). Verificación local: 23 unitarias/HTTP, 19 de infraestructura, 35 de negocio, 7 de recuperación de análisis con fixtures explícitos y 5 del flujo con ASR real. Los conteos del runner incluyen padres. [Entrega multimedia previa](autoclipper-project-documentation/stage-3-media.md).
 
 Identidad incluye 2FA TOTP, recuperación, perfil y solicitudes de privacidad. El adaptador Google valida credenciales en servidor; su prueba externa con una cuenta real sigue pendiente. Ver [límites de Google](autoclipper-project-documentation/google-identity.md) y [seguridad de identidad](autoclipper-project-documentation/identity-security.md).
 

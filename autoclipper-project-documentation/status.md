@@ -1,6 +1,6 @@
 # Matriz de estado
 
-Entrega: etapas 1–2 y entrega multimedia de recortes explícitos de etapa 3. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) y [stage-3-media.md](stage-3-media.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
+Entrega: etapas 1–2, multimedia y transcripción local real de etapa 3. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) y [stage-3-media.md](stage-3-media.md) y [stage-3-analysis.md](stage-3-analysis.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
 
 | Capacidad | Estado | Evidencia / límite |
 |---|---|---|
@@ -36,11 +36,16 @@ Entrega: etapas 1–2 y entrega multimedia de recortes explícitos de etapa 3. E
 | Carpetas/etiquetas/favoritos y paginación por cursor completa | PD | Listado actual acotado a 100 y búsqueda; capacidades adicionales pendientes |
 | Upload firmado/multipart/reanudación/confirmación | IV | PUT y multipart de dos partes reales, tamaño firmado, HEAD y SHA-256 final en worker |
 | Cuota técnica de almacenamiento y reservas | IV | 11 reservas concurrentes: 10 admitidas y una rechazada; replay no duplica reserva |
-| Purga de objetos confirmados y cancelación de trabajos activos | PD | Abortado y limpieza de cargas pendientes implementados; no equivalen a cancelar inspecciones |
+| Purga de objetos confirmados y cancelación de inspecciones | PD | Abortado/limpieza de cargas pendientes y cancelación de derivados/análisis implementados; cancelar inspecciones sigue pendiente |
 | Importación de proveedores / SSRF | PD + PC | Sin importador ni acceso universal anunciado |
 | Extracción de audio WAV | IV | Audio real PCM mono 16 kHz, fuente validada, download autorizado y prueba FFprobe |
-| Transcripción/análisis/segmentos | PD + PC | Candidatos de proveedor documentados; sin credenciales ni resultados IA inventados |
-| Diarización/traducción/títulos/hashtags/prompt/costo IA | PD + PC | Dependen del adaptador elegido y sus capacidades reales |
+| Transcripción local con tiempos e idioma | IV | whisper.cpp/tiny fijados, fuente WAV comprobada, español detectado y aceptación real con MP4/SRT/VTT |
+| Servicio de análisis persistente y separado | IV | Base/roles/cola propios, replay/reinicio, cancelación, checksum y tres intentos comprobados |
+| Deepgram STT y diarización | IE + PC | Adaptador binario con revisión fijada, presupuesto y resultado incierto protegidos; fixtures HTTP únicamente, sin consumo externo |
+| Selección LLM, instrucciones, títulos/hashtags/explicación | IE + PC | Adaptador Ollama y validaciones; falta modelo/servidor e inferencia real. selection=none permite intervalo manual |
+| Modelos, prompt y estimación de costo IA | IV parcial + IE | Modelo/hash de ASR real guardados; prompt/version/uso LLM probados con fixtures. Costo externo local 0, cómputo no gratuito |
+| Traducción de subtítulos | PD | No hay traductor ni resultados traducidos simulados |
+| Orquestación automática de todas las etapas | PD | Intenciones durables vinculadas; el cliente encadena audio/análisis/render y elige manualmente el intervalo cuando selection=none |
 | Recorte explícito/render/subtítulos aportados/video/SRT/VTT | IV | MP4 real, texto visible en frame, sidecars y URLs S3 privadas de 120s; no es selección ni transcripción IA |
 | Persistencia/recovery/cancelación de derivados/cuota | IV | Outbox, pérdida Redis restaurada, tres intentos máximos, cancelación activa/en cola y cuota conciliada una vez |
 | Edición versionada, CAS, revisiones, encuadre/marca/audio | PD | Modelo previsto, no implementado |
@@ -52,11 +57,11 @@ Entrega: etapas 1–2 y entrega multimedia de recortes explícitos de etapa 3. E
 | Proveedor de pagos | PC | Selección requiere entidad, país y necesidades comerciales |
 | Notificaciones/correo/preferencias/soporte | PD + PC | SMTP local y preferencia de correo verificados; entrega externa, eventos y soporte pendientes |
 | Administración autorizada/ajustes auditados | PD | Ninguna ruta global sin permisos |
-| Fairness y cuotas por workspace, workers separados por etapa | PD | Inspector/renderer separados y cuatro derivados pendientes por workspace; fairness y workers STT/análisis pendientes |
+| Fairness y workers separados por etapa | IV parcial + PD | Inspector, renderer y análisis separados; cuatro análisis activos/workspace y concurrencia uno. STT/selección comparten worker/cola; fairness completo pendiente |
 | Dump y restore PostgreSQL en base temporal | IV | pg_dump/pg_restore y comprobación de migración restaurada; base temporal retirada |
 | Restore integral/PITR/retención de negocio | PD | Procedimiento y políticas propuestas, ensayo completo pendiente |
 | Carga/seguridad avanzada/trazas/SBOM/producción | PD | Sin capacidad de millones ni resultados de carga anunciados |
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
-| Primera aceptación funcional de 8 pasos con IA | PD + PC | Cuenta/proyecto/upload/inspección/aislamiento reales disponibles; faltan IA, render y descarga de clip |
+| Primera aceptación funcional de 8 pasos con IA | IV | Cuenta verificada, proyecto/upload, whisper.cpp real, clip subtitulado, estado/download y otro usuario denegado. Intervalo manual; no acredita selección automática |
 
-Prioridad siguiente: adaptadores reales de transcripción/análisis con configuración y presupuesto autorizados; conservar el flujo manual real de extracción/render/descarga. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.
+Prioridad siguiente: selección automática con un LLM real evaluado según recursos, traducción y orquestación automática; conservar la aceptación local real de transcripción/render/descarga. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.

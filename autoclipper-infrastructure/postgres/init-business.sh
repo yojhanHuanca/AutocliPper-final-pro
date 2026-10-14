@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-for service in identity workspace project; do
+for service in identity workspace project analysis; do
   upper="${service^^}"
   owner_var="${upper}_OWNER_PASSWORD"
   runtime_var="${upper}_RUNTIME_PASSWORD"

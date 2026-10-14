@@ -69,6 +69,10 @@ Los fixtures se generan por FFmpeg, no se descargan contenidos de terceros, no c
 - La primera consulta al snapshot por HTTPS encontró ausencia de certificados de sistema en la imagen slim. Se usó HTTP con validación criptográfica de las firmas APT, sin desactivar autenticación; la consulta posterior confirmó el paquete exacto. La descarga inicial del snapshot fue lenta; la capa queda cacheada al completar la imagen.
 - Un intento del verificador con `docker compose run --no-build` fue rechazado porque `run` no admite esa opción; se corrigió a `run --rm` con la imagen ya construida y la prueba Linux pasó.
 
-## No verificado / pendiente
+## Pendientes al cierre histórico de etapa 1
 
 Flujo de cuenta → proyecto → upload autorizado → IA real → clip subtitulado → descarga y denegación a otro usuario; correo/Google/IA/social/pagos; carga/fairness por workspace; CSRF/sesiones/2FA; cancelación cooperativa; caída durante etapa activa; restauración integral de objetos/Redis/PITR; escaneo de imágenes/SBOM; producción y CI remoto. No hay resultados de tesis, clientes, ventas ni promesas de capacidad.
+
+## Entrega de análisis, 14 de octubre de 2026
+
+Ver [evidencia y comandos de análisis](stage-3-analysis.md). Pasaron localmente 23 tests unitarios/HTTP (lint/build incluidos), 19 de infraestructura, 35 de negocio, 7 de recuperación de análisis con proveedor explícito de tests y 5 del pipeline con whisper.cpp real. Los conteos del runner incluyen padres; no se suman mocks como inferencias reales. La primera aceptación de ocho pasos está verificada con cuenta/email local real, video sintético autorizado, ASR local real, intervalo manual, clip subtitulado, estado/descargas y aislamiento. Selección LLM/Deepgram externos, traducción y calidad de tesis siguen pendientes. CI de esta entrega se registra después de publicarla y comprobar su ejecución; los runs anteriores no acreditan estos cambios.

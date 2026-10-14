@@ -1,0 +1,9 @@
+{
+  "name":"@autoclipper/content-analysis-service","version":"0.3.0","private":true,"type":"module",
+  "scripts":{"start":"node dist/main.js"},
+  "dependencies":{
+    "@autoclipper/configuration":"0.1.0","@autoclipper/observability":"0.1.0","@autoclipper/http-security":"0.1.0","@autoclipper/api-contracts":"0.1.0",
+    "@nestjs/common":"12.1.3","@nestjs/core":"12.1.3","@nestjs/platform-express":"12.1.3","@nestjs/swagger":"12.0.2",
+    "reflect-metadata":"0.2.2","rxjs":"7.8.2","pg":"8.23.1","drizzle-orm":"0.45.4","zod":"4.6.7","bullmq":"6.3.14","ioredis":"5.11.1","@aws-sdk/client-s3":"3.1151.0","@smithy/node-http-handler":"4.12.1"
+  }
+}

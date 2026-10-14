@@ -22,11 +22,42 @@ services:
       IDENTITY_DATABASE_URL: postgresql://autoclipper_identity_runtime:${IDENTITY_RUNTIME_PASSWORD}@postgres:5432/autoclipper_identity
       WORKSPACE_DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
       PROJECT_DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project
+      ANALYSIS_DATABASE_URL: postgresql://autoclipper_analysis_runtime:${ANALYSIS_RUNTIME_PASSWORD}@postgres:5432/autoclipper_analysis
     depends_on:
       gateway: {condition: service_healthy}
       project: {condition: service_healthy}
       renderer: {condition: service_healthy}
+      analysis: {condition: service_healthy}
     mem_limit: 512m
+    cpus: 1
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+  analysis-verification:
+    image: autoclipper-verification:0.2.0
+    command: ['node','--test','--test-concurrency=1','tests/analysis-integration/*.test.mjs']
+    environment:
+      NODE_ENV: development
+      HOST: 127.0.0.1
+      PORT: '3106'
+      COOKIE_AUTH: 'false'
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY}
+      DATABASE_URL: postgresql://autoclipper_analysis_runtime:${ANALYSIS_RUNTIME_PASSWORD}@postgres:5432/autoclipper_analysis
+      MIGRATION_DATABASE_URL: postgresql://autoclipper_analysis_owner:${ANALYSIS_OWNER_PASSWORD}@postgres:5432/autoclipper_analysis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      S3_ENDPOINT: http://storage:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: autoclipper-media
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      ANALYSIS_INTEGRATION_ISOLATED: 'true'
+      LOG_LEVEL: silent
+    depends_on:
+      migrate-analysis: {condition: service_completed_successfully}
+      storage-init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    mem_limit: 384m
     cpus: 1
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']

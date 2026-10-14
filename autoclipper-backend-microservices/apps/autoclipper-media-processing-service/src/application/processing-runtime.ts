@@ -1,6 +1,6 @@
 import {Injectable,type OnModuleInit,type OnModuleDestroy,ConflictException,NotFoundException,BadRequestException} from "@nestjs/common";
 import {loadMediaConfig} from "@autoclipper/configuration";
-import {processingSpec,type ProcessingSpec,type ProcessingStatus} from "@autoclipper/api-contracts";
+import {internalProcessingSpec,type ValidatedProcessingSpec,type ProcessingStatus} from "@autoclipper/api-contracts";
 import {digest} from "@autoclipper/http-security";
 import {logger,recordDerivativeAttempt} from "@autoclipper/observability";
 import {Queue,Worker,UnrecoverableError,type Job} from "bullmq";
@@ -12,7 +12,7 @@ import {InspectionError,type MediaMetadata} from "../domain/inspection.js";
 import {validateProcessingSource,outputFiles,outputPrefix} from "../domain/processing.js";
 
 export const PROCESSING_QUEUE="media-derivatives-v1";
-type Task={id:string;workspace_id:string;inspection_id:string;spec:ProcessingSpec;request_hash:string;status:ProcessingStatus["status"];correlation_id:string;attempts:number;cancel_requested:boolean;cleanup_pending:boolean;result:ProcessingStatus["result"];error_code:string|null;started_at:Date|null;finished_at:Date|null};
+type Task={id:string;workspace_id:string;inspection_id:string;spec:ValidatedProcessingSpec;request_hash:string;status:ProcessingStatus["status"];correlation_id:string;attempts:number;cancel_requested:boolean;cleanup_pending:boolean;result:ProcessingStatus["result"];error_code:string|null;started_at:Date|null;finished_at:Date|null};
 type Source={id:string;workspace_id:string;object_key:string;expected_bytes:number;expected_etag:string;expected_sha256:string|null;status:string;result:MediaMetadata};
 @Injectable()
 export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
@@ -39,7 +39,7 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
     },1000);this.timer.unref();
   }
   async submit(data:{id:string;workspaceId:string;inspectionId:string;spec:unknown;correlationId:string;cancelRequested?:boolean}) {
-    const parsed=processingSpec.safeParse(data.spec);if(!parsed.success)throw new BadRequestException();
+    const parsed=internalProcessingSpec.safeParse(data.spec);if(!parsed.success)throw new BadRequestException();
     const hash=digest(JSON.stringify({inspectionId:data.inspectionId,spec:parsed.data}));
     const source=(await this.pool.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[data.inspectionId,data.workspaceId])).rows[0];
     if(!source?.expected_sha256)throw new ConflictException();
@@ -124,7 +124,7 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
         if(task.cleanup_pending)await this.cleanup(task);
         const source=(await lease.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[task.inspection_id,task.workspace_id])).rows[0];
         if(!source?.expected_sha256)throw new InspectionError("SOURCE_NOT_VALIDATED",false);
-        const spec=processingSpec.parse(task.spec);
+        const spec=internalProcessingSpec.parse(task.spec);
         const result=await produceDerivative(this.s3,this.config,{id,workspaceId:task.workspace_id,spec},{objectKey:source.object_key,workspaceId:source.workspace_id,expectedBytes:source.expected_bytes,expectedEtag:source.expected_etag,expectedSha256:source.expected_sha256},abort.signal);
         const succeeded=await lease.query("UPDATE processing_tasks SET status='succeeded',result=$2,finished_at=now(),cleanup_pending=false WHERE id=$1 AND NOT cancel_requested AND status='running' AND attempts=$3 RETURNING id",[id,result,attempt]);
         if(!succeeded.rows[0])throw new InspectionError("CANCELLED",false);

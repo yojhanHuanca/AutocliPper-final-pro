@@ -39,6 +39,8 @@ services:
       WORKSPACE_OWNER_PASSWORD: ${WORKSPACE_OWNER_PASSWORD}
       WORKSPACE_RUNTIME_PASSWORD: ${WORKSPACE_RUNTIME_PASSWORD}
       PROJECT_OWNER_PASSWORD: ${PROJECT_OWNER_PASSWORD}
+      ANALYSIS_OWNER_PASSWORD: ${ANALYSIS_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      ANALYSIS_RUNTIME_PASSWORD: ${ANALYSIS_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
       PROJECT_RUNTIME_PASSWORD: ${PROJECT_RUNTIME_PASSWORD}
     volumes: ['./postgres/init-business.sh:/init-business.sh:ro']
     entrypoint: ['bash','/init-business.sh']
@@ -116,6 +118,7 @@ services:
       PORT: '3004'
       DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project
       MEDIA_URL: http://media:3001
+      ANALYSIS_URL: http://analysis:3006
       S3_ENDPOINT: http://storage:9000
       S3_PUBLIC_ENDPOINT: http://127.0.0.1:19000
       S3_REGION: us-east-1
@@ -132,3 +135,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+
+  migrate-analysis:
+    image: autoclipper-backend:0.2.0
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://autoclipper_analysis_owner:${ANALYSIS_OWNER_PASSWORD}@postgres:5432/autoclipper_analysis
+    command: ['node','scripts/migrate-service.mjs','analysis']
+    depends_on:
+      business-databases: {condition: service_completed_successfully}
+  analysis:
+    <<: *application
+    command: ['node','apps/autoclipper-content-analysis-service/dist/main.js']
+    environment:
+      <<: *environment
+      COOKIE_AUTH: 'false'
+      PORT: '3006'
+      DATABASE_URL: postgresql://autoclipper_analysis_runtime:${ANALYSIS_RUNTIME_PASSWORD}@postgres:5432/autoclipper_analysis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      S3_ENDPOINT: http://storage:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: autoclipper-media
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      TEMP_DIR: /tmp/analysis
+      PAID_AI_ENABLED: 'false'
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=160m,uid=1000,gid=1000']
+    depends_on:
+      migrate-analysis: {condition: service_completed_successfully}
+      storage-init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3006/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    stop_grace_period: 330s

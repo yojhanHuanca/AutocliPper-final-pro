@@ -32,7 +32,7 @@ Evento interno de inspección (validación estricta, propiedades adicionales pro
 {"version":1,"taskId":"893fa48b-8dc2-4b48-8c39-9243b756f6df","correlationId":"d1bf700a-7f1c-4ca2-9b27-a71c62e34517"}
 ```
 
-Cola `autoclipper-media-inspection-v1`; jobId = taskId. Fuente autoritativa del workspace, clave, bytes y ETag: tabla privada del servicio. Solo operadores/pruebas internas crean task+outbox por ahora. El evento no concede permisos ni ejecuta herramientas indicadas por el cliente.
+Cola `autoclipper-media-inspection-v1`; jobId = taskId. Fuente autoritativa del workspace, clave, bytes y ETag: tabla privada del servicio. Project crea intenciones autorizadas; la interfaz de media es privada. El evento no concede permisos ni ejecuta herramientas indicadas por el cliente.
 
 ## Políticas de Angular y ampliaciones pendientes
 
@@ -40,6 +40,12 @@ Cola `autoclipper-media-inspection-v1`; jobId = taskId. Fuente autoritativa del 
 - Idempotency-Key con scope usuario+workspace+operación, hash de solicitud y resultado persistido para creación de trabajos/exportaciones/publicaciones. Reutilizar clave con otro cuerpo produce 409.
 - SSE autenticado por sesión; eventos con ID persistido, `Last-Event-ID`, reconexión y GET de estado como alternativa. Aún no implementado; no inventar progreso.
 - Sesiones actuales en cookies HttpOnly, SameSite=Lax, Secure/prefijo __Host- en producción; refresh rotatorio y revocación por familia ante reutilización. No guardar refresh en localStorage. Gateway/business habilitan credentials=true para el origen exacto; multimedia conserva CORS sin cookies porque no publica operaciones de usuario.
-- Origin y CSRF firmado se verifican ya en operaciones mutables. Angular envía withCredentials y X-CSRF-Token solo al host de la API; el token preautenticación permite proteger login/registro. Definir dominios/HTTPS antes de producción. Google sigue pendiente: su futura validación de issuer/audience/expiry/nonce será de servidor.
+- Origin y CSRF firmado se verifican ya en operaciones mutables. Angular envía withCredentials y X-CSRF-Token solo al host de la API; el token preautenticación permite proteger login/registro. Definir dominios/HTTPS antes de producción. Google ya valida issuer/audience/expiry/nonce en servidor; su aceptación con cuenta real y orígenes Cloud sigue pendiente.
 
-Angular consulta la inspección mediante `/v1/uploads/:id`, a través de autorización en project y workspace; la interfaz interna multimedia no se publica. Proveedores de Google/IA/social/pagos siguen sin configurar.
+Angular consulta la inspección mediante `/v1/uploads/:id`, a través de autorización en project y workspace; la interfaz interna multimedia no se publica. El client ID público de Google está configurado localmente, sin aceptación externa. whisper.cpp local está verificado; Deepgram/Ollama/social/pagos siguen sin configuración o aceptación real.
+
+## Análisis y render desde transcripción
+
+El OpenAPI público y los tipos generados incluyen `/analyses/providers`, `/processing/{id}/analyses`, `/analyses/{id}` y `/analyses/{id}/renders`. Selección y render manual/propuesta son variantes `oneOf`. Errores seguros incluyen TRANSCRIPTION_NOT_CONFIGURED, SELECTION_NOT_CONFIGURED, AI_BUDGET_NOT_AUTHORIZED, LOCAL_TRANSCRIPTION_DURATION_LIMIT e INVALID_SELECTION_REQUEST. Fechas UTC ISO 8601; tiempos de subtítulos absolutos de fuente, segundos; costos USD estimados solo externos. Ver ejemplos, límites y estados en [stage-3-analysis.md](stage-3-analysis.md).
+
+Cola `content-analysis-v1`: evento estricto `{"version":1,"jobId":"UUID"}`; jobId BullMQ = UUID persistido. No contiene texto, URLs, claves de almacenamiento ni instrucciones ejecutables. El worker consulta únicamente su base de datos; la fila guarda fuente/spec/revisiones autoritativas. Contrato privado de operaciones generado en `contracts/analysis.openapi.json`; endpoints internos no se mezclan en el documento público.

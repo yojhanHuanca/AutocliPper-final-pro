@@ -54,3 +54,9 @@ Fuentes para próximos adaptadores, **sin integración funcional anunciada**:
 - [YouTube videos](https://developers.google.com/youtube/v3/docs/videos), [insert](https://developers.google.com/youtube/v3/docs/videos/insert): las páginas consultadas presentan información distinta sobre restricciones de proyectos no verificados; revalidar con el proyecto real antes de implementar y publicar. No se asume visibilidad pública disponible.
 
 Instagram, Twitch y Kick requieren revisión oficial adicional en su etapa. No hay importador universal ni descarga de plataformas implementada.
+
+## IA implementada en etapa 3
+
+whisper.cpp v1.9.5, commit d1be6fde11ac6e0407606b4e42fe72d34add8037, compilación reporta 1.9.5-dev. Modelo tiny multilingual, revisión HF 5359861c739e955e79d9a303bcbc70fb988958b1, bytes y SHA-256 fijados en instalador/Compose. Compilación opcional CPU con CMake 3.25.1-1 y snapshot Debian firmado. [Release upstream](https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5), [recursos y tamaños](https://github.com/ggml-org/whisper.cpp#memory-usage).
+
+Deepgram usa API Listen v1, Nova-3 y diarize_model=v2; requiere revisión concreta y precio/budget autorizados, sin integración externa verificada. Ollama usa generate JSON schema y digest comprobado en tags; servidor/modelo pendientes, sin LLM descargado. [Deepgram API](https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded), [Ollama generate](https://docs.ollama.com/api/generate), [Ollama tags](https://docs.ollama.com/api/tags), [structured outputs](https://docs.ollama.com/capabilities/structured-outputs). Fijaciones exactas, hashes, límites y evidencia en [stage-3-analysis.md](stage-3-analysis.md).

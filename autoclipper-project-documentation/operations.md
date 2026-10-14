@@ -48,3 +48,9 @@ Propuesta pendiente: resultados operativos y eventos 30 días, jobs BullMQ termi
 ## Repositorio remoto
 
 El repositorio es independiente, rama main, remoto https://github.com/yojhanHuanca/AutocliPper-final-pro. Su visibilidad privada fue confirmada mediante API antes de publicar. La etapa 1 se publicó autorizadamente en cf6912b y su CI remoto 38501990994 pasó. Los cambios de etapa 2 se publican solo tras las pruebas locales; el resultado remoto se registra en la evidencia correspondiente. No se creó ni cambió infraestructura de producción.
+
+## Análisis: recuperación y conservación
+
+Respaldar también `autoclipper_analysis` y `autoclipper_project`, las fuentes/derivados S3 y configuración de revisión/digest. Antes de restaurar, mantener `ANALYSIS_WORKER_ENABLED=false` y `PAID_AI_ENABLED=false`; revisar intentos externos y efectos posteriores al punto de restauración antes de habilitar proveedores. Una restauración anterior al registro de un intento no prueba que el proveedor no cobró. No borrar ni reenviar automáticamente intentos `started/unknown`. La interfaz administrativa de conciliación aún está pendiente. Los estados terminales y transcripciones conservadas permiten recuperar colas sin repetir resultados ya persistidos. Los hashes de modelo deben coincidir o el trabajo falla como MODEL_CONFIGURATION_CHANGED.
+
+Temporales de análisis se eliminan al terminar/cancelar/fallar. Transcripciones y propuestas permanecen en PostgreSQL; exportación/eliminación integral de usuario y retención automática aún no implementadas. Los ensayos de aceptación dejan cuentas sintéticas, proyectos en papelera y resultados de demostración; no se afirma purga física de sus objetos. Los fixtures de recuperación sí retiran exclusivamente sus propios jobs, filas y objetos.

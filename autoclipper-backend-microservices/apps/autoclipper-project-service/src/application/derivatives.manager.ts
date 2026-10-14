@@ -6,19 +6,26 @@ import {z} from "zod";
 import {GetObjectCommand,HeadObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import {body,digest,uuid,authenticatedUser,requireCsrf,internalJson,type ServiceConfig} from "@autoclipper/http-security";
-import {processingSpec,processingStatus,type ProcessingStatus,type ProcessingSpec} from "@autoclipper/api-contracts";
+import {processingSpec,internalProcessingSpec,processingStatus,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
 
 type Upload={id:string;project_id:string;workspace_id:string;state:string};
-type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
+type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
 const terminal=(status:string)=>["succeeded","failed","cancelled"].includes(status);
 export class DerivativesManager {
   private cursor:string|undefined;
   constructor(private readonly pool:pg.Pool,private readonly config:ServiceConfig,private readonly mediaUrl:string,private readonly bucket:string,private readonly s3:S3Client,private readonly signer:S3Client,private readonly authorize:(req:Request,id:string,minimum:"reader"|"editor")=>Promise<Upload>){}
   private async tx<T>(work:(client:pg.PoolClient)=>Promise<T>){const client=await this.pool.connect();try{await client.query("BEGIN");const result=await work(client);await client.query("COMMIT");return result;}catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}}
   async begin(req:Request,uploadId:string,input:unknown,correlationId:string) {
-    requireCsrf(req,this.config);
-    const spec=body(processingSpec,input),upload=await this.authorize(req,uploadId,"editor");
+    requireCsrf(req,this.config);return this.beginValidated(req,uploadId,body(processingSpec,input),correlationId);
+  }
+  async beginFromTranscript(req:Request,uploadId:string,input:unknown,correlationId:string){
+    requireCsrf(req,this.config);const spec=body(internalProcessingSpec,input);
+    if(spec.kind!=="clip"||spec.subtitles?.provenance!=="transcript")throw new BadRequestException();
+    return this.beginValidated(req,uploadId,spec,correlationId);
+  }
+  private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string){
+    const upload=await this.authorize(req,uploadId,"editor");
     if(upload.state!=="confirmed")throw new ConflictException();
     const source=await internalJson<{status:string;result?:{durationSeconds:number;audioCodec:string|null;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
     if(source.status!=="succeeded"||!source.result)throw new ConflictException();
@@ -39,6 +46,12 @@ export class DerivativesManager {
       await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId]);
       return{id,status:"queued"};
     });
+  }
+  async audioForAnalysis(req:Request,id:string){
+    const row=await this.synchronize(await this.resource(req,id,"editor"));
+    const audio=row.result?.artifacts.find(artifact=>artifact.kind==="audio");
+    if(row.status!=="succeeded"||row.spec.kind!=="audio"||!audio||!row.result)throw new ConflictException();
+    return {uploadId:row.upload_id,projectId:row.project_id,workspaceId:row.workspace_id,source:{audioProcessingId:row.id,objectKey:audio.objectKey,expectedBytes:audio.bytes,expectedEtag:audio.etag,expectedSha256:audio.sha256,durationSeconds:row.result.durationSeconds}};
   }
   private async resource(req:Request,id:string,minimum:"reader"|"editor"="reader") {
     const row=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE id=$1",[id])).rows[0];

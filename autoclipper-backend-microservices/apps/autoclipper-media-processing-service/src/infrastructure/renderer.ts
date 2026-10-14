@@ -5,13 +5,13 @@ import {join} from "node:path";
 import {createHash} from "node:crypto";
 import {PutObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import type {MediaConfig} from "@autoclipper/configuration";
-import type {ProcessingSpec,ProcessingArtifact,ProcessingStatus} from "@autoclipper/api-contracts";
+import type {ValidatedProcessingSpec,ProcessingArtifact,ProcessingStatus} from "@autoclipper/api-contracts";
 import {InspectionError} from "../domain/inspection.js";
 import {validateProcessingSource,subtitles,outputPrefix} from "../domain/processing.js";
 import {withInspectedSource,probeLocal} from "./probe.js";
 
 const execute=promisify(execFile);
-export async function produceDerivative(s3:S3Client,config:MediaConfig,job:{id:string;workspaceId:string;spec:ProcessingSpec},source:Parameters<typeof withInspectedSource>[2],signal:AbortSignal):Promise<NonNullable<ProcessingStatus["result"]>> {
+export async function produceDerivative(s3:S3Client,config:MediaConfig,job:{id:string;workspaceId:string;spec:ValidatedProcessingSpec},source:Parameters<typeof withInspectedSource>[2],signal:AbortSignal):Promise<NonNullable<ProcessingStatus["result"]>> {
   return withInspectedSource(s3,config,source,async(_path,directory,metadata)=>{
     validateProcessingSource(job.spec,metadata);
     const spec=job.spec;
@@ -21,7 +21,7 @@ export async function produceDerivative(s3:S3Client,config:MediaConfig,job:{id:s
     let args:string[];
     const files:{name:string;kind:ProcessingArtifact["kind"];contentType:ProcessingArtifact["contentType"]}[]=[];
     if(spec.kind==="audio") {
-      args=[...common,"-map","0:a:0","-vn","-ac","1","-ar","16000","-c:a","pcm_s16le","-t",String(metadata.durationSeconds),"-fs",String(limit),output];
+      args=[...common,"-map","0:a:0","-vn","-af","aresample=16000:async=1:first_pts=0,apad","-ac","1","-ar","16000","-c:a","pcm_s16le","-t",String(metadata.durationSeconds),"-fs",String(limit),output];
       files.push({name:output,kind:"audio",contentType:"audio/wav"});
     } else {
       common.splice(common.indexOf("-i"),0,"-ss",String(spec.startSeconds));

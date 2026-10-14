@@ -1,0 +1,4 @@
+{
+  "extends":"../../tsconfig.base.json","compilerOptions":{"rootDir":"src","outDir":"dist"},"include":["src/**/*.ts"],
+  "references":[{"path":"../../packages/autoclipper-configuration"},{"path":"../../packages/autoclipper-observability"},{"path":"../../packages/autoclipper-http-security"},{"path":"../../packages/autoclipper-api-contracts"}]
+}

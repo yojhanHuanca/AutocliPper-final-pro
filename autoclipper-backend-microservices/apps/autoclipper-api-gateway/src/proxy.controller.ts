@@ -20,6 +20,7 @@ export class ProxyController {
     "projects/*path",
     "uploads/*path",
     "processing/*path",
+    "analyses/*path",
   ])
   async forward(@Req() req: Request, @Res() res: Response) {
     const raw = req.originalUrl.split("?")[0] ?? "";

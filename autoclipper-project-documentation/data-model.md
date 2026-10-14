@@ -37,6 +37,10 @@ La migración `0000_*` fue generada con Drizzle Kit y se ejecuta con owner. Runt
 
 Las migraciones 0001–0003 agregan `users.preferences/profile_version`, `user_mfa` (secreto cifrado, alta pendiente y último paso TOTP), `recovery_codes` (hash/consumo), `privacy_requests` (tipo/estado/fechas, una solicitud requested por usuario/tipo), `security_audit` (usuario/acción/correlación/fecha) y `external_identities` (provider+subject único, user+provider único). El borrado de usuarios elimina las credenciales dependientes por FK; auditoría conserva eventos con usuario nulo. Eso no implementa la eliminación integral entre servicios. No se almacenan ID tokens de Google ni códigos de recuperación en texto claro.
 
+## Ampliación de análisis implementada
+
+Analysis posee su propia base/roles owner/runtime y migración `0000_content_analysis`: `analysis_jobs`, `analysis_outbox`, `transcripts` (único por job, idioma/modelo/revisión/SHA de audio y datos validados), `segment_selections` (único por job, modelo/digest/prompt/uso), `provider_attempts` (started/succeeded/failed/unknown y costo estimado) y `analysis_phase_attempts` (fase+intento único y tiempos/errores). Un intento externo incierto queda preservado para evitar cobros duplicados. Project añade `0004_analysis_requests` con audio/upload/proyecto/autor, spec/fuente inmutables, idempotencia y acuses; solo hay FK dentro de su propia base. La transcripción no expone claves S3. Retención y purga integral siguen pendientes. Ver [stage-3-analysis.md](stage-3-analysis.md).
+
 ## Diseño pendiente por servicio
 
 La entrega multimedia añade en media `processing_tasks` (fuente inspeccionada propia, spec, estado, intentos, cancelación/limpieza, resultado y fechas) y `processing_outbox`. Las restricciones exigen resultado solo al éxito y fecha de fin exactamente en estados terminales. Project añade `processing_requests` con idempotencia por autor, referencia de upload/proyecto, reserva, acuses de admisión/cancelación y conciliación terminal. No hay FK entre bases. Los detalles de cuota y borrado están en [stage-3-media.md](stage-3-media.md).

@@ -28,6 +28,10 @@ const derivativeDuration = new Histogram({name:'autoclipper_derivative_attempt_s
 const derivativeBytes = new Counter({name:'autoclipper_derivative_produced_bytes_total',help:'Bytes in successfully published derivative artifacts',labelNames:['operation'],registers:[registry]});
 export function recordDerivativeAttempt(operation:'clip'|'audio',status:'succeeded'|'failed'|'cancelled'|'retry',seconds:number,bytes=0){derivativeDuration.observe({operation,status},seconds);if(bytes>0)derivativeBytes.inc({operation},bytes);}
 
+const analysisDuration=new Histogram({name:'autoclipper_analysis_attempt_seconds',help:'Measured content analysis attempt duration',labelNames:['provider','status'],registers:[registry],buckets:[0.1,1,5,15,30,60,180,300,600]});
+const analysisAudioSeconds=new Counter({name:'autoclipper_analysis_source_seconds_total',help:'Source duration of successful analysis jobs; not a billing ledger',labelNames:['provider'],registers:[registry]});
+export function recordAnalysisAttempt(provider:'whisper_cpp'|'deepgram',status:'succeeded'|'failed'|'cancelled'|'retry',seconds:number,sourceSeconds=0){analysisDuration.observe({provider,status},seconds);if(sourceSeconds>0)analysisAudioSeconds.inc({provider},sourceSeconds);}
+
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
@@ -37,7 +41,7 @@ export class SafeExceptionFilter implements ExceptionFilter {
     if (status >= 500) logger.error({ code: 'REQUEST_FAILED', correlationId: response.locals['correlationId'], status });
     const detail = exception instanceof HttpException ? exception.getResponse() : undefined;
     const explicit = typeof detail === 'object' && detail !== null && 'code' in detail ? detail.code : undefined;
-    const safeCodes: Record<string, number> = { GOOGLE_NOT_CONFIGURED: 503, ACCOUNT_LINK_REQUIRED: 409 };
+    const safeCodes: Record<string, number> = { GOOGLE_NOT_CONFIGURED: 503, ACCOUNT_LINK_REQUIRED: 409, TRANSCRIPTION_NOT_CONFIGURED:503, SELECTION_NOT_CONFIGURED:503, AI_BUDGET_NOT_AUTHORIZED:503, LOCAL_TRANSCRIPTION_DURATION_LIMIT:400, INVALID_SELECTION_REQUEST:400 };
     const code = typeof explicit === 'string' && safeCodes[explicit] === status ? explicit : codes[status] ?? 'INTERNAL_ERROR';
     response.status(status).json({ code, message: 'Request could not be completed', correlationId: response.locals['correlationId'] });
   }

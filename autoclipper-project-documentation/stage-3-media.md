@@ -1,5 +1,7 @@
 # Entrega multimedia: audio y recortes explícitos
 
+Registro de la entrega multimedia previa. La ampliación con ASR real y subtítulos de transcripción está en [stage-3-analysis.md](stage-3-analysis.md).
+
 Alcance: extracción de audio WAV, recortes solicitados por un usuario, encuadre fijo, subtítulos aportados y descargas autorizadas. Esta entrega no genera transcripciones ni selecciona segmentos con IA. Los contratos usan `/v1` y una especificación inmutable con `version=1`.
 
 ## Recorrido y propiedad de datos

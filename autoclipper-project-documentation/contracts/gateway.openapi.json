@@ -5487,6 +5487,636 @@
           }
         ]
       }
+    },
+    "/v1/analyses/providers": {
+      "get": {
+        "operationId": "AnalysisController_providers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "transcription",
+                    "selection",
+                    "paidExecutionEnabled"
+                  ],
+                  "properties": {
+                    "transcription": {
+                      "type": "object",
+                      "required": [
+                        "whisper_cpp",
+                        "deepgram"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "whisper_cpp": {
+                          "type": "object",
+                          "required": [
+                            "configured",
+                            "maxSeconds",
+                            "diarization"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "maxSeconds": {
+                              "type": "integer"
+                            },
+                            "diarization": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "deepgram": {
+                          "type": "object",
+                          "required": [
+                            "configured",
+                            "maxSeconds",
+                            "diarization"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "maxSeconds": {
+                              "type": "integer"
+                            },
+                            "diarization": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "required": [
+                        "ollama"
+                      ],
+                      "properties": {
+                        "ollama": {
+                          "type": "object",
+                          "required": [
+                            "configured"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "paidExecutionEnabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/processing/{id}/analyses": {
+      "post": {
+        "operationId": "AnalysisController_begin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisSpecDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/analyses/{id}": {
+      "get": {
+        "operationId": "AnalysisController_status",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "AnalysisController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/analyses/{id}/renders": {
+      "post": {
+        "operationId": "AnalysisController_render",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ManualTranscriptRenderDto"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ProposalTranscriptRenderDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -6879,6 +7509,34 @@
           "aspect"
         ]
       },
+      "SubtitleResponseDto": {
+        "type": "object",
+        "properties": {
+          "provenance": {
+            "type": "string",
+            "enum": [
+              "user",
+              "transcript"
+            ]
+          },
+          "transcriptId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "cues": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubtitleCueDto"
+            }
+          }
+        },
+        "required": [
+          "provenance",
+          "cues"
+        ]
+      },
       "ProcessingSpecDto": {
         "type": "object",
         "properties": {
@@ -6914,7 +7572,7 @@
             ]
           },
           "subtitles": {
-            "$ref": "#/components/schemas/UserSubtitlesDto"
+            "$ref": "#/components/schemas/SubtitleResponseDto"
           }
         },
         "required": [
@@ -7024,6 +7682,477 @@
           "spec",
           "artifacts",
           "durationSeconds"
+        ]
+      },
+      "ManualTranscriptRenderDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "endSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Clip duration 0.1–120 seconds, within source."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "startSeconds",
+          "endSeconds",
+          "aspect"
+        ]
+      },
+      "ProposalTranscriptRenderDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "proposalIndex": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Index into the persisted real LLM proposals."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "proposalIndex",
+          "aspect"
+        ]
+      },
+      "NoSelectionDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "none"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "LlmSelectionDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "llm"
+            ]
+          },
+          "count": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "minSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120
+          },
+          "maxSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 2000,
+            "default": ""
+          }
+        },
+        "required": [
+          "mode",
+          "count",
+          "minSeconds",
+          "maxSeconds"
+        ]
+      },
+      "AnalysisSpecDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "whisper_cpp",
+              "deepgram"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "es",
+              "en"
+            ],
+            "default": "auto"
+          },
+          "selection": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/NoSelectionDto"
+              },
+              {
+                "$ref": "#/components/schemas/LlmSelectionDto"
+              }
+            ],
+            "description": "none preserves a real transcript without simulating AI segment selection."
+          }
+        },
+        "required": [
+          "version",
+          "provider"
+        ]
+      },
+      "TranscriptSegmentDto": {
+        "type": "object",
+        "properties": {
+          "startSeconds": {
+            "type": "number"
+          },
+          "endSeconds": {
+            "type": "number"
+          },
+          "text": {
+            "type": "string"
+          },
+          "speaker": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "startSeconds",
+          "endSeconds",
+          "text"
+        ]
+      },
+      "TranscriptDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "languageSource": {
+            "type": "string",
+            "enum": [
+              "detected",
+              "requested"
+            ]
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptSegmentDto"
+            }
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "modelSha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string",
+            "nullable": true
+          },
+          "estimatedExternalCostUsd": {
+            "type": "number",
+            "description": "Estimate of external API cost only; local compute is not free."
+          },
+          "diarization": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "languageSource",
+          "durationSeconds",
+          "segments",
+          "provider",
+          "model",
+          "revision",
+          "engineVersion",
+          "modelSha256",
+          "requestId",
+          "estimatedExternalCostUsd",
+          "diarization"
+        ]
+      },
+      "SegmentProposalDto": {
+        "type": "object",
+        "properties": {
+          "startSeconds": {
+            "type": "number"
+          },
+          "endSeconds": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "hashtags": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Indicative score; no guarantee of virality."
+          }
+        },
+        "required": [
+          "startSeconds",
+          "endSeconds",
+          "title",
+          "description",
+          "hashtags",
+          "explanation"
+        ]
+      },
+      "SelectionUsageDto": {
+        "type": "object",
+        "properties": {
+          "inputTokens": {
+            "type": "number"
+          },
+          "outputTokens": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "inputTokens",
+          "outputTokens"
+        ]
+      },
+      "SelectionResultDto": {
+        "type": "object",
+        "properties": {
+          "segments": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SegmentProposalDto"
+            }
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "ollama"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string",
+            "description": "Pinned model SHA-256."
+          },
+          "promptVersion": {
+            "type": "string",
+            "enum": [
+              "segment-selection-v1"
+            ]
+          },
+          "usage": {
+            "$ref": "#/components/schemas/SelectionUsageDto"
+          },
+          "estimatedExternalCostUsd": {
+            "type": "number",
+            "enum": [
+              0
+            ]
+          }
+        },
+        "required": [
+          "segments",
+          "provider",
+          "model",
+          "revision",
+          "promptVersion",
+          "usage",
+          "estimatedExternalCostUsd"
+        ]
+      },
+      "AnalysisPhaseDto": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "transcribing",
+              "selecting"
+            ]
+          },
+          "attempt": {
+            "type": "number"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "phase",
+          "attempt",
+          "startedAt",
+          "finishedAt",
+          "errorCode"
+        ]
+      },
+      "AnalysisStatusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "transcribing",
+              "selecting",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "transcript": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TranscriptDto"
+              }
+            ]
+          },
+          "selection": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SelectionResultDto"
+              }
+            ]
+          },
+          "providerOutcomeUnknown": {
+            "type": "boolean"
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnalysisPhaseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "attempts",
+          "errorCode",
+          "startedAt",
+          "finishedAt",
+          "transcript",
+          "selection",
+          "providerOutcomeUnknown",
+          "phases"
         ]
       },
       "ErrorResponse": {

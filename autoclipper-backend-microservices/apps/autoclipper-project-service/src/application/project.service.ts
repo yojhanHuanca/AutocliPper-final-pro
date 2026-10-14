@@ -37,6 +37,8 @@ import {
 import { logger } from "@autoclipper/observability";
 import { DerivativesManager } from "./derivatives.manager.js";
 
+import { AnalysisManager } from "./analysis.manager.js";
+
 type Project = {
   id: string;
   workspace_id: string;
@@ -92,6 +94,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   readonly s3: S3Client;
   readonly signer: S3Client;
   readonly derivatives: DerivativesManager;
+  readonly analyses: AnalysisManager;
   private timer: NodeJS.Timeout | undefined;
   private working: Promise<void> | undefined;
   constructor() {
@@ -114,6 +117,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     this.s3 = new S3Client({ ...options, endpoint });
     this.signer = new S3Client({ ...options, endpoint: publicEndpoint });
     this.derivatives = new DerivativesManager(this.pool,this.config,this.mediaUrl,this.bucket,this.s3,this.signer,(req,id,minimum)=>this.upload(req,id,minimum));
+    this.analyses=new AnalysisManager(this.pool,this.config,process.env["ANALYSIS_URL"]??"http://127.0.0.1:3006",this.derivatives,(req,id,minimum)=>this.upload(req,id,minimum));
   }
   async onModuleInit() {
     this.pool.on("error", () =>
@@ -660,6 +664,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   }
   private async dispatch() {
     await this.derivatives.dispatch();
+    await this.analyses.dispatch();
     const rows = await this.pool.query<Upload & { correlation_id: string }>(
       "SELECT u.*,r.correlation_id FROM inspection_requests r JOIN uploads u ON u.id=r.upload_id WHERE r.delivered_at IS NULL ORDER BY r.created_at LIMIT 25",
     );

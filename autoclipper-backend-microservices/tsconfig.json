@@ -33,6 +33,9 @@
     },
     {
       "path": "apps/autoclipper-project-service"
+    },
+    {
+      "path": "apps/autoclipper-content-analysis-service"
     }
   ]
 }

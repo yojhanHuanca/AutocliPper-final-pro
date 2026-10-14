@@ -95,3 +95,9 @@ npm run client:types
 Revisar siempre SQL generado. `client:types` genera tipos de OpenAPI, no una aplicación Angular ni un cliente HTTP completo. Angular podrá consumirlos mediante HttpClient y sus interceptores. No editar a mano los archivos generados.
 
 Parada conservando datos: `docker compose --profile app down`. No usar `down -v` sobre datos necesarios. Los logs pueden consultarse con `docker compose logs --tail 100 media gateway`; no publicar `.env` ni la salida completa de `docker compose config`, porque expande secretos.
+
+## ASR local opcional
+
+Ejecutar `node setup-stage2.mjs` en infraestructura agrega credenciales nuevas de análisis sin imprimirlas ni sustituir archivos existentes. `node setup-analysis-model.mjs` descarga/verifica solo tiny (74.1 MiB). Usar `compose.analysis-local.yaml` junto con compose.yaml/compose.business.yaml para habilitarlo. El stack base no descarga modelos ni habilita pago. Comandos de construcción, prueba real y configuración: [stage-3-analysis.md](stage-3-analysis.md).
+
+La suite de recuperación de análisis usa proveedores explícitos de tests con PostgreSQL/Redis/S3 reales. Detener `analysis` antes de `run --rm analysis-verification` con compose.business-tests.yaml; restaurarlo con el override local después. No ejecutar sus fixtures contra otro worker de análisis activo.

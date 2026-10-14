@@ -31,6 +31,8 @@ services:
       WORKSPACE_OWNER_PASSWORD: ${WORKSPACE_OWNER_PASSWORD:?Run setup-stage2.mjs}
       WORKSPACE_RUNTIME_PASSWORD: ${WORKSPACE_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
       PROJECT_OWNER_PASSWORD: ${PROJECT_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      ANALYSIS_OWNER_PASSWORD: ${ANALYSIS_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      ANALYSIS_RUNTIME_PASSWORD: ${ANALYSIS_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
       PROJECT_RUNTIME_PASSWORD: ${PROJECT_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
     ports: ['127.0.0.1:15432:5432']
     volumes: ['postgres-data:/var/lib/postgresql', './postgres/init-media.sh:/docker-entrypoint-initdb.d/10-media.sh:ro','./postgres/init-business.sh:/docker-entrypoint-initdb.d/20-business.sh:ro']

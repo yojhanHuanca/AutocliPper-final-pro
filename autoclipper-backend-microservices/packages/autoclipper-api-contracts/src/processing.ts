@@ -7,20 +7,21 @@ const cue = z.object({
   endSeconds: seconds,
   text: z.string().trim().min(1).max(500).refine(value => !/[<>\\{}]/u.test(value) && [...value].every(character => character==="\n" || character.charCodeAt(0)>=32)),
 }).strict().refine(value => value.endSeconds - value.startSeconds >= 0.01);
-const clip = z.object({
-  version: z.literal(1), kind: z.literal("clip"), startSeconds: seconds, endSeconds: seconds,
-  aspect: z.enum(["source","vertical","square","horizontal"]),
-  subtitles: z.object({ provenance: z.literal("user"), cues: z.array(cue).min(1).max(200) }).strict().optional(),
-}).strict().superRefine((value, context) => {
-  if (value.endSeconds - value.startSeconds < 0.1 || value.endSeconds - value.startSeconds > 120) context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
-  let previous = value.startSeconds;
-  for (const caption of value.subtitles?.cues ?? []) {
-    if (caption.startSeconds < previous || caption.endSeconds > value.endSeconds) context.addIssue({code:"custom",message:"Cues must be ordered, non-overlapping and contained in the requested clip"});
-    previous = caption.endSeconds;
-  }
-});
-export const processingSpec = z.union([z.object({version:z.literal(1),kind:z.literal("audio")}).strict(),clip]);
-export type ProcessingSpec = z.infer<typeof processingSpec>;
+const clipFields={version:z.literal(1),kind:z.literal("clip"),startSeconds:seconds,endSeconds:seconds,aspect:z.enum(["source","vertical","square","horizontal"])};
+const userSubtitles=z.object({provenance:z.literal("user"),cues:z.array(cue).min(1).max(200)}).strict();
+const transcriptSubtitles=z.object({provenance:z.literal("transcript"),transcriptId:z.uuid(),cues:z.array(cue).min(1).max(200)}).strict();
+function clipRules(value:{startSeconds:number;endSeconds:number;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
+  if(value.endSeconds-value.startSeconds<0.1||value.endSeconds-value.startSeconds>120)context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
+  let previous=value.startSeconds;
+  for(const caption of value.subtitles?.cues??[]){if(caption.startSeconds<previous||caption.endSeconds>value.endSeconds)context.addIssue({code:"custom",message:"Cues must be ordered, non-overlapping and contained in the requested clip"});previous=caption.endSeconds;}
+}
+const audio=z.object({version:z.literal(1),kind:z.literal("audio")}).strict();
+const clip=z.object({...clipFields,subtitles:userSubtitles.optional()}).strict().superRefine(clipRules);
+const internalClip=z.object({...clipFields,subtitles:z.union([userSubtitles,transcriptSubtitles]).optional()}).strict().superRefine(clipRules);
+export const processingSpec=z.union([audio,clip]);
+export type ProcessingSpec=z.infer<typeof processingSpec>;
+export const internalProcessingSpec=z.union([audio,internalClip]);
+export type ValidatedProcessingSpec=z.infer<typeof internalProcessingSpec>;
 export const artifactSchema = z.object({kind:z.enum(["video","audio","srt","vtt"]),objectKey:z.string().max(512),bytes:z.number().int().positive().max(134217728),sha256:z.string().regex(/^[a-f0-9]{64}$/),etag:z.string().min(1).max(200),contentType:z.enum(["video/mp4","audio/wav","application/x-subrip","text/vtt"])}).strict();
 export type ProcessingArtifact = z.infer<typeof artifactSchema>;
 export const processingStatus = z.object({id:z.uuid(),status:z.enum(["queued","running","succeeded","failed","cancelled"]),attempts:z.number().int().nonnegative(),errorCode:z.string().nullable(),startedAt:z.string().nullable(),finishedAt:z.string().nullable(),cleanupPending:z.boolean(),result:z.object({artifacts:z.array(artifactSchema).max(3),durationSeconds:z.number().positive(),width:z.number().int().positive().optional(),height:z.number().int().positive().optional(),sampleRate:z.number().int().positive().optional()}).strict().nullable()}).strict();
@@ -35,13 +36,18 @@ export class UserSubtitlesDto {
   @ApiProperty({enum:["user"]}) provenance!: string;
   @ApiProperty({type:[SubtitleCueDto],maxItems:200}) cues!: SubtitleCueDto[];
 }
+export class SubtitleResponseDto {
+  @ApiProperty({enum:["user","transcript"]}) provenance!: string;
+  @ApiPropertyOptional({format:"uuid",readOnly:true}) transcriptId?: string;
+  @ApiProperty({type:[SubtitleCueDto],maxItems:200}) cues!: SubtitleCueDto[];
+}
 export class ProcessingSpecDto {
   @ApiProperty({enum:[1]}) version!: number;
   @ApiProperty({enum:["audio","clip"]}) kind!: string;
   @ApiPropertyOptional({minimum:0}) startSeconds?: number;
   @ApiPropertyOptional({minimum:0,description:"Clip length must be 0.1–120 seconds and fit the source."}) endSeconds?: number;
   @ApiPropertyOptional({enum:["source","vertical","square","horizontal"]}) aspect?: string;
-  @ApiPropertyOptional({type:UserSubtitlesDto}) subtitles?: UserSubtitlesDto;
+  @ApiPropertyOptional({type:SubtitleResponseDto}) subtitles?: SubtitleResponseDto;
 }
 export class AudioProcessingSpecDto {
   @ApiProperty({enum:[1]}) version!: number;

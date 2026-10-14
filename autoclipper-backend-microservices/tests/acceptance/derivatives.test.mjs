@@ -67,6 +67,13 @@ test("authorized user-specified clips, real burned subtitles, WAV extraction and
       const after=await alice.c.request(`/projects/storage?workspaceId=${workspace.value.id}`);assert.equal(after.value.reservedBytes,0);assert.equal(after.value.usedBytes,before.value.usedBytes);
       assert.equal((await alice.c.request(`/processing/${created.value.id}`,"DELETE")).status,409);
     });
+    await t.test("unconfigured analysis is explicit and cannot accept another user's audio",async()=>{
+      const providers=await alice.c.request('/analyses/providers');assert.equal(providers.status,200);assert.equal(providers.value.transcription.deepgram.configured,false);assert.equal(providers.value.paidExecutionEnabled,false);
+      const spec={version:1,provider:'deepgram',language:'auto',selection:{mode:'none'}};
+      assert.equal((await bob.c.request(`/processing/${audioId}/analyses`,'POST',spec,{'idempotency-key':randomUUID()})).status,403);
+      const result=await alice.c.request(`/processing/${audioId}/analyses`,'POST',spec,{'idempotency-key':randomUUID()});assert.equal(result.status,503);assert.equal(result.value.code,'TRANSCRIPTION_NOT_CONFIGURED');assert.ok(result.value.correlationId);
+      assert.equal((await alice.c.request(`/processing/${clipId}/analyses`,'POST',spec,{'idempotency-key':randomUUID()})).status,409);
+    });
     await t.test("another user cannot inspect, cancel, list or sign a download; trash blocks new URLs",async()=>{
       for(const id of [clipId,audioId]){
         assert.equal((await bob.c.request(`/processing/${id}`)).status,403);
