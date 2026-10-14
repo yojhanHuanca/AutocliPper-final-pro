@@ -115,3 +115,5 @@ docker compose -f compose.yaml -f compose.business.yaml -f compose.analysis-loca
 ```
 
 `analysis-verification` requiere los demás workers de análisis detenidos; usa fixtures únicamente dentro del proceso de tests. CI ejecuta esa suite después de detener el servicio de análisis. CI base no descarga modelos ni acredita ASR real: esa aceptación es la prueba local opt-in anterior.
+
+CI remoto: commit `a392e6d709cf4361c461e06de1634f5b1b04d500`, [run 38621706578](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38621706578), **quality / infrastructure / business aprobados**. Se comprobaron los pasos de contratos vigentes, pruebas reales de dependencias/negocio y recuperación de análisis. Repositorio privado confirmado antes del push. Los modelos y configuraciones locales permanecen ignorados; escaneo de 184 archivos sin coincidencias de secretos configurados.
