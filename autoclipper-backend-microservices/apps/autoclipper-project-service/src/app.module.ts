@@ -4,5 +4,6 @@ import { ProjectController } from "./interfaces/project.controller.js";
 import { DerivativesController } from "./interfaces/derivatives.controller.js";
 import { AnalysisController } from "./interfaces/analysis.controller.js";
 import { EditorController } from "./interfaces/editor.controller.js";
-@Module({ providers: [ProjectService], controllers: [ProjectController,DerivativesController,AnalysisController,EditorController] })
+import { CollaborationController } from "./interfaces/collaboration.controller.js";
+@Module({ providers: [ProjectService], controllers: [ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController] })
 export class AppModule {}

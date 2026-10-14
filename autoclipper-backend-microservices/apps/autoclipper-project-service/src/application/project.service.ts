@@ -40,6 +40,7 @@ import { DerivativesManager } from "./derivatives.manager.js";
 import { AnalysisManager } from "./analysis.manager.js";
 
 import { EditorManager } from "./editor.manager.js";
+import { CollaborationManager } from "./collaboration.manager.js";
 
 type Project = {
   id: string;
@@ -98,6 +99,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   readonly derivatives: DerivativesManager;
   readonly analyses: AnalysisManager;
   readonly editor: EditorManager;
+  readonly collaboration: CollaborationManager;
   private timer: NodeJS.Timeout | undefined;
   private working: Promise<void> | undefined;
   constructor() {
@@ -122,6 +124,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     this.derivatives = new DerivativesManager(this.pool,this.config,this.mediaUrl,this.bucket,this.s3,this.signer,(req,id,minimum)=>this.upload(req,id,minimum));
     this.analyses=new AnalysisManager(this.pool,this.config,process.env["ANALYSIS_URL"]??"http://127.0.0.1:3006",this.derivatives,(req,id,minimum)=>this.upload(req,id,minimum));
     this.editor=new EditorManager(this.pool,this.config,this.derivatives,this.analyses,(req,id,minimum)=>this.upload(req,id,minimum));
+    this.collaboration=new CollaborationManager(this.pool,this.config,this.derivatives,(req,id,minimum)=>this.upload(req,id,minimum));
   }
   async onModuleInit() {
     this.pool.on("error", () =>
@@ -154,7 +157,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   private async project(
     req: Request,
     id: string,
-    minimum: "reader" | "editor" = "reader",
+    minimum: "reader" | "editor" | "admin" = "reader",
   ) {
     const user = await authenticatedUser(req, this.config);
     const row = (
@@ -170,7 +173,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   private async upload(
     req: Request,
     id: string,
-    minimum: "reader" | "editor" = "reader",
+    minimum: "reader" | "editor" | "admin" = "reader",
   ) {
     const row = (
       await this.pool.query<Upload>("SELECT * FROM uploads WHERE id=$1", [id])

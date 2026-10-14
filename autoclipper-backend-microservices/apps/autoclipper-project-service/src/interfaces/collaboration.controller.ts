@@ -1,0 +1,24 @@
+import {Body,Controller,Delete,Get,Inject,Param,Post,Query,Req,Res} from "@nestjs/common";
+import type {Request,Response} from "express";
+import {ApiBody,ApiCreatedResponse,ApiHeader,ApiOkResponse,ApiQuery,ApiTags} from "@nestjs/swagger";
+import {ReviewVersionDto,ReviewStateDto,ReviewHistoryDto,CreateCommentDto,DeleteCommentDto,EditorCommentDto,EditorCommentPageDto,CreateReviewLinkDto,CreatedReviewLinkDto,ReviewLinkPageDto,PublicReviewDto,EditorAuditPageDto} from "@autoclipper/api-contracts";
+import {uuid} from "@autoclipper/http-security";
+import {ProjectService} from "../application/project.service.js";
+@ApiTags("editor-collaboration")
+@Controller()
+export class CollaborationController {
+  constructor(@Inject(ProjectService)readonly service:ProjectService){}
+  @Get("edits/:id/review")@ApiOkResponse({type:ReviewHistoryDto}) review(@Req()req:Request,@Param("id")id:string){return this.service.collaboration.review(req,uuid(id));}
+  @Post("edits/:id/review")@ApiBody({type:ReviewVersionDto})@ApiCreatedResponse({type:ReviewStateDto}) request(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.transition(req,uuid(id),input,"request",String(res.locals["correlationId"]));}
+  @Post("edits/:id/approvals")@ApiBody({type:ReviewVersionDto})@ApiCreatedResponse({type:ReviewStateDto}) approve(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.transition(req,uuid(id),input,"approve",String(res.locals["correlationId"]));}
+  @Delete("edits/:id/review")@ApiBody({type:ReviewVersionDto})@ApiOkResponse({type:ReviewStateDto}) returnReview(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.transition(req,uuid(id),input,"return",String(res.locals["correlationId"]));}
+  @Get("edits/:id/comments")@ApiQuery({name:"revisionVersion",required:false,type:Number,minimum:1})@ApiQuery({name:"beforeId",required:false,type:String,format:"uuid"})@ApiOkResponse({type:EditorCommentPageDto}) comments(@Req()req:Request,@Param("id")id:string,@Query("revisionVersion")number:string|undefined,@Query("beforeId")before:string|undefined){return this.service.collaboration.comments(req,uuid(id),number,before);}
+  @Post("edits/:id/comments")@ApiHeader({name:"Idempotency-Key",required:true})@ApiBody({type:CreateCommentDto})@ApiCreatedResponse({type:EditorCommentDto}) comment(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.comment(req,uuid(id),input,String(res.locals["correlationId"]));}
+  @Delete("edits/:id/comments/:comment")@ApiBody({type:DeleteCommentDto})@ApiOkResponse({type:EditorCommentDto}) deleteComment(@Req()req:Request,@Param("id")id:string,@Param("comment")comment:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.deleteComment(req,uuid(id),uuid(comment),input,String(res.locals["correlationId"]));}
+  @Post("edits/:id/review-links")@ApiBody({type:CreateReviewLinkDto})@ApiCreatedResponse({type:CreatedReviewLinkDto}) createLink(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.collaboration.createLink(req,uuid(id),input,String(res.locals["correlationId"]));}
+  @Get("edits/:id/review-links")@ApiOkResponse({type:ReviewLinkPageDto}) links(@Req()req:Request,@Param("id")id:string){return this.service.collaboration.links(req,uuid(id));}
+  @Delete("edits/:id/review-links/:link") revokeLink(@Req()req:Request,@Param("id")id:string,@Param("link")link:string,@Res({passthrough:true})res:Response){return this.service.collaboration.revokeLink(req,uuid(id),uuid(link),String(res.locals["correlationId"]));}
+  @Get("edits/:id/audit")@ApiQuery({name:"beforeId",required:false,type:String,format:"uuid"})@ApiOkResponse({type:EditorAuditPageDto}) audit(@Req()req:Request,@Param("id")id:string,@Query("beforeId")before:string|undefined){return this.service.collaboration.auditLog(req,uuid(id),before);}
+  @Get("review-links/:token")@ApiQuery({name:"beforeId",required:false,type:String,format:"uuid"})@ApiOkResponse({type:PublicReviewDto}) publicView(@Req()req:Request,@Param("token")token:string,@Query("beforeId")before:string|undefined){return this.service.collaboration.publicView(req,token,before);}
+  @Get("review-links/:token/video")@ApiOkResponse({schema:{type:"object",required:["url","expiresInSeconds","contentType","bytes","sha256"],properties:{url:{type:"string",format:"uri"},expiresInSeconds:{type:"integer",minimum:1,maximum:120},contentType:{type:"string",enum:["video/mp4"]},bytes:{type:"integer"},sha256:{type:"string"}}}}) publicVideo(@Req()req:Request,@Param("token")token:string){return this.service.collaboration.publicVideo(req,token);}
+}

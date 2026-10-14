@@ -43,6 +43,13 @@
       "when": 1792000000000,
       "tag": "0005_editor_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792010000000,
+      "tag": "0006_editor_collaboration",
+      "breakpoints": true
     }
   ]
 }

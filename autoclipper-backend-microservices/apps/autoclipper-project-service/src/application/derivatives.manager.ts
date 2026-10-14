@@ -103,13 +103,22 @@ export class DerivativesManager {
   async cancel(req:Request,id:string){requireCsrf(req,this.config);const row=await this.synchronize(await this.resource(req,id,"editor"));if(terminal(row.status))throw new ConflictException();await this.pool.query("UPDATE processing_requests SET cancel_requested=true WHERE id=$1 AND settled_at IS NULL",[id]);return {cancellationRequested:true};}
   async download(req:Request,id:string,kind:string) {
     const selected=body(z.enum(["video","audio","srt","vtt"]),kind),row=await this.synchronize(await this.resource(req,id));
+    return this.signedArtifact(row,selected);
+  }
+  async assertReviewExport(revisionId:string,id:string){
+    const stored=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE id=$1 AND editor_revision_id=$2",[id,revisionId])).rows[0];if(!stored)throw new NotFoundException();const row=await this.synchronize(stored);
+    if(row.status!=="succeeded"||row.spec.kind!=="clip"||!row.result?.artifacts.some(artifact=>artifact.kind==="video"))throw new ConflictException();return row;
+  }
+  async downloadForReview(revisionId:string,id:string,expiresAt:Date){return this.signedArtifact(await this.assertReviewExport(revisionId,id),"video",expiresAt);}
+  private async signedArtifact(row:Row,selected:"video"|"audio"|"srt"|"vtt",expiresAt?:Date){
     if(row.status!=="succeeded")throw new ConflictException();
     const artifact=row.result?.artifacts.find(a=>a.kind===selected);if(!artifact)throw new NotFoundException();
     const actual=await this.s3.send(new HeadObjectCommand({Bucket:this.bucket,Key:artifact.objectKey}));
     if(actual.ContentLength!==artifact.bytes||actual.ETag!==artifact.etag)throw new ConflictException();
     const filename=artifact.kind==="video"?"clip.mp4":artifact.kind==="audio"?"audio.wav":`captions.${artifact.kind}`;
-    const url=await getSignedUrl(this.signer,new GetObjectCommand({Bucket:this.bucket,Key:artifact.objectKey,ResponseContentDisposition:`attachment; filename="${filename}"`,ResponseContentType:artifact.contentType}),{expiresIn:120});
-    return {url,expiresInSeconds:120,contentType:artifact.contentType,bytes:artifact.bytes,sha256:artifact.sha256};
+    const signingDate=new Date(),expiresInSeconds=expiresAt?Math.min(120,Math.floor((expiresAt.getTime()-signingDate.getTime())/1000)):120;if(expiresInSeconds<1)throw new NotFoundException();
+    const url=await getSignedUrl(this.signer,new GetObjectCommand({Bucket:this.bucket,Key:artifact.objectKey,ResponseContentDisposition:`attachment; filename="${filename}"`,ResponseContentType:artifact.contentType}),{expiresIn:expiresInSeconds,signingDate});
+    return {url,expiresInSeconds,contentType:artifact.contentType,bytes:artifact.bytes,sha256:artifact.sha256};
   }
   async dispatch() {
     const pending=(await this.pool.query<Row&{correlation_id:string}>("SELECT * FROM processing_requests WHERE delivered_at IS NULL ORDER BY created_at LIMIT 25")).rows;
