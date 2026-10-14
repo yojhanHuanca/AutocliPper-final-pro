@@ -7,16 +7,17 @@ import {
   createDecipheriv,
 } from "node:crypto";
 
-export function seal(value: string, key: string) {
+export function seal(value: string, key: string, context = "") {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", Buffer.from(key, "hex"), iv);
+  cipher.setAAD(Buffer.from(context));
   const encrypted = Buffer.concat([
     cipher.update(value, "utf8"),
     cipher.final(),
   ]);
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64");
 }
-export function unseal(value: string, key: string) {
+export function unseal(value: string, key: string, context = "") {
   const encrypted = Buffer.from(value, "base64");
   const cipher = createDecipheriv(
     "aes-256-gcm",
@@ -24,6 +25,7 @@ export function unseal(value: string, key: string) {
     encrypted.subarray(0, 12),
   );
   cipher.setAuthTag(encrypted.subarray(12, 28));
+  cipher.setAAD(Buffer.from(context));
   return Buffer.concat([
     cipher.update(encrypted.subarray(28)),
     cipher.final(),

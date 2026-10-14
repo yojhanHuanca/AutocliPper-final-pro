@@ -8,6 +8,8 @@
       "when": 1791946000000,
       "tag": "0000_identity",
       "breakpoints": true
-    }
+    },
+    {"idx":1,"version":"7","when":1791951000000,"tag":"0001_identity_security","breakpoints":true},
+    {"idx":2,"version":"7","when":1791952000000,"tag":"0002_security_audit","breakpoints":true}
   ]
 }

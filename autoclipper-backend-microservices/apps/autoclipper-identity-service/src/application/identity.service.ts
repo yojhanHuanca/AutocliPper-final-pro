@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   HttpException,
+  ConflictException,
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
@@ -33,6 +34,7 @@ import {
   type PublicUser,
 } from "../domain/credentials.js";
 import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
+import { MfaManager } from "./mfa.manager.js";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -59,6 +61,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   });
   readonly transport = mailTransport();
   readonly encryptionKey = process.env["AUTH_ENCRYPTION_KEY"] ?? "";
+  readonly mfa = new MfaManager(this.encryptionKey);
   private dummyHash = "";
   private timer: NodeJS.Timeout | undefined;
   private sending: Promise<void> | undefined;
@@ -105,9 +108,24 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     }
   }
   private async limit(req: Request, subject: string) {
-    const trusted=req.headers['x-service-token'];const forwarded=req.headers['x-client-ip'];const remote=typeof trusted==='string'&&same(trusted,this.config.INTERNAL_TOKEN)&&typeof forwarded==='string'?forwarded:req.ip;
-    const script="local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],600) end; return n";
-    const total=Number(await this.redis.eval(script,1,`identity:global:${digest(remote??'unknown')}`));if(total>120)throw new HttpException('Rate limited',429);
+    const trusted = req.headers["x-service-token"];
+    const forwarded = req.headers["x-client-ip"];
+    const remote =
+      typeof trusted === "string" &&
+      same(trusted, this.config.INTERNAL_TOKEN) &&
+      typeof forwarded === "string"
+        ? forwarded
+        : req.ip;
+    const script =
+      "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],600) end; return n";
+    const total = Number(
+      await this.redis.eval(
+        script,
+        1,
+        `identity:global:${digest(remote ?? "unknown")}`,
+      ),
+    );
+    if (total > 120) throw new HttpException("Rate limited", 429);
     const key = `identity:rate:${digest(`${remote}:${subject}`)}`;
     const count = Number(
       await this.redis.eval(
@@ -201,6 +219,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       ).rows[0];
       if (!locked || locked.password_hash !== user.password_hash)
         throw new UnauthorizedException();
+      await this.mfa.verify(client, user.id, data.factor);
       await client.query(
         "INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')",
         [session, user.id],
@@ -213,6 +232,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         "INSERT INTO access_tokens(token_hash,session_id,expires_at) VALUES($1,$2,now()+interval '15 minutes')",
         [digest(access), session],
       );
+      await this.audit(client, user.id, "session.login", req);
     });
     setCookie(res, "access", access, 900000);
     setCookie(res, "refresh", refresh, 2592000000);
@@ -230,6 +250,271 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   }
   async me(req: Request) {
     return this.authenticate(cookie(req, "access"));
+  }
+  private async sensitive<T>(
+    req: Request,
+    password: string,
+    work: (client: pg.PoolClient, user: PublicUser) => Promise<T>,
+  ) {
+    const user = await this.me(req);
+    await this.limit(req, `sensitive:${user.id}`);
+    const current = (
+      await this.pool.query<UserRow>("SELECT * FROM users WHERE id=$1", [
+        user.id,
+      ])
+    ).rows[0];
+    if (!current || !(await argon2.verify(current.password_hash, password)))
+      throw new UnauthorizedException();
+    return this.tx(async (client) => {
+      const locked = (
+        await client.query<{ password_hash: string }>(
+          "SELECT password_hash FROM users WHERE id=$1 FOR UPDATE",
+          [user.id],
+        )
+      ).rows[0];
+      if (!locked || locked.password_hash !== current.password_hash)
+        throw new UnauthorizedException();
+      return work(client, user);
+    });
+  }
+  async mfaStatus(req: Request) {
+    const user = await this.me(req);
+    const row = (
+      await this.pool.query<{ enabled: boolean }>(
+        "SELECT enabled FROM user_mfa WHERE user_id=$1",
+        [user.id],
+      )
+    ).rows[0];
+    const codes = (
+      await this.pool.query<{ count: string }>(
+        "SELECT count(*) FROM recovery_codes WHERE user_id=$1 AND consumed_at IS NULL",
+        [user.id],
+      )
+    ).rows[0];
+    return {
+      enabled: row?.enabled ?? false,
+      recoveryCodesRemaining: Number(codes?.count ?? 0),
+    };
+  }
+  async setupMfa(req: Request, input: unknown) {
+    requireCsrf(req, this.config);
+    const data = body(
+      z.object({ password: z.string().min(1).max(128) }).strict(),
+      input,
+    );
+    return this.sensitive(req, data.password, async (client, user) => {
+      const result = await this.mfa.setup(client, user.id, user.email);
+      await this.audit(client, user.id, "mfa.setup", req);
+      return result;
+    });
+  }
+  async enableMfa(req: Request, res: Response, input: unknown) {
+    requireCsrf(req, this.config);
+    const data = body(
+      z
+        .object({
+          password: z.string().min(1).max(128),
+          code: z.string().regex(/^\d{6}$/),
+        })
+        .strict(),
+      input,
+    );
+    const result = await this.sensitive(
+      req,
+      data.password,
+      async (client, user) => {
+        const enabled = await this.mfa.enable(client, user.id, data.code);
+        await client.query(
+          "UPDATE sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1",
+          [user.id],
+        );
+        await this.audit(client, user.id, "mfa.enabled", req);
+        return enabled;
+      },
+    );
+    clearCookies(res);
+    return result;
+  }
+  async disableMfa(req: Request, res: Response, input: unknown) {
+    requireCsrf(req, this.config);
+    const data = body(
+      z
+        .object({
+          password: z.string().min(1).max(128),
+          factor: z
+            .string()
+            .regex(/^(\d{6}|[a-f0-9]{24})$/)
+            .optional(),
+        })
+        .strict(),
+      input,
+    );
+    const result = await this.sensitive(
+      req,
+      data.password,
+      async (client, user) => {
+        const disabled = await this.mfa.disable(client, user.id, data.factor);
+        await client.query(
+          "UPDATE sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1",
+          [user.id],
+        );
+        await this.audit(client, user.id, "mfa.disabled", req);
+        return disabled;
+      },
+    );
+    clearCookies(res);
+    return result;
+  }
+  async rotateRecovery(req: Request, input: unknown) {
+    requireCsrf(req, this.config);
+    const data = body(
+      z
+        .object({
+          password: z.string().min(1).max(128),
+          factor: z.string().regex(/^(\d{6}|[a-f0-9]{24})$/),
+        })
+        .strict(),
+      input,
+    );
+    return this.sensitive(req, data.password, async (client, user) => {
+      const active = (
+        await client.query<{ enabled: boolean }>(
+          "SELECT enabled FROM user_mfa WHERE user_id=$1",
+          [user.id],
+        )
+      ).rows[0];
+      if (!active?.enabled) throw new ConflictException();
+      await this.mfa.verify(client, user.id, data.factor);
+      const recoveryCodes = await this.mfa.codes(client, user.id);
+      await this.audit(client, user.id, "mfa.recovery_rotated", req);
+      return { recoveryCodes };
+    });
+  }
+  async profile(req: Request) {
+    const user = await this.me(req);
+    const row = (
+      await this.pool.query<{
+        name: string;
+        preferences: Record<string, unknown>;
+        profile_version: number;
+      }>("SELECT name,preferences,profile_version FROM users WHERE id=$1", [
+        user.id,
+      ])
+    ).rows[0]!;
+    return {
+      id: user.id,
+      email: user.email,
+      name: row.name,
+      preferences: row.preferences,
+      version: row.profile_version,
+    };
+  }
+  async updateProfile(req: Request, input: unknown) {
+    requireCsrf(req, this.config);
+    const user = await this.me(req);
+    const preferences = z
+      .object({
+        locale: z.enum(["es", "en"]).optional(),
+        timezone: z
+          .string()
+          .max(64)
+          .refine(
+            (value) =>
+              value === "UTC" ||
+              Intl.supportedValuesOf("timeZone").includes(value),
+          )
+          .optional(),
+        emailNotifications: z.boolean().optional(),
+        theme: z.enum(["light", "dark", "system"]).optional(),
+      })
+      .strict();
+    const data = body(
+      z
+        .object({
+          name: z.string().trim().min(1).max(100).optional(),
+          preferences: preferences.optional(),
+          version: z.number().int().positive(),
+        })
+        .strict()
+        .refine(
+          (value) =>
+            value.name !== undefined ||
+            Object.keys(value.preferences ?? {}).length > 0,
+        ),
+      input,
+    );
+    const updated = await this.pool.query<{ profile_version: number }>(
+      "UPDATE users SET name=COALESCE($1,name),preferences=preferences||$2::jsonb,profile_version=profile_version+1 WHERE id=$3 AND profile_version=$4 RETURNING profile_version",
+      [
+        data.name ?? null,
+        JSON.stringify(data.preferences ?? {}),
+        user.id,
+        data.version,
+      ],
+    );
+    if (!updated.rows[0]) throw new ConflictException();
+    return { version: updated.rows[0].profile_version };
+  }
+  async privacy(req: Request, input: unknown) {
+    requireCsrf(req, this.config);
+    const data = body(
+      z
+        .object({
+          kind: z.enum(["export", "deletion"]),
+          password: z.string().min(1).max(128),
+          factor: z
+            .string()
+            .regex(/^(\d{6}|[a-f0-9]{24})$/)
+            .optional(),
+        })
+        .strict(),
+      input,
+    );
+    return this.sensitive(req, data.password, async (client, user) => {
+      await this.mfa.verify(client, user.id, data.factor);
+      const inserted = await client.query<{ id: string }>(
+        "INSERT INTO privacy_requests(id,user_id,kind) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id",
+        [randomUUID(), user.id, data.kind],
+      );
+      const row =
+        inserted.rows[0] ??
+        (
+          await client.query<{ id: string }>(
+            "SELECT id FROM privacy_requests WHERE user_id=$1 AND kind=$2 AND state='requested'",
+            [user.id, data.kind],
+          )
+        ).rows[0]!;
+      if (inserted.rows[0])
+        await this.audit(
+          client,
+          user.id,
+          `privacy.${data.kind}_requested`,
+          req,
+        );
+      return {
+        id: row.id,
+        kind: data.kind,
+        state: "requested",
+        fulfillment: "pending",
+      };
+    });
+  }
+  async privacyRequests(req: Request) {
+    const user = await this.me(req);
+    return {
+      items: (
+        await this.pool.query(
+          "SELECT id,kind,state,created_at,completed_at FROM privacy_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
+          [user.id],
+        )
+      ).rows.map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        state: row.state,
+        createdAt: row.created_at,
+        completedAt: row.completed_at,
+      })),
+    };
   }
   async internal(req: Request, input: unknown) {
     requireInternal(req, this.config);
@@ -277,6 +562,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         await client.query("UPDATE sessions SET revoked_at=now() WHERE id=$1", [
           row.id,
         ]);
+        await this.audit(client, row.user_id, "session.refresh_reuse", req);
         return false;
       }
       await client.query(
@@ -316,7 +602,14 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       "SELECT id,created_at,expires_at,revoked_at FROM sessions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
       [user.id],
     );
-    return { items: result.rows };
+    return {
+      items: result.rows.map((row) => ({
+        id: row.id,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at,
+        revokedAt: row.revoked_at,
+      })),
+    };
   }
   async revoke(req: Request, id: string) {
     requireCsrf(req, this.config);
@@ -364,6 +657,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         "UPDATE verification_tokens SET consumed_at=COALESCE(consumed_at,now()) WHERE user_id=$1 AND purpose='reset'",
         [row.user_id],
       );
+      await this.audit(client, row.user_id, "password.reset", req);
     });
     clearCookies(res);
     return { reset: true };
@@ -413,5 +707,37 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     this.transport.close();
     this.redis.disconnect();
     await this.pool.end();
+  }
+  private async audit(
+    client: pg.PoolClient,
+    userId: string,
+    action: string,
+    req: Request,
+  ) {
+    await client.query(
+      "INSERT INTO security_audit(id,user_id,action,correlation_id) VALUES($1,$2,$3,$4)",
+      [
+        randomUUID(),
+        userId,
+        action,
+        String(req.res?.locals["correlationId"] ?? randomUUID()),
+      ],
+    );
+  }
+  async securityEvents(req: Request) {
+    const user = await this.me(req);
+    return {
+      items: (
+        await this.pool.query(
+          "SELECT id,action,correlation_id,created_at FROM security_audit WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100",
+          [user.id],
+        )
+      ).rows.map((row) => ({
+        id: row.id,
+        action: row.action,
+        correlationId: row.correlation_id,
+        createdAt: row.created_at,
+      })),
+    };
   }
 }

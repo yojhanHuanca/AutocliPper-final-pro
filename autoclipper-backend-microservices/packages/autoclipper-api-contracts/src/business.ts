@@ -104,3 +104,95 @@ export class ConfirmedUploadDto {
   @ApiProperty({ format: "uuid" }) id!: string;
   @ApiProperty({ enum: ["confirmed"] }) state!: string;
 }
+export class MfaStatusResponseDto {
+  @ApiProperty() enabled!: boolean;
+  @ApiProperty({ minimum: 0, maximum: 10 }) recoveryCodesRemaining!: number;
+}
+export class MfaSetupResponseDto {
+  @ApiProperty({
+    format: "uri",
+    description:
+      "Sensitive authenticator enrollment URI; never log or persist in the browser.",
+  })
+  otpauthUri!: string;
+  @ApiProperty({ example: 600 }) expiresInSeconds!: number;
+}
+export class RecoveryCodesResponseDto {
+  @ApiProperty({
+    type: [String],
+    description:
+      "Displayed once. Store offline; each code is accepted only once.",
+  })
+  recoveryCodes!: string[];
+}
+export class MfaEnabledResponseDto extends RecoveryCodesResponseDto {
+  @ApiProperty({ enum: [true] }) enabled!: boolean;
+}
+export class PreferencesResponseDto {
+  @ApiProperty({ enum: ["es", "en"] }) locale!: string;
+  @ApiProperty({ example: "America/Lima" }) timezone!: string;
+  @ApiProperty() emailNotifications!: boolean;
+  @ApiProperty({ enum: ["light", "dark", "system"] }) theme!: string;
+}
+export class ProfileResponseDto extends PublicUserDto {
+  @ApiProperty({ type: PreferencesResponseDto })
+  preferences!: PreferencesResponseDto;
+  @ApiProperty({ minimum: 1 }) version!: number;
+}
+export class PrivacyRequestResponseDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty({ enum: ["export", "deletion"] }) kind!: string;
+  @ApiProperty({ enum: ["requested"] }) state!: string;
+  @ApiProperty({
+    enum: ["pending"],
+    description:
+      "Request recorded; actual export/deletion is not performed by this endpoint.",
+  })
+  fulfillment!: string;
+}
+export const flagResponse = (field: string) => ({
+  type: "object" as const,
+  required: [field],
+  additionalProperties: false,
+  properties: { [field]: { type: "boolean" as const } },
+});
+export class CsrfResponseDto {
+  @ApiProperty({
+    description:
+      "Signed double-submit token; keep in memory and send only to this API.",
+  })
+  csrfToken!: string;
+}
+export class SessionResponseDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty({ format: "date-time" }) createdAt!: string;
+  @ApiProperty({ format: "date-time" }) expiresAt!: string;
+  @ApiProperty({ type: String, format: "date-time", nullable: true })
+  revokedAt!: string | null;
+}
+export class SessionListResponseDto {
+  @ApiProperty({ type: [SessionResponseDto] }) items!: SessionResponseDto[];
+}
+export class SecurityEventResponseDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty() action!: string;
+  @ApiProperty({ format: "uuid" }) correlationId!: string;
+  @ApiProperty({ format: "date-time" }) createdAt!: string;
+}
+export class SecurityEventListResponseDto {
+  @ApiProperty({ type: [SecurityEventResponseDto] })
+  items!: SecurityEventResponseDto[];
+}
+export class PrivacyStatusResponseDto {
+  @ApiProperty({ format: "uuid" }) id!: string;
+  @ApiProperty({ enum: ["export", "deletion"] }) kind!: string;
+  @ApiProperty({ enum: ["requested", "processing", "completed", "rejected"] })
+  state!: string;
+  @ApiProperty({ format: "date-time" }) createdAt!: string;
+  @ApiProperty({ type: String, format: "date-time", nullable: true })
+  completedAt!: string | null;
+}
+export class PrivacyListResponseDto {
+  @ApiProperty({ type: [PrivacyStatusResponseDto] })
+  items!: PrivacyStatusResponseDto[];
+}

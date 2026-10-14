@@ -22,6 +22,7 @@
     "argon2": "0.45.1",
     "nodemailer": "10.1.0",
     "ioredis": "5.11.1",
-    "@autoclipper/api-contracts": "0.1.0"
+    "@autoclipper/api-contracts": "0.1.0",
+    "otpauth": "9.5.2"
   }
 }

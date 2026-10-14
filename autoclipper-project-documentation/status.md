@@ -19,13 +19,14 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | Limpieza de temporales y S3 privado | IV | Directorio vacío después de trabajos y GET anónimo 403 |
 | Métricas/logs y protección de métricas | IV | Scrape autenticado, rechazo 401; tracing distribuido pendiente |
 | CI etapa 1 con lint/tipos/tests/build/audit/contratos/Docker | IV | Run 38501990994 aprobado en quality e infrastructure; commit cf6912b |
-| CI de la ampliación de etapa 2 | IE | Job business agregado; comprobar resultado del commit de entrega |
+| CI del recorrido principal de etapa 2 | IV | Run 38509763878 aprobado en quality, infrastructure y business; commit 2a1e5d6 |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
 | Google / entrega externa de correo | PD + PC | Sin simulación; requieren implementación/configuración y prueba externa |
 | Sesiones/refresh/reutilización/revocación, Argon2id, CSRF | IV | Cookies HttpOnly, rotación, revocación de familia, origen y token CSRF comprobados |
-| 2FA/códigos, perfil/preferencias, solicitudes de privacidad | PD | No se anuncian como implementados |
+| 2FA/códigos, perfil/preferencias, solicitudes de privacidad | IV | TOTP/recovery reales, revocación de sesiones, CAS y aislamiento; ver identity-security.md |
+| Ejecución de exportación/eliminación integral de datos | PD | Solo se registran solicitudes con fulfillment=pending; falta coordinación entre servicios |
 | Workspaces/equipos/invitaciones/roles/propiedad | IV | Comprobación servidor, invitación ligada a email, transferencia y restricciones en PostgreSQL |
 | Proyectos CRUD, búsqueda y concurrencia | IV | Acceso denegado a otro usuario y versión contra sobrescritura |
 | Carpetas/etiquetas/favoritos y paginación por cursor completa | PD | Listado actual acotado a 100 y búsqueda; capacidades adicionales pendientes |
@@ -43,7 +44,7 @@ Entrega: etapa 1 y recorrido prioritario de etapa 2. Estados: **IV** implementad
 | Programación IANA/dedupe/conciliación social | PD | Máquina de estados diseñada, sin envíos reales |
 | Planes/consumo/reservas/conciliación/créditos/webhooks | PD | Etapa 6; sin precios ni cobros simulados |
 | Proveedor de pagos | PC | Selección requiere entidad, país y necesidades comerciales |
-| Notificaciones/correo/preferencias/soporte | PD + PC | SMTP/Postmark candidato; no se envió correo |
+| Notificaciones/correo/preferencias/soporte | PD + PC | SMTP local y preferencia de correo verificados; entrega externa, eventos y soporte pendientes |
 | Administración autorizada/ajustes auditados | PD | Ninguna ruta global sin permisos |
 | Fairness y cuotas por workspace, workers separados por etapa | PD | Solo concurrencia por instancia y limiter global de inspección |
 | Dump y restore PostgreSQL en base temporal | IV | pg_dump/pg_restore y comprobación de migración restaurada; base temporal retirada |

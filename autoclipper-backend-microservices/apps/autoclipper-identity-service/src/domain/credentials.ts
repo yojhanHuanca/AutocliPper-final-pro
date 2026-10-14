@@ -8,7 +8,14 @@ export const registration = z
   .object({ email, password, name: z.string().trim().min(1).max(100) })
   .strict();
 export const login = z
-  .object({ email, password: z.string().max(128) })
+  .object({
+    email,
+    password: z.string().max(128),
+    factor: z
+      .string()
+      .regex(/^(\d{6}|[a-f0-9]{24})$/)
+      .optional(),
+  })
   .strict();
 export const token = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })

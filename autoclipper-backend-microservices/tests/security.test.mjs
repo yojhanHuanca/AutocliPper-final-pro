@@ -14,6 +14,9 @@ test("encrypted outbox detects tampering and does not store plaintext", () => {
   assert.throws(() => unseal(modified.toString("base64"), key));
   assert.throws(() => unseal(encrypted, randomBytes(32).toString("hex")));
   assert.equal(same("é", "a"), false);
+  const bound = seal(value, key, "mfa:alice");
+  assert.equal(unseal(bound, key, "mfa:alice"), value);
+  assert.throws(() => unseal(bound, key, "mfa:bob"));
 });
 test("workspace role hierarchy does not grant reader/editor administrative access", () => {
   assert.equal(permits("reader", "reader"), true);
