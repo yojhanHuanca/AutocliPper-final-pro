@@ -21,6 +21,7 @@ export class ProxyController {
     "uploads/*path",
     "processing/*path",
     "analyses/*path",
+    "edits/*path",
   ])
   async forward(@Req() req: Request, @Res() res: Response) {
     const raw = req.originalUrl.split("?")[0] ?? "";
@@ -70,6 +71,8 @@ export class ProxyController {
       res.appendHeader("set-cookie", value);
     const type = upstream.headers.get("content-type");
     if (type) res.setHeader("content-type", type);
+    const etag = upstream.headers.get("etag");
+    if (etag) res.setHeader("etag", etag);
     // Bounded JSON APIs only; videos travel directly through signed storage URLs.
     const payload = await upstream.text();
     if (payload.length > 1048576) throw new ServiceUnavailableException();

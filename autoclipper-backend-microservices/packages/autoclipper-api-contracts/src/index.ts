@@ -16,3 +16,4 @@ export class ReadinessResponse {
 }
 export * from "./processing.js";
 export * from "./analysis.js";
+export * from "./editor.js";

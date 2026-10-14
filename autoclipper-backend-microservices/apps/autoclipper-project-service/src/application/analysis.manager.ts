@@ -46,6 +46,10 @@ export class AnalysisManager {
   async status(req:Request,id:string){return this.synchronize(await this.resource(req,id));}
   async cancel(req:Request,id:string){requireCsrf(req,this.config);const row=await this.resource(req,id,"editor"),state=await this.synchronize(row);if(terminal(state.status))throw new ConflictException();await this.pool.query("UPDATE analysis_requests SET cancel_requested=true WHERE id=$1 AND finished_at IS NULL",[id]);return{cancellationRequested:true};}
   async render(req:Request,id:string,input:unknown,correlationId:string){
+    const prepared=await this.prepareRender(req,id,input);
+    return this.derivatives.beginFromTranscript(req,prepared.uploadId,prepared.spec,correlationId);
+  }
+  async prepareRender(req:Request,id:string,input:unknown){
     requireCsrf(req,this.config);const row=await this.resource(req,id,"editor"),state=await this.synchronize(row),spec=body(transcriptRenderSpec,input);
     if(state.status!=="succeeded"||!state.transcript)throw new ConflictException();
     const times="proposalIndex" in spec?state.selection?.segments[spec.proposalIndex]:spec;
@@ -55,7 +59,7 @@ export class AnalysisManager {
     const cues=state.transcript.segments.filter(segment=>segment.startSeconds<endSeconds&&segment.endSeconds>startSeconds).map(segment=>({startSeconds:Math.max(startSeconds,segment.startSeconds),endSeconds:Math.min(endSeconds,segment.endSeconds),text:Array.from(segment.text.replace(/[<>\\{}]/gu," "),character=>character.charCodeAt(0)<32?" ":character).join("").trim()})).filter(cue=>cue.text&&cue.endSeconds-cue.startSeconds>=0.01);
     // Reject excessive caption density/length instead of silently dropping words.
     if(!cues.length||cues.length>200||cues.some(cue=>cue.text.length>500))throw new BadRequestException();
-    return this.derivatives.beginFromTranscript(req,row.upload_id,{version:1,kind:"clip",startSeconds,endSeconds,aspect:spec.aspect,subtitles:{provenance:"transcript",transcriptId:state.transcript.id,cues}},correlationId);
+    return {uploadId:row.upload_id,spec:{version:1 as const,kind:"clip" as const,startSeconds,endSeconds,aspect:spec.aspect,subtitles:{provenance:"transcript" as const,transcriptId:state.transcript.id,cues}}};
   }
   async dispatch(){
     const pending=(await this.pool.query<Row>("SELECT * FROM analysis_requests WHERE delivered_at IS NULL ORDER BY created_at LIMIT 25")).rows;

@@ -104,7 +104,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -223,7 +253,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -351,7 +411,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -462,7 +552,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -548,7 +668,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -654,7 +804,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -760,7 +940,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -875,7 +1085,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -981,7 +1221,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1067,7 +1337,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1180,7 +1480,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1286,7 +1616,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1370,7 +1730,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1456,7 +1846,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1542,7 +1962,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1653,7 +2103,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1764,7 +2244,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1866,7 +2376,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -1967,7 +2507,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2072,7 +2642,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2154,7 +2754,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2240,7 +2870,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2353,7 +3013,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2468,7 +3158,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2579,7 +3299,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2690,7 +3440,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2776,7 +3556,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2875,7 +3685,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -2980,7 +3820,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3066,7 +3936,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3178,7 +4078,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3273,7 +4203,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3388,7 +4348,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3491,7 +4481,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3598,7 +4618,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3714,7 +4764,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3828,7 +4908,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -3940,7 +5050,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4035,7 +5175,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4140,7 +5310,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4235,7 +5435,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4364,7 +5594,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4478,7 +5738,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4564,7 +5854,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4668,7 +5988,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4763,7 +6113,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -4858,7 +6238,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5000,7 +6410,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5095,7 +6535,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5205,7 +6675,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5312,7 +6812,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5447,7 +6977,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5610,7 +7170,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5745,7 +7335,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5840,7 +7460,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -5935,7 +7585,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -6077,7 +7757,37 @@
               }
             }
           },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
             "description": "Classified error with a safe correlation identifier",
             "content": {
               "application/json": {
@@ -6110,6 +7820,1345 @@
         },
         "tags": [
           "analysis"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/uploads/{id}/edits": {
+      "post": {
+        "operationId": "EditorController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEditDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}": {
+      "get": {
+        "operationId": "EditorController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "headers": {
+              "ETag": {
+                "description": "Quoted current draft version, for example \"3\".",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "EditorController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "Quoted expected version; must match the version in the body.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEditDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/revisions": {
+      "get": {
+        "operationId": "EditorController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "beforeVersion",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "nextBeforeVersion"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "$ref": "#/components/schemas/EditorRevisionSummaryDto"
+                      }
+                    },
+                    "nextBeforeVersion": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/revisions/{version}": {
+      "get": {
+        "operationId": "EditorController_revision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorRevisionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/restore": {
+      "post": {
+        "operationId": "EditorController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "Quoted expected version; must match the version in the body.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/renders": {
+      "post": {
+        "operationId": "EditorController_render",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/exports": {
+      "get": {
+        "operationId": "EditorController_exports",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "$ref": "#/components/schemas/EditorExportDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/projects/{id}/edits": {
+      "get": {
+        "operationId": "EditorController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "uploadId",
+                          "name",
+                          "version",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "uploadId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
         ],
         "security": [
           {
@@ -7418,6 +10467,27 @@
           "kind"
         ]
       },
+      "FramingDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of horizontal overflow to crop: 0 left, 0.5 center, 1 right."
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of vertical overflow to crop: 0 top, 0.5 center, 1 bottom."
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      },
       "SubtitleCueDto": {
         "type": "object",
         "properties": {
@@ -7442,6 +10512,36 @@
           "text"
         ]
       },
+      "SubtitleStyleDto": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "string",
+            "enum": [
+              "clean",
+              "boxed",
+              "bold"
+            ]
+          },
+          "fontSize": {
+            "type": "number",
+            "minimum": 12,
+            "maximum": 40,
+            "default": 24
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "top",
+              "bottom"
+            ],
+            "default": "bottom"
+          }
+        },
+        "required": [
+          "template"
+        ]
+      },
       "UserSubtitlesDto": {
         "type": "object",
         "properties": {
@@ -7457,6 +10557,9 @@
             "items": {
               "$ref": "#/components/schemas/SubtitleCueDto"
             }
+          },
+          "style": {
+            "$ref": "#/components/schemas/SubtitleStyleDto"
           }
         },
         "required": [
@@ -7497,6 +10600,9 @@
               "horizontal"
             ]
           },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
+          },
           "subtitles": {
             "$ref": "#/components/schemas/UserSubtitlesDto"
           }
@@ -7530,6 +10636,9 @@
             "items": {
               "$ref": "#/components/schemas/SubtitleCueDto"
             }
+          },
+          "style": {
+            "$ref": "#/components/schemas/SubtitleStyleDto"
           }
         },
         "required": [
@@ -7570,6 +10679,9 @@
               "square",
               "horizontal"
             ]
+          },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
           },
           "subtitles": {
             "$ref": "#/components/schemas/SubtitleResponseDto"
@@ -7669,6 +10781,11 @@
           },
           "sampleRate": {
             "type": "number"
+          },
+          "editorRevisionId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
           }
         },
         "required": [
@@ -8153,6 +11270,393 @@
           "selection",
           "providerOutcomeUnknown",
           "phases"
+        ]
+      },
+      "NoEditorCaptionsDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "none"
+            ]
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "UserEditorCaptionsDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "user"
+            ]
+          },
+          "cues": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubtitleCueDto"
+            }
+          },
+          "style": {
+            "$ref": "#/components/schemas/SubtitleStyleDto"
+          }
+        },
+        "required": [
+          "source",
+          "cues"
+        ]
+      },
+      "TranscriptEditorCaptionsDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "transcript"
+            ]
+          },
+          "analysisId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing authorized successful analysis of the same source upload."
+          },
+          "style": {
+            "$ref": "#/components/schemas/SubtitleStyleDto"
+          }
+        },
+        "required": [
+          "source",
+          "analysisId"
+        ]
+      },
+      "EditorRevisionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "restored"
+            ]
+          },
+          "restoredFromVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "action",
+          "restoredFromVersion",
+          "authorId",
+          "createdAt"
+        ]
+      },
+      "EditorExportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "cleanupPending": {
+            "type": "boolean"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProcessingArtifactDto"
+            }
+          },
+          "durationSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "sampleRate": {
+            "type": "number"
+          },
+          "editorRevisionId": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "attempts",
+          "errorCode",
+          "startedAt",
+          "finishedAt",
+          "cleanupPending",
+          "artifacts",
+          "durationSeconds"
+        ]
+      },
+      "EditorSpecDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "clip"
+            ]
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "endSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Clip length 0.1–120 seconds."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
+          },
+          "subtitles": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/NoEditorCaptionsDto"
+              },
+              {
+                "$ref": "#/components/schemas/UserEditorCaptionsDto"
+              },
+              {
+                "$ref": "#/components/schemas/TranscriptEditorCaptionsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "kind",
+          "startSeconds",
+          "endSeconds",
+          "aspect"
+        ]
+      },
+      "CreateEditDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditorSpecDto"
+          }
+        },
+        "required": [
+          "name",
+          "spec"
+        ]
+      },
+      "EditorRevisionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "restored"
+            ]
+          },
+          "restoredFromVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditorSpecDto"
+          },
+          "renderSpec": {
+            "description": "Immutable server-resolved render description, including verified transcript provenance.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProcessingSpecDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "action",
+          "restoredFromVersion",
+          "authorId",
+          "createdAt",
+          "spec",
+          "renderSpec"
+        ]
+      },
+      "EditorDraftDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revision": {
+            "$ref": "#/components/schemas/EditorRevisionDto"
+          }
+        },
+        "required": [
+          "id",
+          "uploadId",
+          "projectId",
+          "name",
+          "version",
+          "revision"
+        ]
+      },
+      "UpdateEditDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Current draft version. Stale updates return 412."
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditorSpecDto"
+          }
+        },
+        "required": [
+          "version",
+          "spec"
+        ]
+      },
+      "RestoreRevisionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revisionVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "version",
+          "revisionVersion"
+        ]
+      },
+      "RenderRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revisionVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "revisionVersion"
         ]
       },
       "ErrorResponse": {

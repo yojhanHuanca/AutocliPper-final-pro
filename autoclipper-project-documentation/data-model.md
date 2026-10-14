@@ -43,6 +43,8 @@ Analysis posee su propia base/roles owner/runtime y migración `0000_content_ana
 
 ## Diseño pendiente por servicio
 
+Edición implementada en Project: `0005_editor_revisions` crea `editor_drafts` (upload/proyecto/workspace/autor, intención idempotente y versión actual) y `editor_revisions` (versión única por borrador, autor, acción, origen de restauración y snapshots JSON de intención/render). Una FK diferida exige la revisión actual y otra valida el origen de restauración; el trigger rechaza UPDATE/DELETE de revisiones mientras existe el borrador. `processing_requests.editor_revision_id` liga cada exportación a su revisión dentro de la misma base. No hay FK entre servicios. La purga integral sigue pendiente; una revisión exportada permanece referenciada hasta retirar sus intenciones. Ver [stage-4-editor.md](stage-4-editor.md).
+
 La entrega multimedia añade en media `processing_tasks` (fuente inspeccionada propia, spec, estado, intentos, cancelación/limpieza, resultado y fechas) y `processing_outbox`. Las restricciones exigen resultado solo al éxito y fecha de fin exactamente en estados terminales. Project añade `processing_requests` con idempotencia por autor, referencia de upload/proyecto, reserva, acuses de admisión/cancelación y conciliación terminal. No hay FK entre bases. Los detalles de cuota y borrado están en [stage-3-media.md](stage-3-media.md).
 
 La tabla describe el alcance completo. Las entidades enumeradas como implementadas al inicio de este documento ya tienen migraciones y endpoints de etapa 2; las demás se implementarán con sus casos de uso y pruebas, evitando tablas sin comportamiento.

@@ -8,6 +8,7 @@ import type {MediaConfig} from "@autoclipper/configuration";
 import type {ValidatedProcessingSpec,ProcessingArtifact,ProcessingStatus} from "@autoclipper/api-contracts";
 import {InspectionError} from "../domain/inspection.js";
 import {validateProcessingSource,subtitles,outputPrefix} from "../domain/processing.js";
+import {videoFilter} from "../domain/video-filter.js";
 import {withInspectedSource,probeLocal} from "./probe.js";
 
 const execute=promisify(execFile);
@@ -25,14 +26,11 @@ export async function produceDerivative(s3:S3Client,config:MediaConfig,job:{id:s
       files.push({name:output,kind:"audio",contentType:"audio/wav"});
     } else {
       common.splice(common.indexOf("-i"),0,"-ss",String(spec.startSeconds));
-      const dimensions={vertical:[720,1280],square:[720,720],horizontal:[1280,720]} as const;
-      const size=spec.aspect==="source"?undefined:dimensions[spec.aspect];
-      let filter=size?`scale=${size[0]}:${size[1]}:force_original_aspect_ratio=increase,crop=${size[0]}:${size[1]},setsar=1`:"scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1";
+      const filter=videoFilter(spec);
       if(spec.subtitles) {
         const text=subtitles(spec);
         await writeFile(join(directory,"captions.srt"),text.srt,{mode:0o600,flag:"wx"});
         await writeFile(join(directory,"captions.vtt"),text.vtt,{mode:0o600,flag:"wx"});
-        filter+=",subtitles=filename=captions.srt:force_style='FontName=DejaVu Sans,FontSize=24,Outline=2,MarginV=32'";
         files.push({name:"captions.srt",kind:"srt",contentType:"application/x-subrip"},{name:"captions.vtt",kind:"vtt",contentType:"text/vtt"});
       }
       args=[...common,"-t",String(spec.endSeconds-spec.startSeconds),"-map","0:v:0","-map","0:a:0?","-sn","-dn","-vf",filter,"-r","30","-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-threads","1","-b:v","1800k","-maxrate","2000k","-bufsize","4000k","-c:a","aac","-b:a","128k","-movflags","+faststart","-fs",String(limit),output];

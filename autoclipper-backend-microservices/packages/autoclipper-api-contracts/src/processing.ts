@@ -7,11 +7,15 @@ const cue = z.object({
   endSeconds: seconds,
   text: z.string().trim().min(1).max(500).refine(value => !/[<>\\{}]/u.test(value) && [...value].every(character => character==="\n" || character.charCodeAt(0)>=32)),
 }).strict().refine(value => value.endSeconds - value.startSeconds >= 0.01);
-const clipFields={version:z.literal(1),kind:z.literal("clip"),startSeconds:seconds,endSeconds:seconds,aspect:z.enum(["source","vertical","square","horizontal"])};
-const userSubtitles=z.object({provenance:z.literal("user"),cues:z.array(cue).min(1).max(200)}).strict();
-const transcriptSubtitles=z.object({provenance:z.literal("transcript"),transcriptId:z.uuid(),cues:z.array(cue).min(1).max(200)}).strict();
-function clipRules(value:{startSeconds:number;endSeconds:number;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
+export {cue as subtitleCueSchema};
+export const framingSchema=z.object({x:z.number().finite().min(0).max(1),y:z.number().finite().min(0).max(1)}).strict();
+export const subtitleStyleSchema=z.object({template:z.enum(["clean","boxed","bold"]),fontSize:z.number().int().min(12).max(40).default(24),position:z.enum(["top","bottom"]).default("bottom")}).strict();
+const clipFields={version:z.literal(1),kind:z.literal("clip"),startSeconds:seconds,endSeconds:seconds,aspect:z.enum(["source","vertical","square","horizontal"]),framing:framingSchema.optional()};
+const userSubtitles=z.object({provenance:z.literal("user"),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
+const transcriptSubtitles=z.object({provenance:z.literal("transcript"),transcriptId:z.uuid(),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
+function clipRules(value:{startSeconds:number;endSeconds:number;aspect:string;framing?:z.infer<typeof framingSchema>|undefined;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
   if(value.endSeconds-value.startSeconds<0.1||value.endSeconds-value.startSeconds>120)context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
+  if(value.framing&&value.aspect==="source")context.addIssue({code:"custom",message:"Manual framing requires a fixed output aspect"});
   let previous=value.startSeconds;
   for(const caption of value.subtitles?.cues??[]){if(caption.startSeconds<previous||caption.endSeconds>value.endSeconds)context.addIssue({code:"custom",message:"Cues must be ordered, non-overlapping and contained in the requested clip"});previous=caption.endSeconds;}
 }
@@ -32,14 +36,25 @@ export class SubtitleCueDto {
   @ApiProperty({minimum:0}) endSeconds!: number;
   @ApiProperty({maxLength:500,description:"Plain user-provided text; markup and ASS commands are rejected."}) text!: string;
 }
+export class FramingDto {
+  @ApiProperty({minimum:0,maximum:1,description:"Fraction of horizontal overflow to crop: 0 left, 0.5 center, 1 right."}) x!:number;
+  @ApiProperty({minimum:0,maximum:1,description:"Fraction of vertical overflow to crop: 0 top, 0.5 center, 1 bottom."}) y!:number;
+}
+export class SubtitleStyleDto {
+  @ApiProperty({enum:["clean","boxed","bold"]}) template!:string;
+  @ApiPropertyOptional({minimum:12,maximum:40,default:24}) fontSize?:number;
+  @ApiPropertyOptional({enum:["top","bottom"],default:"bottom"}) position?:string;
+}
 export class UserSubtitlesDto {
   @ApiProperty({enum:["user"]}) provenance!: string;
   @ApiProperty({type:[SubtitleCueDto],maxItems:200}) cues!: SubtitleCueDto[];
+  @ApiPropertyOptional({type:SubtitleStyleDto}) style?:SubtitleStyleDto;
 }
 export class SubtitleResponseDto {
   @ApiProperty({enum:["user","transcript"]}) provenance!: string;
   @ApiPropertyOptional({format:"uuid",readOnly:true}) transcriptId?: string;
   @ApiProperty({type:[SubtitleCueDto],maxItems:200}) cues!: SubtitleCueDto[];
+  @ApiPropertyOptional({type:SubtitleStyleDto}) style?:SubtitleStyleDto;
 }
 export class ProcessingSpecDto {
   @ApiProperty({enum:[1]}) version!: number;
@@ -47,6 +62,7 @@ export class ProcessingSpecDto {
   @ApiPropertyOptional({minimum:0}) startSeconds?: number;
   @ApiPropertyOptional({minimum:0,description:"Clip length must be 0.1–120 seconds and fit the source."}) endSeconds?: number;
   @ApiPropertyOptional({enum:["source","vertical","square","horizontal"]}) aspect?: string;
+  @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;
   @ApiPropertyOptional({type:SubtitleResponseDto}) subtitles?: SubtitleResponseDto;
 }
 export class AudioProcessingSpecDto {
@@ -59,6 +75,7 @@ export class ClipProcessingSpecDto {
   @ApiProperty({minimum:0}) startSeconds!: number;
   @ApiProperty({minimum:0,description:"Must fit the video; clip length 0.1–120 seconds."}) endSeconds!: number;
   @ApiProperty({enum:["source","vertical","square","horizontal"]}) aspect!: string;
+  @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;
   @ApiPropertyOptional({type:UserSubtitlesDto}) subtitles?: UserSubtitlesDto;
 }
 export class ProcessingArtifactDto {
@@ -81,4 +98,5 @@ export class ProcessingStatusDto {
   @ApiPropertyOptional() width?: number;
   @ApiPropertyOptional() height?: number;
   @ApiPropertyOptional() sampleRate?: number;
+  @ApiPropertyOptional({format:"uuid",readOnly:true}) editorRevisionId?:string;
 }

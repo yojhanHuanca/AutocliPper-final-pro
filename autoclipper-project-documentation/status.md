@@ -1,6 +1,6 @@
 # Matriz de estado
 
-Entrega: etapas 1–2, multimedia y transcripción local real de etapa 3. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md) y [stage-3-media.md](stage-3-media.md) y [stage-3-analysis.md](stage-3-analysis.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
+Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edición versionada de etapa 4. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md), [stage-3-media.md](stage-3-media.md), [stage-3-analysis.md](stage-3-analysis.md) y [stage-4-editor.md](stage-4-editor.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
 
 | Capacidad | Estado | Evidencia / límite |
 |---|---|---|
@@ -49,7 +49,9 @@ Entrega: etapas 1–2, multimedia y transcripción local real de etapa 3. Estado
 | Orquestación automática de todas las etapas | PD | Intenciones durables vinculadas; el cliente encadena audio/análisis/render y elige manualmente el intervalo cuando selection=none |
 | Recorte explícito/render/subtítulos aportados/video/SRT/VTT | IV | MP4 real, texto visible en frame, sidecars y URLs S3 privadas de 120s; no es selección ni transcripción IA |
 | Persistencia/recovery/cancelación de derivados/cuota | IV | Outbox, pérdida Redis restaurada, tres intentos máximos, cancelación activa/en cola y cuota conciliada una vez |
-| Edición versionada, CAS, revisiones, encuadre/marca/audio | PD | Modelo previsto, no implementado |
+| Edición versionada, CAS, revisiones recuperables | IV | PostgreSQL impide modificar revisiones; dos escritores concurrentes, versiones/If-Match obsoletos, ETag a través del gateway y restauración comprobados |
+| Encuadre manual y plantillas de subtítulos | IV | Crop normalizado, clean/boxed/bold y posición top/bottom medidos en FFmpeg; exportación usa la revisión elegida, con procedencia de ASR real conservada |
+| Marca y mezcla de audio | PD | No se agregaron logos, overlays ni mezcla musical |
 | Preview/seguimiento/split-screen/unión de segmentos | PD | Sin promesas de equivalencia o soporte |
 | Comentarios/aprobaciones/enlaces de revisión/auditoría | PD | Etapa 4 |
 | OAuth social, tokens cifrados, publicación/calendario | PD + PC | Etapa 5, permisos/revisión por proveedor |
@@ -65,4 +67,4 @@ Entrega: etapas 1–2, multimedia y transcripción local real de etapa 3. Estado
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
 | Primera aceptación funcional de 8 pasos con IA | IV | Cuenta verificada, proyecto/upload, whisper.cpp real, clip subtitulado, estado/download y otro usuario denegado. Intervalo manual; no acredita selección automática |
 
-Prioridad siguiente: selección automática con un LLM real evaluado según recursos, traducción y orquestación automática; conservar la aceptación local real de transcripción/render/descarga. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.
+Prioridad siguiente: marca y colaboración de etapa 4; selección automática con un LLM real permanece pendiente de recursos/proveedor, junto con traducción y orquestación automática. Conservar la aceptación local real de transcripción/edición/render/descarga. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.

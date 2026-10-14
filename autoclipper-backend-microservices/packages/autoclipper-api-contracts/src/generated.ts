@@ -756,6 +756,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/uploads/{id}/edits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EditorController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edits/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EditorController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["EditorController_update"];
+        trace?: never;
+    };
+    "/v1/edits/{id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EditorController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edits/{id}/revisions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EditorController_revision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edits/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EditorController_restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edits/{id}/renders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EditorController_render"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/edits/{id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EditorController_exports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/edits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EditorController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1144,6 +1272,12 @@ export interface components {
             /** @enum {string} */
             kind: "audio";
         };
+        FramingDto: {
+            /** @description Fraction of horizontal overflow to crop: 0 left, 0.5 center, 1 right. */
+            x: number;
+            /** @description Fraction of vertical overflow to crop: 0 top, 0.5 center, 1 bottom. */
+            y: number;
+        };
         SubtitleCueDto: {
             /** @description Absolute timestamp in the source video, seconds. */
             startSeconds: number;
@@ -1151,10 +1285,22 @@ export interface components {
             /** @description Plain user-provided text; markup and ASS commands are rejected. */
             text: string;
         };
+        SubtitleStyleDto: {
+            /** @enum {string} */
+            template: "clean" | "boxed" | "bold";
+            /** @default 24 */
+            fontSize: number;
+            /**
+             * @default bottom
+             * @enum {string}
+             */
+            position: "top" | "bottom";
+        };
         UserSubtitlesDto: {
             /** @enum {string} */
             provenance: "user";
             cues: components["schemas"]["SubtitleCueDto"][];
+            style?: components["schemas"]["SubtitleStyleDto"];
         };
         ClipProcessingSpecDto: {
             /** @enum {number} */
@@ -1166,6 +1312,7 @@ export interface components {
             endSeconds: number;
             /** @enum {string} */
             aspect: "source" | "vertical" | "square" | "horizontal";
+            framing?: components["schemas"]["FramingDto"];
             subtitles?: components["schemas"]["UserSubtitlesDto"];
         };
         SubtitleResponseDto: {
@@ -1174,6 +1321,7 @@ export interface components {
             /** Format: uuid */
             readonly transcriptId?: string;
             cues: components["schemas"]["SubtitleCueDto"][];
+            style?: components["schemas"]["SubtitleStyleDto"];
         };
         ProcessingSpecDto: {
             /** @enum {number} */
@@ -1185,6 +1333,7 @@ export interface components {
             endSeconds?: number;
             /** @enum {string} */
             aspect?: "source" | "vertical" | "square" | "horizontal";
+            framing?: components["schemas"]["FramingDto"];
             subtitles?: components["schemas"]["SubtitleResponseDto"];
         };
         ProcessingArtifactDto: {
@@ -1213,6 +1362,8 @@ export interface components {
             width?: number;
             height?: number;
             sampleRate?: number;
+            /** Format: uuid */
+            readonly editorRevisionId?: string;
         };
         ManualTranscriptRenderDto: {
             /** @enum {number} */
@@ -1334,6 +1485,113 @@ export interface components {
             providerOutcomeUnknown: boolean;
             phases: components["schemas"]["AnalysisPhaseDto"][];
         };
+        NoEditorCaptionsDto: {
+            /** @enum {string} */
+            source: "none";
+        };
+        UserEditorCaptionsDto: {
+            /** @enum {string} */
+            source: "user";
+            cues: components["schemas"]["SubtitleCueDto"][];
+            style?: components["schemas"]["SubtitleStyleDto"];
+        };
+        TranscriptEditorCaptionsDto: {
+            /** @enum {string} */
+            source: "transcript";
+            /**
+             * Format: uuid
+             * @description Existing authorized successful analysis of the same source upload.
+             */
+            analysisId: string;
+            style?: components["schemas"]["SubtitleStyleDto"];
+        };
+        EditorRevisionSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            /** @enum {string} */
+            action: "created" | "updated" | "restored";
+            restoredFromVersion: number | null;
+            /** Format: uuid */
+            authorId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        EditorExportDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            attempts: number;
+            errorCode: string | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+            cleanupPending: boolean;
+            artifacts: components["schemas"]["ProcessingArtifactDto"][];
+            durationSeconds: number | null;
+            width?: number;
+            height?: number;
+            sampleRate?: number;
+            /** Format: uuid */
+            readonly editorRevisionId?: string;
+        };
+        EditorSpecDto: {
+            /** @enum {number} */
+            version: 1;
+            /** @enum {string} */
+            kind: "clip";
+            startSeconds: number;
+            /** @description Clip length 0.1–120 seconds. */
+            endSeconds: number;
+            /** @enum {string} */
+            aspect: "source" | "vertical" | "square" | "horizontal";
+            framing?: components["schemas"]["FramingDto"];
+            subtitles?: components["schemas"]["NoEditorCaptionsDto"] | components["schemas"]["UserEditorCaptionsDto"] | components["schemas"]["TranscriptEditorCaptionsDto"];
+        };
+        CreateEditDto: {
+            name: string;
+            spec: components["schemas"]["EditorSpecDto"];
+        };
+        EditorRevisionDto: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            /** @enum {string} */
+            action: "created" | "updated" | "restored";
+            restoredFromVersion: number | null;
+            /** Format: uuid */
+            authorId: string;
+            /** Format: date-time */
+            createdAt: string;
+            spec: components["schemas"]["EditorSpecDto"];
+            /** @description Immutable server-resolved render description, including verified transcript provenance. */
+            renderSpec: components["schemas"]["ProcessingSpecDto"];
+        };
+        EditorDraftDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            uploadId: string;
+            /** Format: uuid */
+            projectId: string;
+            name: string;
+            version: number;
+            revision: components["schemas"]["EditorRevisionDto"];
+        };
+        UpdateEditDto: {
+            /** @description Current draft version. Stale updates return 412. */
+            version: number;
+            spec: components["schemas"]["EditorSpecDto"];
+        };
+        RestoreRevisionDto: {
+            version: number;
+            revisionVersion: number;
+        };
+        RenderRevisionDto: {
+            revisionVersion: number;
+        };
         ErrorResponse: {
             code: string;
             message: string;
@@ -1436,7 +1694,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1521,7 +1806,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1606,7 +1918,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1688,7 +2027,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1761,7 +2127,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1841,7 +2234,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1921,7 +2341,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2003,7 +2450,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2083,7 +2557,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2156,7 +2657,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2238,7 +2766,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2311,7 +2866,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2391,7 +2973,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2464,7 +3073,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2537,7 +3173,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2619,7 +3282,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2701,7 +3391,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2781,7 +3498,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2859,7 +3603,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2937,7 +3708,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3010,7 +3808,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3083,7 +3908,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3163,7 +4015,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3245,7 +4124,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3327,7 +4233,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3400,7 +4333,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3481,7 +4441,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3559,7 +4546,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3636,7 +4650,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3709,7 +4750,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3790,7 +4858,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3865,7 +4960,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3942,7 +5064,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4023,7 +5172,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4103,7 +5279,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4184,7 +5387,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4261,7 +5491,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4342,7 +5599,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4417,7 +5701,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4493,7 +5804,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4573,7 +5911,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4656,7 +6021,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4729,7 +6121,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4811,7 +6230,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4889,7 +6335,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4964,7 +6437,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5040,7 +6540,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5127,7 +6654,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5202,7 +6756,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5282,7 +6863,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5359,7 +6967,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5444,7 +7079,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5536,7 +7198,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5623,7 +7312,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5698,7 +7414,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5774,7 +7517,34 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5861,7 +7631,1011 @@ export interface operations {
                 };
             };
             /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEditDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorDraftDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description Quoted current draft version, for example "3". */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorDraftDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Quoted expected version; must match the version in the body. */
+                "If-Match"?: string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEditDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorDraftDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_history: {
+        parameters: {
+            query?: {
+                beforeVersion?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EditorRevisionSummaryDto"][];
+                        nextBeforeVersion: number | null;
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_revision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorRevisionDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_restore: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Quoted expected version; must match the version in the body. */
+                "If-Match"?: string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreRevisionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EditorDraftDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_render: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenderRevisionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        status: string;
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_exports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EditorExportDto"][];
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EditorController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            uploadId: string;
+                            name: string;
+                            version: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

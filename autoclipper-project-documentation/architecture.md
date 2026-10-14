@@ -110,3 +110,7 @@ flowchart LR
 ```
 
 La futura publicación tendrá su propia máquina: scheduled → dispatching → published/failed/uncertain; `uncertain` exige conciliación antes de reintentar. Persistirá instante UTC, zona IANA y política explícita para horas ambiguas/inexistentes. Una respuesta externa incierta nunca se traducirá automáticamente en otro envío.
+
+## Edición implementada
+
+Project guarda borrador y revisiones inmutables mediante CAS. Resuelve los subtítulos de Analysis antes de guardar la instantánea y comprueba que pertenecen al mismo upload. Exportar utiliza la revisión elegida, reserva cuota y persiste su referencia junto con la intención durable; el dispatcher y renderer existentes procesan la descripción validada. Media solo recibe fuente/spec autoritativos y mantiene su propia base. Encuadre manual y plantillas se aplican con FFmpeg/libass; no hay seguimiento automático ni servicio de preview. Restaurar crea una revisión nueva sin modificar el historial. Permisos, límites, API y evidencia en [stage-4-editor.md](stage-4-editor.md).

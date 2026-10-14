@@ -10,7 +10,7 @@ import {processingSpec,internalProcessingSpec,processingStatus,type ProcessingSt
 import {logger} from "@autoclipper/observability";
 
 type Upload={id:string;project_id:string;workspace_id:string;state:string};
-type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
+type Row={editor_revision_id:string|null;id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
 const terminal=(status:string)=>["succeeded","failed","cancelled"].includes(status);
 export class DerivativesManager {
   private cursor:string|undefined;
@@ -24,13 +24,28 @@ export class DerivativesManager {
     if(spec.kind!=="clip"||spec.subtitles?.provenance!=="transcript")throw new BadRequestException();
     return this.beginValidated(req,uploadId,spec,correlationId);
   }
-  private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string){
+  async beginFromEditor(req:Request,uploadId:string,input:unknown,correlationId:string,revisionId:string){
+    requireCsrf(req,this.config);const spec=body(internalProcessingSpec,input);
+    if(spec.kind!=="clip")throw new BadRequestException();
+    await this.authorize(req,uploadId,"editor");
+    const revision=(await this.pool.query("SELECT r.id FROM editor_revisions r JOIN editor_drafts d ON d.id=r.draft_id WHERE r.id=$1 AND d.upload_id=$2",[uuid(revisionId),uploadId])).rows[0];
+    if(!revision)throw new NotFoundException();
+    return this.beginValidated(req,uploadId,spec,correlationId,revisionId);
+  }
+  async sourceForEditor(req:Request,uploadId:string){
+    const upload=await this.authorize(req,uploadId,"editor");if(upload.state!=="confirmed")throw new ConflictException();
+    const source=await internalJson<{status:string;result?:{durationSeconds:number;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
+    if(source.status!=="succeeded"||!source.result)throw new ConflictException();
+    if(source.result.width>3840||source.result.height>3840)throw new BadRequestException();
+    return{upload,metadata:source.result};
+  }
+  private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string,editorRevisionId?:string){
     const upload=await this.authorize(req,uploadId,"editor");
     if(upload.state!=="confirmed")throw new ConflictException();
     const source=await internalJson<{status:string;result?:{durationSeconds:number;audioCodec:string|null;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
     if(source.status!=="succeeded"||!source.result)throw new ConflictException();
     if(source.result.width>3840||source.result.height>3840||(spec.kind==="clip"&&spec.endSeconds>source.result.durationSeconds)||(spec.kind==="audio"&&(!source.result.audioCodec||source.result.durationSeconds>3600)))throw new BadRequestException();
-    const user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({uploadId,spec}));
+    const user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({uploadId,spec,...(editorRevisionId?{editorRevisionId}:{})}));
     const reservation=spec.kind==="audio"?134217728:68157440;
     return this.tx(async client=>{
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${user.id}:${key}`]);
@@ -43,7 +58,7 @@ export class DerivativesManager {
       const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,upload.workspace_id,Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824)]);
       if(!reserved.rows[0])throw new ConflictException();
       const id=randomUUID();
-      await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId]);
+      await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id,editor_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId,editorRevisionId??null]);
       return{id,status:"queued"};
     });
   }
@@ -76,13 +91,15 @@ export class DerivativesManager {
       return(await client.query<Row>("UPDATE processing_requests SET status=$2,attempts=$3,error_code=$4,started_at=$5,finished_at=$6,result=$7,cleanup_pending=$8,settled_at=$9 WHERE id=$1 RETURNING *",[row.id,status.status,status.attempts,status.errorCode,status.startedAt,status.finishedAt,status.result,status.cleanupPending,settle?new Date():null])).rows[0]!;
     });
   }
-  private present(row:Row){return{id:row.id,status:row.status,attempts:row.attempts,errorCode:row.error_code,startedAt:row.started_at?.toISOString()??null,finishedAt:row.finished_at?.toISOString()??null,cleanupPending:row.cleanup_pending,spec:row.spec,artifacts:(row.result?.artifacts??[]).map(a=>({kind:a.kind,bytes:a.bytes,sha256:a.sha256,contentType:a.contentType})),durationSeconds:row.result?.durationSeconds??null,width:row.result?.width,height:row.result?.height,sampleRate:row.result?.sampleRate};}
+  private summary(row:Row){return{id:row.id,editorRevisionId:row.editor_revision_id??undefined,status:row.status,attempts:row.attempts,errorCode:row.error_code,startedAt:row.started_at?.toISOString()??null,finishedAt:row.finished_at?.toISOString()??null,cleanupPending:row.cleanup_pending,artifacts:(row.result?.artifacts??[]).map(a=>({kind:a.kind,bytes:a.bytes,sha256:a.sha256,contentType:a.contentType})),durationSeconds:row.result?.durationSeconds??null,width:row.result?.width,height:row.result?.height,sampleRate:row.result?.sampleRate};}
+  private present(row:Row){return{...this.summary(row),spec:row.spec};}
   async status(req:Request,id:string){return this.present(await this.synchronize(await this.resource(req,id)));}
   async list(req:Request,projectId:string) {
     const rows=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE project_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50",[projectId])).rows;
     if(rows[0])await this.authorize(req,rows[0].upload_id,"reader");
     return {items:rows.map(row=>this.present(row))};
   }
+  async listForEditor(draftId:string){const rows=(await this.pool.query<Row>("SELECT p.* FROM processing_requests p JOIN editor_revisions r ON r.id=p.editor_revision_id WHERE r.draft_id=$1 ORDER BY p.created_at DESC,p.id DESC LIMIT 50",[draftId])).rows;return{items:rows.map(row=>this.summary(row))};}
   async cancel(req:Request,id:string){requireCsrf(req,this.config);const row=await this.synchronize(await this.resource(req,id,"editor"));if(terminal(row.status))throw new ConflictException();await this.pool.query("UPDATE processing_requests SET cancel_requested=true WHERE id=$1 AND settled_at IS NULL",[id]);return {cancellationRequested:true};}
   async download(req:Request,id:string,kind:string) {
     const selected=body(z.enum(["video","audio","srt","vtt"]),kind),row=await this.synchronize(await this.resource(req,id));

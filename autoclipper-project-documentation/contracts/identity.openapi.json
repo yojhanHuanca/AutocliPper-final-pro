@@ -31,88 +31,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/google/challenge": {
       "post": {
         "operationId": "IdentityController_googleChallenge",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -150,88 +79,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/google": {
       "post": {
         "operationId": "IdentityController_googleLogin",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -278,88 +136,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/google/link": {
       "post": {
         "operationId": "IdentityController_linkGoogle",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -389,75 +176,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -475,92 +197,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/2fa/setup": {
       "post": {
         "operationId": "IdentityController_setupMfa",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -581,92 +228,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/2fa/enable": {
       "post": {
         "operationId": "IdentityController_enableMfa",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -687,92 +259,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/2fa/disable": {
       "post": {
         "operationId": "IdentityController_disableMfa",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -802,92 +299,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/2fa/recovery/rotate": {
       "post": {
         "operationId": "IdentityController_rotateRecovery",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -908,75 +330,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -994,90 +351,15 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       },
       "patch": {
         "operationId": "IdentityController_updateProfile",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -1107,92 +389,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/privacy-requests": {
       "post": {
         "operationId": "IdentityController_privacy",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -1213,75 +420,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       },
       "get": {
@@ -1297,75 +439,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -1383,75 +460,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -1497,88 +509,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/register": {
       "post": {
         "operationId": "IdentityController_register",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -1608,88 +549,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/verify": {
       "post": {
         "operationId": "IdentityController_verify",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -1719,88 +589,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/login": {
       "post": {
         "operationId": "IdentityController_login",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -1821,88 +620,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/refresh": {
       "post": {
         "operationId": "IdentityController_refresh",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -1922,92 +650,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "refreshSession": []
-          }
         ]
       }
     },
     "/v1/auth/logout": {
       "post": {
         "operationId": "IdentityController_logout",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -2027,72 +680,11 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/me": {
@@ -2109,75 +701,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -2195,75 +722,10 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
@@ -2278,15 +740,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
           }
         ],
         "responses": {
@@ -2308,92 +761,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": [
-          {
-            "cookieSession": []
-          }
         ]
       }
     },
     "/v1/auth/password/forgot": {
       "post": {
         "operationId": "IdentityController_forgot",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -2423,88 +801,17 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     },
     "/v1/auth/password/reset": {
       "post": {
         "operationId": "IdentityController_reset",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-CSRF-Token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -2534,72 +841,11 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Classified error with a safe correlation identifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         },
         "tags": [
           "identity"
-        ],
-        "security": []
+        ]
       }
     }
   },
