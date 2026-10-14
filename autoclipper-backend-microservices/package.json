@@ -1,0 +1,29 @@
+{
+  "name": "autoclipper-backend-microservices",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": { "node": ">=24.15.0 <25", "npm": ">=11 <12" },
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "verify": "npm run lint && npm run test",
+    "start:gateway": "node apps/autoclipper-api-gateway/dist/main.js",
+    "start:media": "node apps/autoclipper-media-processing-service/dist/main.js",
+    "db:generate": "drizzle-kit generate --config apps/autoclipper-media-processing-service/drizzle.config.ts",
+    "db:migrate": "node apps/autoclipper-media-processing-service/dist/infrastructure/migrate.js",
+    "storage:init": "node scripts/storage-init.mjs",
+    "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "openapi:export": "node scripts/export-openapi.mjs",
+    "client:types": "openapi-typescript ../autoclipper-project-documentation/contracts/gateway.openapi.json -o packages/autoclipper-api-contracts/src/generated.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1", "eslint": "10.12.0", "typescript-eslint": "8.71.2",
+    "typescript": "5.9.3", "@types/node": "24.19.2", "@types/express": "5.0.6",
+    "@types/pg": "8.23.1", "drizzle-kit": "0.31.11", "openapi-typescript": "7.13.0"
+  }
+}

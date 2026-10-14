@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+!.env.test.example
+.tools/
+.local/
+coverage/
+*.log
+*.tsbuildinfo
+autoclipper-infrastructure/backups/
