@@ -1,6 +1,6 @@
 # Matriz de estado
 
-Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edición/colaboración de etapa 4. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md), [stage-3-media.md](stage-3-media.md), [stage-3-analysis.md](stage-3-analysis.md), [stage-4-editor.md](stage-4-editor.md) y [stage-4-collaboration.md](stage-4-collaboration.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
+Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edición/colaboración/pantalla dividida de etapa 4. Estados: **IV** implementado y verificado; **IE** implementado sin verificación externa; **PC** pendiente de configuración; **PD** pendiente de desarrollo. Ver [stage-2.md](stage-2.md), [stage-3-media.md](stage-3-media.md), [stage-3-analysis.md](stage-3-analysis.md), [stage-4-editor.md](stage-4-editor.md), [stage-4-collaboration.md](stage-4-collaboration.md) y [stage-4-split-screen.md](stage-4-split-screen.md) para aceptación y límites; no se contabilizan diseños como funciones implementadas.
 
 | Capacidad | Estado | Evidencia / límite |
 |---|---|---|
@@ -26,6 +26,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | CI de servicio de análisis y transcripción/render vinculados | IV | Run 38621706578 aprobado en quality, infrastructure y business; commit a392e6d. ASR real acreditado por prueba local opt-in |
 | CI de edición versionada, encuadre y plantillas | IV | Run 38629797508 aprobado en los tres jobs; commit 721336e. Editor con ASR real acreditado localmente, sin pesos en CI |
 | CI de comentarios, revisión/aprobaciones y enlaces limitados | IV | Run 38638350096 aprobado en quality/infrastructure/business; commit 93dfc02. ASR real conservado por prueba local de seis tests |
+| CI de pantalla dividida con dos fuentes autorizadas | IV | [Run 38669973228](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38669973228) aprobado en quality/infrastructure/business para 02003a2: 26 unitarias, 34 infraestructura, 55 negocio y 7 análisis fixtures. ASR real y composición acreditados localmente |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |

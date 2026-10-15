@@ -1,6 +1,6 @@
 # Pantalla dividida sobre revisiones de edición
 
-Entrega verificada localmente, con CI por registrar tras publicación privada. Añade composición real de dos videos propios cargados/inspeccionados y autorizados dentro del mismo workspace. Conserva fuente principal, transcripción, revisiones, aprobaciones, outbox, cuotas y enlaces de revisión existentes. No incorpora tracking, branding, mezcla musical, material externo ni interfaz Angular.
+Entrega verificada localmente y publicada en el repositorio privado como `02003a20f3e9fc1f09f64829963ba241c91b1abc`. [CI 38669973228](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38669973228) aprobó quality, infrastructure y business para ese SHA. Añade composición real de dos videos propios cargados/inspeccionados y autorizados dentro del mismo workspace. Conserva fuente principal, transcripción, revisiones, aprobaciones, outbox, cuotas y enlaces de revisión existentes. No incorpora tracking, branding, mezcla musical, material externo ni interfaz Angular.
 
 ## Especificación y comportamiento
 
@@ -72,7 +72,7 @@ Los accesos privados al procesamiento comprueban ambas fuentes. Los grants públ
 
 ## Verificación
 
-Ya ejecutado: lint/build/contratos, 26 unitarias/HTTP sobre Node 24.21.0 y nueve tests nativos FFmpeg 8.1.1 (cinco de composición y cuatro de las plantillas previas). Las pruebas sobre frames midieron disposición, frontera de proporción y crop; se comprobaron audio principal/secundario/none, congelación, silencio de relleno, duración y subtítulos sobre el canvas. Los conteos incluyen padres. Resultados de aceptación, ASR real y CI se registrarán al concluirlos.
+Ya ejecutado: lint/build/contratos, 26 unitarias/HTTP sobre Node 24.21.0 y nueve tests nativos FFmpeg 8.1.1 (cinco de composición y cuatro de las plantillas previas). Las pruebas sobre frames midieron disposición, frontera de proporción y crop; se comprobaron audio principal/secundario/none, congelación, silencio de relleno, duración y subtítulos sobre el canvas. Los conteos incluyen padres. Los resultados finales de aceptación, ASR real y CI están registrados a continuación.
 
 La suite Docker de infraestructura aprobó 34 tests, sin omisiones, en 166.06 segundos del runner. Incluye cinco de filtros/composición y seis del runtime de dos fuentes, además de la regresión previa de 23. Se verificaron ambos SHA-256 aunque ETag/tamaño coinciden, secundario de otro workspace, límites/rechazo de entrada corta, objeto secundario modificado (un intento), ausente (tres intentos), recuperación de entrada Redis perdida, cancelación en cola/activa y retirada de ambos directorios sin artefactos parciales. Estas pruebas usaron PostgreSQL, Redis, S3 y FFmpeg 5.1.9 reales.
 
@@ -80,7 +80,7 @@ La primera suite completa de negocio ejecutó 55 tests: 53 aprobados y dos fallo
 
 La revisión de configuración detectó que TEMP_DIR nativo predeterminado es relativo y FFmpeg cambia cwd al directorio del principal. Se normalizó la ruta secundaria con resolve antes de pasársela al binario; el test de runtime se configuró expresamente con TEMP_DIR relativo. Tras reconstruir las imágenes, volvieron a pasar 34 tests de infraestructura en 120.90 segundos y lint/build/26 unitarias/contratos. Este caso se probó con dependencias Linux/Docker; las pruebas nativas anteriores de frames/audio usaron Windows/FFmpeg 8.1.1.
 
-La aceptación final, después de ese ajuste y usando las imágenes actualizadas, aprobó nuevamente 14 tests conjuntos en 73.44 segundos y seis del flujo whisper.cpp real en 50.81 segundos. Se preservaron la transcripción/cues principales al componer, permisos de dos fuentes, exportación de revisión anterior, reserva/conciliación una vez y descarga autorizada. El fallo inicial por 429 queda registrado arriba; no se presenta la primera suite completa de 55 como aprobada. La regresión completa del SHA se acreditará por CI.
+La aceptación final, después de ese ajuste y usando las imágenes actualizadas, aprobó nuevamente 14 tests conjuntos en 73.44 segundos y seis del flujo whisper.cpp real en 50.81 segundos. Se preservaron la transcripción/cues principales al componer, permisos de dos fuentes, exportación de revisión anterior, reserva/conciliación una vez y descarga autorizada. El fallo inicial por 429 queda registrado arriba; no se presenta la primera suite completa local de 55 como aprobada. La regresión completa posterior de ese SHA pasó en CI: 26 unitarias/HTTP, 34 de infraestructura, 55 de negocio y siete de recuperación de análisis, sin fallos ni omisiones. CI no descarga pesos ni ejecuta whisper.cpp; la inferencia real sigue acreditada por la aceptación local opt-in.
 
 | Evidencia propia | Resultado final |
 |---|---|
