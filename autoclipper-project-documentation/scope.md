@@ -6,7 +6,7 @@ La entrega actual acredita el recorrido de cuenta a transcripción local real y 
 |---|---|---|
 | 1 | Repo independiente, workspace estricto, NestJS, dependencias Docker, roles/migraciones, salud/contratos, pruebas reales y CI básica | Implementada; ver evidencia y pendientes operativos |
 | 2 | Identidad, workspaces/roles, proyectos, carga directa/multipart y aislamiento | Recorrido y 2FA verificados; Google externo, fulfillment de privacidad y gestión avanzada pendientes |
-| 3 | Extracción, proveedor real de transcripción, selección validada, render/subtítulos, estado y descarga; flujo real completo | Audio, whisper.cpp real y render/descarga verificados con intervalo manual; selección real, traducción y orquestación automática pendientes |
+| 3 | Extracción, proveedor real de transcripción, selección validada, render/subtítulos, estado y descarga; flujo real completo | Audio, whisper.cpp real y render/descarga con orquestación durable servidor verificados; intervalo manual explícito, selección real y traducción pendientes |
 | 4 | Especificación de edición versionada, concurrencia, revisiones, marca, comentarios, aprobación y review links | Edición/colaboración/split verificados; marca/audio avanzado pendientes |
 | 5 | OAuth y publicación/calendario por proveedor permitido, zonas IANA, dedupe y conciliación | Pendiente; revisión oficial y credenciales al implementar |
 | 6 | Consumo interno, reservas/conciliación, planes versionados, proveedor de pagos si se elige, soporte/admin autorizados | Pendiente |
@@ -14,7 +14,7 @@ La entrega actual acredita el recorrido de cuenta a transcripción local real y 
 
 ## Siguiente recorrido funcional
 
-Recorrido ya acreditado: registro → verificación SMTP local → sesión segura → workspace → proyecto → carga autorizada → HEAD/checksum/cuota → inspección → audio → whisper.cpp real → intervalo manual → clip subtitulado → estado/descarga temporal y denegación a otro usuario. El siguiente incremento de etapa 3 orquestará esas etapas desde el servidor, inicialmente con intervalo manual explícito. La selección automática necesita inferencia real validada y una entrega posterior; no se anuncia por encadenar etapas.
+Recorrido ya acreditado: registro → verificación SMTP local → sesión segura → workspace → proyecto → carga autorizada → HEAD/checksum/cuota → inspección → audio → whisper.cpp real → intervalo manual → clip subtitulado → estado/descarga temporal y denegación a otro usuario. La [orquestación durable](stage-3-orchestration.md) ya encadena audio/ASR/render desde el servidor, con intervalo manual explícito. La selección automática necesita inferencia real validada y una entrega posterior; no se anuncia por encadenar etapas.
 
 La aceptación real utilizó voz sintética autorizada y modelo local fijado; no acredita calidad general ni selección LLM. Los fixtures de proveedores no satisfacen inferencia real. Pendencias de proveedor no deben bloquear trabajo independiente en permisos, datos, almacenamiento, edición y render.
 

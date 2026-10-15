@@ -16,6 +16,7 @@ export class DerivativesManager {
   private cursor:string|undefined;
   constructor(private readonly pool:pg.Pool,private readonly config:ServiceConfig,private readonly mediaUrl:string,private readonly bucket:string,private readonly s3:S3Client,private readonly signer:S3Client,private readonly authorize:(req:Request,id:string,minimum:"reader"|"editor")=>Promise<Upload>){}
   private async tx<T>(work:(client:pg.PoolClient)=>Promise<T>){const client=await this.pool.connect();try{await client.query("BEGIN");const result=await work(client);await client.query("COMMIT");return result;}catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}}
+  async authorizeUpload(req:Request,id:string,minimum:"reader"|"editor"){return this.authorize(req,id,minimum);}
   async begin(req:Request,uploadId:string,input:unknown,correlationId:string) {
     requireCsrf(req,this.config);return this.beginValidated(req,uploadId,body(processingSpec,input),correlationId);
   }

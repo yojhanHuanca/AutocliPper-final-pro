@@ -51,6 +51,8 @@ Pantalla dividida: Project `0007_split_screen` añade `editor_revisions.secondar
 
 La entrega multimedia añade en media `processing_tasks` (fuente inspeccionada propia, spec, estado, intentos, cancelación/limpieza, resultado y fechas) y `processing_outbox`. Las restricciones exigen resultado solo al éxito y fecha de fin exactamente en estados terminales. Project añade `processing_requests` con idempotencia por autor, referencia de upload/proyecto, reserva, acuses de admisión/cancelación y conciliación terminal. No hay FK entre bases. Los detalles de cuota y borrado están en [stage-3-media.md](stage-3-media.md).
 
+Project `0008_pipelines` añade intención/spec/hash inmutable por API, estado/plazo/cancelación y reserva no transferida; `pipeline_events` impide UPDATE/DELETE y limita historial por versión. Processing y analysis_requests referencian la intención mediante FK local; índices únicos impiden duplicar audio/clip/análisis por pipeline. El estado terminal exige finished_at y reserva no transferida cero. Los hijos concilian sus propias reservas antes del cierre. Ver [orquestación](stage-3-orchestration.md); no hay FK ni lectura SQL entre bases.
+
 La tabla describe el alcance completo. Las entidades enumeradas como implementadas al inicio de este documento ya tienen migraciones y endpoints de etapa 2; las demás se implementarán con sus casos de uso y pruebas, evitando tablas sin comportamiento.
 
 | Dueño | Entidades y restricciones previstas |

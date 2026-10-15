@@ -61,3 +61,7 @@ Rutas bajo `/edits/{id}`: review, approvals, comments, review-links y audit. Las
 ## Pantalla dividida
 
 EditorSpecDto incorpora splitScreen opcional: secondaryUploadId, layout side_by_side/stacked, primaryRatio 0.2–0.8, startSeconds del secundario, shortInput reject/freeze, audio primary/secondary/none y framing opcional. Se admite mediante el editor versionado y se rechaza en POST directo uploads/{id}/processing. ProcessingSpecDto de respuesta conserva la descripción autorizada; PublicSplitScreenDto elimina secondaryUploadId. Las variantes previas clip/audio siguen válidas sin ese campo. La cola continúa enviando solo el taskId versionado; ambas fuentes se consultan desde las bases de sus dueños. Ver ejemplo, límites y política de duración/audio en [stage-4-split-screen.md](stage-4-split-screen.md).
+
+## Pipeline manual en servidor
+
+POST `/uploads/{id}/pipelines` recibe PipelineSpecDto estricto: provider whisper_cpp, language explícito, selection none e intervalo/aspect manual. GET/DELETE `/pipelines/{id}` consulta/cancela; GET `/pipelines/{id}/download` firma video/SRT/VTT. Respuestas acotadas a ocho transiciones, sin claves S3 ni transcripción completa. Idempotency-Key obligatorio al crear, cookie/Origin/CSRF y roles actuales; la idempotencia no sustituye autorización. Un solo POST crea la intención, no cada etapa desde Angular. No admite LLM/pago/URLs/IDs de etapas del cliente. Contratos públicos regenerados y detalles en [stage-3-orchestration.md](stage-3-orchestration.md).

@@ -1942,6 +1942,189 @@
           "editor-collaboration"
         ]
       }
+    },
+    "/v1/uploads/{id}/pipelines": {
+      "post": {
+        "operationId": "PipelineController_begin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineSpecDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/pipelines/{id}": {
+      "get": {
+        "operationId": "PipelineController_status",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pipelines"
+        ]
+      },
+      "delete": {
+        "operationId": "PipelineController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "cancellationRequested"
+                  ],
+                  "properties": {
+                    "cancellationRequested": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pipelines"
+        ]
+      }
+    },
+    "/v1/pipelines/{id}/download": {
+      "get": {
+        "operationId": "PipelineController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "video",
+                "srt",
+                "vtt"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "url",
+                    "expiresInSeconds",
+                    "contentType",
+                    "bytes",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "maximum": 120
+                    },
+                    "contentType": {
+                      "type": "string"
+                    },
+                    "bytes": {
+                      "type": "integer"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pipelines"
+        ]
+      }
     }
   },
   "info": {
@@ -4306,6 +4489,185 @@
           "videoEnabled",
           "expiresAt",
           "comments"
+        ]
+      },
+      "PipelineSpecDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "whisper_cpp"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "es",
+              "en"
+            ]
+          },
+          "selection": {
+            "type": "object",
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "none"
+                ]
+              }
+            },
+            "description": "Manual interval; no automatic segment selection."
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 300
+          },
+          "endSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 300,
+            "description": "Within the inspected source; clip length 0.1–120 seconds."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "provider",
+          "language",
+          "startSeconds",
+          "endSeconds",
+          "aspect"
+        ]
+      },
+      "PipelineEventDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "status",
+          "at"
+        ]
+      },
+      "PipelineStatusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "audio",
+              "analysis",
+              "render",
+              "stopping",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "spec": {
+            "$ref": "#/components/schemas/PipelineSpecDto"
+          },
+          "version": {
+            "type": "number"
+          },
+          "cancellationRequested": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deadlineAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "audioProcessingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "analysisId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "renderProcessingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reservedBytes": {
+            "type": "number",
+            "description": "Unallocated portion of the upfront storage reservation; children settle their transferred portions."
+          },
+          "events": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineEventDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "spec",
+          "version",
+          "cancellationRequested",
+          "errorCode",
+          "createdAt",
+          "deadlineAt",
+          "finishedAt",
+          "audioProcessingId",
+          "analysisId",
+          "renderProcessingId",
+          "reservedBytes",
+          "events"
         ]
       }
     }

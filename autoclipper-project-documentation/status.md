@@ -49,7 +49,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Selección LLM, instrucciones, títulos/hashtags/explicación | IE + PC | Adaptador Ollama y validaciones; falta modelo/servidor e inferencia real. selection=none permite intervalo manual |
 | Modelos, prompt y estimación de costo IA | IV parcial + IE | Modelo/hash de ASR real guardados; prompt/version/uso LLM probados con fixtures. Costo externo local 0, cómputo no gratuito |
 | Traducción de subtítulos | PD | No hay traductor ni resultados traducidos simulados |
-| Orquestación automática de todas las etapas | PD | Intenciones durables vinculadas; el cliente encadena audio/análisis/render y elige manualmente el intervalo cuando selection=none |
+| Orquestación de audio/ASR local/render desde servidor | IV | Una intención durable encadena etapas mediante outboxes propios, conserva intervalo manual/selection=none; replay, SIGKILL del orquestador, cancelación, roles, plazo y reservas comprobados. [Evidencia](stage-3-orchestration.md); selección automática real pendiente |
 | Recorte explícito/render/subtítulos aportados/video/SRT/VTT | IV | MP4 real, texto visible en frame, sidecars y URLs S3 privadas de 120s; no es selección ni transcripción IA |
 | Persistencia/recovery/cancelación de derivados/cuota | IV | Outbox, pérdida Redis restaurada, tres intentos máximos, cancelación activa/en cola y cuota conciliada una vez |
 | Edición versionada, CAS, revisiones recuperables | IV | PostgreSQL impide modificar revisiones; dos escritores concurrentes, versiones/If-Match obsoletos, ETag a través del gateway y restauración comprobados |

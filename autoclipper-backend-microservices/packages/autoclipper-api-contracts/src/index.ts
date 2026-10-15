@@ -18,3 +18,4 @@ export * from "./processing.js";
 export * from "./analysis.js";
 export * from "./editor.js";
 export * from "./collaboration.js";
+export * from "./pipeline.js";

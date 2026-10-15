@@ -22,6 +22,7 @@ import {AnalysisController as InternalAnalysisController} from '../apps/autoclip
 import {AnalysisRuntime} from '../apps/autoclipper-content-analysis-service/dist/application/analysis-runtime.js';
 import {EditorController} from '../apps/autoclipper-project-service/dist/interfaces/editor.controller.js';
 import {CollaborationController} from '../apps/autoclipper-project-service/dist/interfaces/collaboration.controller.js';
+import {PipelineController} from '../apps/autoclipper-project-service/dist/interfaces/pipeline.controller.js';
 // Contract generation must not instantiate database/queue clients or start workers.
 class MediaContractModule {}
 Module({ controllers: [OperationsController], providers: [{ provide: InspectionRuntime, useValue: {} },{provide:ProcessingRuntime,useValue:{}}] })(MediaContractModule);
@@ -29,7 +30,7 @@ const directory = new URL('../../autoclipper-project-documentation/contracts/', 
 await mkdir(directory, { recursive: true });
 const documents={};
 const contractModule=(controller,service)=>{class ContractModule{}Module({controllers:Array.isArray(controller)?controller:[controller],providers:[{provide:service,useValue:{}}]})(ContractModule);return ContractModule;};
-for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule([ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController],ProjectService)],['analysis',contractModule(InternalAnalysisController,AnalysisRuntime)]]) {
+for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule([ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController,PipelineController],ProjectService)],['analysis',contractModule(InternalAnalysisController,AnalysisRuntime)]]) {
   const app = await NestFactory.create(module, { logger: false });
   try {
     const document = configureHttp(app, loadGatewayConfig(), name === 'gateway' ? 'api-gateway' : name==='media'?'media-processing-service':`${name}-service`);

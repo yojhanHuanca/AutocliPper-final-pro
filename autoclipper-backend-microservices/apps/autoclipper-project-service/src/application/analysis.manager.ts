@@ -1,11 +1,12 @@
-import {BadRequestException,ConflictException,HttpException,NotFoundException} from "@nestjs/common";
+import {ConflictException,HttpException,NotFoundException} from "@nestjs/common";
 import type {Request} from "express";
 import type pg from "pg";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {analysisSpec,analysisStatus,transcriptRenderSpec,type AnalysisSpec,type AnalysisStatus} from "@autoclipper/api-contracts";
+import {analysisSpec,analysisStatus,type AnalysisSpec,type AnalysisStatus} from "@autoclipper/api-contracts";
 import {authenticatedUser,body,digest,internalJson,requireCsrf,uuid,type ServiceConfig} from "@autoclipper/http-security";
 import {logger} from "@autoclipper/observability";
+import {transcriptClip} from "./transcript-clip.js";
 import type {DerivativesManager} from "./derivatives.manager.js";
 
 type Audio=Awaited<ReturnType<DerivativesManager["audioForAnalysis"]>>;
@@ -50,16 +51,8 @@ export class AnalysisManager {
     return this.derivatives.beginFromTranscript(req,prepared.uploadId,prepared.spec,correlationId);
   }
   async prepareRender(req:Request,id:string,input:unknown){
-    requireCsrf(req,this.config);const row=await this.resource(req,id,"editor"),state=await this.synchronize(row),spec=body(transcriptRenderSpec,input);
-    if(state.status!=="succeeded"||!state.transcript)throw new ConflictException();
-    const times="proposalIndex" in spec?state.selection?.segments[spec.proposalIndex]:spec;
-    if(!times)throw new BadRequestException();
-    const {startSeconds,endSeconds}=times;
-    if(endSeconds-startSeconds<0.1||endSeconds-startSeconds>120||endSeconds>state.transcript.durationSeconds)throw new BadRequestException();
-    const cues=state.transcript.segments.filter(segment=>segment.startSeconds<endSeconds&&segment.endSeconds>startSeconds).map(segment=>({startSeconds:Math.max(startSeconds,segment.startSeconds),endSeconds:Math.min(endSeconds,segment.endSeconds),text:Array.from(segment.text.replace(/[<>\\{}]/gu," "),character=>character.charCodeAt(0)<32?" ":character).join("").trim()})).filter(cue=>cue.text&&cue.endSeconds-cue.startSeconds>=0.01);
-    // Reject excessive caption density/length instead of silently dropping words.
-    if(!cues.length||cues.length>200||cues.some(cue=>cue.text.length>500))throw new BadRequestException();
-    return {uploadId:row.upload_id,spec:{version:1 as const,kind:"clip" as const,startSeconds,endSeconds,aspect:spec.aspect,subtitles:{provenance:"transcript" as const,transcriptId:state.transcript.id,cues}}};
+    requireCsrf(req,this.config);const row=await this.resource(req,id,"editor"),state=await this.synchronize(row);
+    return {uploadId:row.upload_id,spec:transcriptClip(state,input)};
   }
   async dispatch(){
     const pending=(await this.pool.query<Row>("SELECT * FROM analysis_requests WHERE delivered_at IS NULL ORDER BY created_at LIMIT 25")).rows;

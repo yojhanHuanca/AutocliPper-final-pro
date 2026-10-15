@@ -21,6 +21,7 @@ export class ProxyController {
     "uploads/*path",
     "processing/*path",
     "analyses/*path",
+    "pipelines/*path",
     "edits/*path",
     "review-links/*path",
   ])
