@@ -9,23 +9,35 @@ const cue = z.object({
 }).strict().refine(value => value.endSeconds - value.startSeconds >= 0.01);
 export {cue as subtitleCueSchema};
 export const framingSchema=z.object({x:z.number().finite().min(0).max(1),y:z.number().finite().min(0).max(1)}).strict();
+export const splitScreenSchema=z.object({secondaryUploadId:z.uuid(),layout:z.enum(["side_by_side","stacked"]),primaryRatio:z.number().finite().min(0.2).max(0.8),startSeconds:seconds,shortInput:z.enum(["reject","freeze"]),audio:z.enum(["primary","secondary","none"]),framing:framingSchema.optional()}).strict();
 export const subtitleStyleSchema=z.object({template:z.enum(["clean","boxed","bold"]),fontSize:z.number().int().min(12).max(40).default(24),position:z.enum(["top","bottom"]).default("bottom")}).strict();
 const clipFields={version:z.literal(1),kind:z.literal("clip"),startSeconds:seconds,endSeconds:seconds,aspect:z.enum(["source","vertical","square","horizontal"]),framing:framingSchema.optional()};
 const userSubtitles=z.object({provenance:z.literal("user"),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
 const transcriptSubtitles=z.object({provenance:z.literal("transcript"),transcriptId:z.uuid(),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
-function clipRules(value:{startSeconds:number;endSeconds:number;aspect:string;framing?:z.infer<typeof framingSchema>|undefined;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
+function clipRules(value:{startSeconds:number;endSeconds:number;aspect:string;framing?:z.infer<typeof framingSchema>|undefined;splitScreen?:z.infer<typeof splitScreenSchema>|undefined;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
   if(value.endSeconds-value.startSeconds<0.1||value.endSeconds-value.startSeconds>120)context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
   if(value.framing&&value.aspect==="source")context.addIssue({code:"custom",message:"Manual framing requires a fixed output aspect"});
+  if(value.splitScreen&&value.aspect==="source")context.addIssue({code:"custom",message:"Split screen requires a fixed output aspect"});
   let previous=value.startSeconds;
   for(const caption of value.subtitles?.cues??[]){if(caption.startSeconds<previous||caption.endSeconds>value.endSeconds)context.addIssue({code:"custom",message:"Cues must be ordered, non-overlapping and contained in the requested clip"});previous=caption.endSeconds;}
 }
 const audio=z.object({version:z.literal(1),kind:z.literal("audio")}).strict();
 const clip=z.object({...clipFields,subtitles:userSubtitles.optional()}).strict().superRefine(clipRules);
-const internalClip=z.object({...clipFields,subtitles:z.union([userSubtitles,transcriptSubtitles]).optional()}).strict().superRefine(clipRules);
+const internalClip=z.object({...clipFields,splitScreen:splitScreenSchema.optional(),subtitles:z.union([userSubtitles,transcriptSubtitles]).optional()}).strict().superRefine(clipRules);
 export const processingSpec=z.union([audio,clip]);
 export type ProcessingSpec=z.infer<typeof processingSpec>;
 export const internalProcessingSpec=z.union([audio,internalClip]);
 export type ValidatedProcessingSpec=z.infer<typeof internalProcessingSpec>;
+type SplitMetadata={durationSeconds:number;width:number;height:number;audioCodec:string|null};
+export function splitSourceError(spec:Extract<ValidatedProcessingSpec,{kind:"clip"}>,primary:SplitMetadata,secondary:SplitMetadata,primaryBytes:number,secondaryBytes:number){
+  const split=spec.splitScreen;if(!split)return;
+  if(primaryBytes+secondaryBytes>104857600||[primary,secondary].some(source=>source.width>1920||source.height>1920||source.width*source.height>2073600))return "SPLIT_INPUT_LIMIT";
+  const remaining=secondary.durationSeconds-split.startSeconds;
+  if(remaining<0.1)return "SECONDARY_TIMESTAMP_OUT_OF_RANGE";
+  if(split.shortInput==="reject"&&remaining<spec.endSeconds-spec.startSeconds)return "SECONDARY_TOO_SHORT";
+  if((split.audio==="primary"&&!primary.audioCodec)||(split.audio==="secondary"&&!secondary.audioCodec))return "NO_SELECTED_AUDIO";
+  return;
+}
 export const artifactSchema = z.object({kind:z.enum(["video","audio","srt","vtt"]),objectKey:z.string().max(512),bytes:z.number().int().positive().max(134217728),sha256:z.string().regex(/^[a-f0-9]{64}$/),etag:z.string().min(1).max(200),contentType:z.enum(["video/mp4","audio/wav","application/x-subrip","text/vtt"])}).strict();
 export type ProcessingArtifact = z.infer<typeof artifactSchema>;
 export const processingStatus = z.object({id:z.uuid(),status:z.enum(["queued","running","succeeded","failed","cancelled"]),attempts:z.number().int().nonnegative(),errorCode:z.string().nullable(),startedAt:z.string().nullable(),finishedAt:z.string().nullable(),cleanupPending:z.boolean(),result:z.object({artifacts:z.array(artifactSchema).max(3),durationSeconds:z.number().positive(),width:z.number().int().positive().optional(),height:z.number().int().positive().optional(),sampleRate:z.number().int().positive().optional()}).strict().nullable()}).strict();
@@ -39,6 +51,15 @@ export class SubtitleCueDto {
 export class FramingDto {
   @ApiProperty({minimum:0,maximum:1,description:"Fraction of horizontal overflow to crop: 0 left, 0.5 center, 1 right."}) x!:number;
   @ApiProperty({minimum:0,maximum:1,description:"Fraction of vertical overflow to crop: 0 top, 0.5 center, 1 bottom."}) y!:number;
+}
+export class SplitScreenDto {
+  @ApiProperty({format:"uuid",description:"Confirmed inspected upload in the same authorized workspace; no external URLs."}) secondaryUploadId!:string;
+  @ApiProperty({enum:["side_by_side","stacked"]}) layout!:string;
+  @ApiProperty({minimum:0.2,maximum:0.8,description:"Primary panel fraction; panel dimensions round to even pixels."}) primaryRatio!:number;
+  @ApiProperty({minimum:0,maximum:14400,description:"Start time in the secondary source."}) startSeconds!:number;
+  @ApiProperty({enum:["reject","freeze"],description:"Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence."}) shortInput!:string;
+  @ApiProperty({enum:["primary","secondary","none"],description:"Exactly one audio source or silence; no implicit mixing."}) audio!:string;
+  @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;
 }
 export class SubtitleStyleDto {
   @ApiProperty({enum:["clean","boxed","bold"]}) template!:string;
@@ -63,6 +84,7 @@ export class ProcessingSpecDto {
   @ApiPropertyOptional({minimum:0,description:"Clip length must be 0.1–120 seconds and fit the source."}) endSeconds?: number;
   @ApiPropertyOptional({enum:["source","vertical","square","horizontal"]}) aspect?: string;
   @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;
+  @ApiPropertyOptional({type:SplitScreenDto}) splitScreen?:SplitScreenDto;
   @ApiPropertyOptional({type:SubtitleResponseDto}) subtitles?: SubtitleResponseDto;
 }
 export class AudioProcessingSpecDto {

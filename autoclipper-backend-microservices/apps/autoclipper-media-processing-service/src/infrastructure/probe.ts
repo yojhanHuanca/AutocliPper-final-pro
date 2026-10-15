@@ -25,6 +25,7 @@ export async function probeLocal(
     MediaConfig,
     "FFPROBE_PATH" | "PROBE_TIMEOUT_MS" | "MAX_VIDEO_SECONDS"
   >,
+  signal?:AbortSignal,
 ) {
   let stdout: string;
   try {
@@ -53,10 +54,12 @@ export async function probeLocal(
         killSignal: "SIGKILL",
         maxBuffer: 1048576,
         windowsHide: true,
+        ...(signal?{signal}:{}),
       },
     );
     stdout = result.stdout;
   } catch {
+    if(signal?.aborted)throw new InspectionError("CANCELLED",false);
     throw new InspectionError("PROBE_FAILED", false);
   }
   try {
@@ -138,7 +141,7 @@ export async function withInspectedSource<T>(
     if (task.expectedSha256 && hash.digest("hex") !== task.expectedSha256)
       throw new InspectionError("CHECKSUM_MISMATCH", false);
     clearTimeout(timer);
-    const metadata = await probeLocal(path, config);
+    const metadata = await probeLocal(path, config,combined);
     return await work(path, directory, metadata);
   } finally {
     clearTimeout(timer);

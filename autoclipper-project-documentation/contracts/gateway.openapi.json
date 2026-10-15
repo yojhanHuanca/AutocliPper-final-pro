@@ -12430,6 +12430,63 @@
           "aspect"
         ]
       },
+      "SplitScreenDto": {
+        "type": "object",
+        "properties": {
+          "secondaryUploadId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Confirmed inspected upload in the same authorized workspace; no external URLs."
+          },
+          "layout": {
+            "type": "string",
+            "enum": [
+              "side_by_side",
+              "stacked"
+            ]
+          },
+          "primaryRatio": {
+            "type": "number",
+            "minimum": 0.2,
+            "maximum": 0.8,
+            "description": "Primary panel fraction; panel dimensions round to even pixels."
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 14400,
+            "description": "Start time in the secondary source."
+          },
+          "shortInput": {
+            "type": "string",
+            "enum": [
+              "reject",
+              "freeze"
+            ],
+            "description": "Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence."
+          },
+          "audio": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "secondary",
+              "none"
+            ],
+            "description": "Exactly one audio source or silence; no implicit mixing."
+          },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
+          }
+        },
+        "required": [
+          "secondaryUploadId",
+          "layout",
+          "primaryRatio",
+          "startSeconds",
+          "shortInput",
+          "audio"
+        ]
+      },
       "SubtitleResponseDto": {
         "type": "object",
         "properties": {
@@ -12497,6 +12554,9 @@
           },
           "framing": {
             "$ref": "#/components/schemas/FramingDto"
+          },
+          "splitScreen": {
+            "$ref": "#/components/schemas/SplitScreenDto"
           },
           "subtitles": {
             "$ref": "#/components/schemas/SubtitleResponseDto"
@@ -13301,6 +13361,9 @@
           "framing": {
             "$ref": "#/components/schemas/FramingDto"
           },
+          "splitScreen": {
+            "$ref": "#/components/schemas/SplitScreenDto"
+          },
           "subtitles": {
             "oneOf": [
               {
@@ -13921,6 +13984,57 @@
           "cues"
         ]
       },
+      "PublicSplitScreenDto": {
+        "type": "object",
+        "properties": {
+          "layout": {
+            "type": "string",
+            "enum": [
+              "side_by_side",
+              "stacked"
+            ]
+          },
+          "primaryRatio": {
+            "type": "number",
+            "minimum": 0.2,
+            "maximum": 0.8,
+            "description": "Primary panel fraction; panel dimensions round to even pixels."
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 14400,
+            "description": "Start time in the secondary source."
+          },
+          "shortInput": {
+            "type": "string",
+            "enum": [
+              "reject",
+              "freeze"
+            ],
+            "description": "Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence."
+          },
+          "audio": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "secondary",
+              "none"
+            ],
+            "description": "Exactly one audio source or silence; no implicit mixing."
+          },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
+          }
+        },
+        "required": [
+          "layout",
+          "primaryRatio",
+          "startSeconds",
+          "shortInput",
+          "audio"
+        ]
+      },
       "PublicReviewSpecDto": {
         "type": "object",
         "properties": {
@@ -13959,6 +14073,9 @@
           },
           "subtitles": {
             "$ref": "#/components/schemas/PublicReviewCaptionsDto"
+          },
+          "splitScreen": {
+            "$ref": "#/components/schemas/PublicSplitScreenDto"
           }
         },
         "required": [

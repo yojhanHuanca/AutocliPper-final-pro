@@ -50,6 +50,13 @@
       "when": 1792010000000,
       "tag": "0006_editor_collaboration",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792015000000,
+      "tag": "0007_split_screen",
+      "breakpoints": true
     }
   ]
 }

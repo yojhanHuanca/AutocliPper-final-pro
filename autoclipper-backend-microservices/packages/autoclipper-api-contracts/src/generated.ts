@@ -1459,6 +1459,30 @@ export interface components {
             framing?: components["schemas"]["FramingDto"];
             subtitles?: components["schemas"]["UserSubtitlesDto"];
         };
+        SplitScreenDto: {
+            /**
+             * Format: uuid
+             * @description Confirmed inspected upload in the same authorized workspace; no external URLs.
+             */
+            secondaryUploadId: string;
+            /** @enum {string} */
+            layout: "side_by_side" | "stacked";
+            /** @description Primary panel fraction; panel dimensions round to even pixels. */
+            primaryRatio: number;
+            /** @description Start time in the secondary source. */
+            startSeconds: number;
+            /**
+             * @description Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence.
+             * @enum {string}
+             */
+            shortInput: "reject" | "freeze";
+            /**
+             * @description Exactly one audio source or silence; no implicit mixing.
+             * @enum {string}
+             */
+            audio: "primary" | "secondary" | "none";
+            framing?: components["schemas"]["FramingDto"];
+        };
         SubtitleResponseDto: {
             /** @enum {string} */
             provenance: "user" | "transcript";
@@ -1478,6 +1502,7 @@ export interface components {
             /** @enum {string} */
             aspect?: "source" | "vertical" | "square" | "horizontal";
             framing?: components["schemas"]["FramingDto"];
+            splitScreen?: components["schemas"]["SplitScreenDto"];
             subtitles?: components["schemas"]["SubtitleResponseDto"];
         };
         ProcessingArtifactDto: {
@@ -1692,6 +1717,7 @@ export interface components {
             /** @enum {string} */
             aspect: "source" | "vertical" | "square" | "horizontal";
             framing?: components["schemas"]["FramingDto"];
+            splitScreen?: components["schemas"]["SplitScreenDto"];
             subtitles?: components["schemas"]["NoEditorCaptionsDto"] | components["schemas"]["UserEditorCaptionsDto"] | components["schemas"]["TranscriptEditorCaptionsDto"];
         };
         CreateEditDto: {
@@ -1867,6 +1893,25 @@ export interface components {
             cues: components["schemas"]["SubtitleCueDto"][];
             style?: components["schemas"]["SubtitleStyleDto"];
         };
+        PublicSplitScreenDto: {
+            /** @enum {string} */
+            layout: "side_by_side" | "stacked";
+            /** @description Primary panel fraction; panel dimensions round to even pixels. */
+            primaryRatio: number;
+            /** @description Start time in the secondary source. */
+            startSeconds: number;
+            /**
+             * @description Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence.
+             * @enum {string}
+             */
+            shortInput: "reject" | "freeze";
+            /**
+             * @description Exactly one audio source or silence; no implicit mixing.
+             * @enum {string}
+             */
+            audio: "primary" | "secondary" | "none";
+            framing?: components["schemas"]["FramingDto"];
+        };
         PublicReviewSpecDto: {
             /** @enum {number} */
             version: 1;
@@ -1879,6 +1924,7 @@ export interface components {
             aspect: "source" | "vertical" | "square" | "horizontal";
             framing?: components["schemas"]["FramingDto"];
             subtitles?: components["schemas"]["PublicReviewCaptionsDto"];
+            splitScreen?: components["schemas"]["PublicSplitScreenDto"];
         };
         PublicReviewCommentDto: {
             /** Format: uuid */

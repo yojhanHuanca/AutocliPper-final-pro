@@ -54,7 +54,8 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Edición versionada, CAS, revisiones recuperables | IV | PostgreSQL impide modificar revisiones; dos escritores concurrentes, versiones/If-Match obsoletos, ETag a través del gateway y restauración comprobados |
 | Encuadre manual y plantillas de subtítulos | IV | Crop normalizado, clean/boxed/bold y posición top/bottom medidos en FFmpeg; exportación usa la revisión elegida, con procedencia de ASR real conservada |
 | Marca y mezcla de audio | PD | No se agregaron logos, overlays ni mezcla musical |
-| Preview/seguimiento/split-screen/unión de segmentos | PD | Sin promesas de equivalencia o soporte |
+| Pantalla dividida versionada con dos fuentes | IV | Mismo workspace/autorización/inspecciones; hashes de ambas fuentes, proporciones/crop, freeze/duración/audio explícito, revisión anterior, cuota, cancelación/limpieza y grant de resultado comprobados; límite combinado 100 MiB y HD |
+| Preview/seguimiento/unión de segmentos | PD | Sin promesas de equivalencia o soporte |
 | Comentarios/aprobaciones/enlaces de revisión/auditoría | IV | Dos usuarios/roles, CAS, aprobación ligada a revisión, reset al editar, auditoría SQL inmutable y grants hash-only con video acotado, expiración/revocación/papelera comprobados. Límite público por proceso; purga integral pendiente |
 | OAuth social, tokens cifrados, publicación/calendario | PD + PC | Etapa 5, permisos/revisión por proveedor |
 | Programación IANA/dedupe/conciliación social | PD | Máquina de estados diseñada, sin envíos reales |
@@ -69,4 +70,4 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
 | Primera aceptación funcional de 8 pasos con IA | IV | Cuenta verificada, proyecto/upload, whisper.cpp real, clip subtitulado, estado/download y otro usuario denegado. Intervalo manual; no acredita selección automática |
 
-Prioridad siguiente: marca y mezcla de audio de etapa 4; selección automática con un LLM real permanece pendiente de recursos/proveedor, junto con traducción y orquestación automática. Conservar la aceptación local real de transcripción/edición/render/descarga y permisos de colaboración. Faltan también funciones de etapa 2 enumeradas y el resto del alcance. No habilitado para producción ni anunciado como plataforma completa.
+Prioridades de lanzamiento y criterios de salida en [launch-backlog.md](launch-backlog.md): selección real/orquestación, privacidad/purga, restore, observabilidad/carga, administración/soporte y consumo; marca/audio, pagos y publicación según alcance/decisiones pendientes. Conservar la aceptación real de transcripción/edición/composición/descarga y aislamiento. No habilitado para producción ni anunciado como plataforma completa.

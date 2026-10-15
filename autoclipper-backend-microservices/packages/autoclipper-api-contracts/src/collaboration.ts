@@ -1,5 +1,5 @@
 import {ApiProperty,ApiPropertyOptional,OmitType} from "@nestjs/swagger";
-import {ClipProcessingSpecDto,SubtitleCueDto,SubtitleStyleDto} from "./processing.js";
+import {ClipProcessingSpecDto,SplitScreenDto,SubtitleCueDto,SubtitleStyleDto} from "./processing.js";
 export class ReviewVersionDto {
   @ApiProperty({minimum:1,description:"Current editor revision; an obsolete revision returns 412."}) version!:number;
   @ApiProperty({minimum:1,description:"Current review state version, independent of content revision."}) reviewVersion!:number;
@@ -60,7 +60,8 @@ export class PublicReviewCaptionsDto {
   @ApiProperty({type:[SubtitleCueDto],maxItems:200}) cues!:SubtitleCueDto[];
   @ApiPropertyOptional({type:SubtitleStyleDto}) style?:SubtitleStyleDto;
 }
-export class PublicReviewSpecDto extends OmitType(ClipProcessingSpecDto,["subtitles"] as const){@ApiPropertyOptional({type:PublicReviewCaptionsDto}) subtitles?:PublicReviewCaptionsDto;}
+export class PublicSplitScreenDto extends OmitType(SplitScreenDto,["secondaryUploadId"] as const){}
+export class PublicReviewSpecDto extends OmitType(ClipProcessingSpecDto,["subtitles"] as const){@ApiPropertyOptional({type:PublicReviewCaptionsDto}) subtitles?:PublicReviewCaptionsDto;@ApiPropertyOptional({type:PublicSplitScreenDto}) splitScreen?:PublicSplitScreenDto;}
 export class PublicReviewDto {
   @ApiProperty() name!:string;
   @ApiProperty({minimum:1}) revisionVersion!:number;

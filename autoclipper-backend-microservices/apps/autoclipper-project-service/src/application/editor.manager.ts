@@ -30,11 +30,12 @@ export class EditorManager {
       if(prepared.uploadId!==uploadId)throw new BadRequestException();
       subtitles={...prepared.spec.subtitles,...(spec.subtitles.style?{style:spec.subtitles.style}:{})};
     }
-    const renderSpec=body(internalProcessingSpec,{version:1,kind:"clip",startSeconds:spec.startSeconds,endSeconds:spec.endSeconds,aspect:spec.aspect,...(spec.framing?{framing:spec.framing}:{}),...(subtitles?{subtitles}:{})});
+    const renderSpec=body(internalProcessingSpec,{version:1,kind:"clip",startSeconds:spec.startSeconds,endSeconds:spec.endSeconds,aspect:spec.aspect,...(spec.framing?{framing:spec.framing}:{}),...(spec.splitScreen?{splitScreen:spec.splitScreen}:{}),...(subtitles?{subtitles}:{})});
+    if(renderSpec.kind==="clip")await this.derivatives.validateEditorSplit(req,source,renderSpec);
     return{source,renderSpec};
   }
   private async insertRevision(client:pg.PoolClient,draftId:string,number:number,authorId:string,action:Revision["action"],spec:EditorSpec,renderSpec:ValidatedProcessingSpec,correlationId:string,restoredFrom:number|null=null){
-    return(await client.query<Revision>("INSERT INTO editor_revisions(id,draft_id,version,author_id,action,spec,render_spec,correlation_id,restored_from_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *",[randomUUID(),draftId,number,authorId,action,spec,renderSpec,correlationId,restoredFrom])).rows[0]!;
+    return(await client.query<Revision>("INSERT INTO editor_revisions(id,draft_id,version,author_id,action,spec,render_spec,correlation_id,restored_from_version,secondary_upload_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *",[randomUUID(),draftId,number,authorId,action,spec,renderSpec,correlationId,restoredFrom,renderSpec.kind==="clip"?renderSpec.splitScreen?.secondaryUploadId??null:null])).rows[0]!;
   }
   async create(req:Request,uploadId:string,input:unknown,correlationId:string){
     requireCsrf(req,this.config);await this.authorize(req,uploadId,"editor");
@@ -67,6 +68,7 @@ export class EditorManager {
     requireCsrf(req,this.config);const draft=await this.resource(req,id,"editor"),data=body(z.object({version,revisionVersion:version}).strict(),input),user=await authenticatedUser(req,this.config);
     if(req.headers["if-match"]!==undefined&&req.headers["if-match"]!==`"${data.version}"`)throw new PreconditionFailedException();
     if(draft.current_version!==data.version)throw new PreconditionFailedException();const saved=await this.revision(this.pool,id,data.revisionVersion);
+    if(saved.render_spec.kind==="clip"&&saved.render_spec.splitScreen)await this.derivatives.validateEditorSplit(req,await this.derivatives.sourceForEditor(req,draft.upload_id),saved.render_spec);
     return this.save(id,data.version,user.id,"restored",saved.spec,saved.render_spec,correlationId,saved.version);
   }
   async render(req:Request,id:string,input:unknown,correlationId:string){requireCsrf(req,this.config);const draft=await this.resource(req,id,"editor"),data=body(z.object({revisionVersion:version}).strict(),input),saved=await this.revision(this.pool,id,data.revisionVersion);return this.derivatives.beginFromEditor(req,draft.upload_id,saved.render_spec,correlationId,saved.id);}

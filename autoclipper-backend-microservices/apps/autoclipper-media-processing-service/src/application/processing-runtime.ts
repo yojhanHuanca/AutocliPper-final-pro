@@ -1,6 +1,6 @@
 import {Injectable,type OnModuleInit,type OnModuleDestroy,ConflictException,NotFoundException,BadRequestException} from "@nestjs/common";
 import {loadMediaConfig} from "@autoclipper/configuration";
-import {internalProcessingSpec,type ValidatedProcessingSpec,type ProcessingStatus} from "@autoclipper/api-contracts";
+import {internalProcessingSpec,splitSourceError,type ValidatedProcessingSpec,type ProcessingStatus} from "@autoclipper/api-contracts";
 import {digest} from "@autoclipper/http-security";
 import {logger,recordDerivativeAttempt} from "@autoclipper/observability";
 import {Queue,Worker,UnrecoverableError,type Job} from "bullmq";
@@ -43,11 +43,13 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
     const hash=digest(JSON.stringify({inspectionId:data.inspectionId,spec:parsed.data}));
     const source=(await this.pool.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[data.inspectionId,data.workspaceId])).rows[0];
     if(!source?.expected_sha256)throw new ConflictException();
+    let secondary:Source|undefined;
+    if(parsed.data.kind==="clip"&&parsed.data.splitScreen){secondary=(await this.pool.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[parsed.data.splitScreen.secondaryUploadId,data.workspaceId])).rows[0];if(!secondary?.expected_sha256)throw new ConflictException();if(splitSourceError(parsed.data,source.result,secondary.result,source.expected_bytes,secondary.expected_bytes))throw new BadRequestException();}
     try{validateProcessingSource(parsed.data,source.result);}catch{throw new BadRequestException();}
     const client=await this.pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("INSERT INTO processing_tasks(id,workspace_id,inspection_id,spec,request_hash,correlation_id,cancel_requested) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING",[data.id,data.workspaceId,data.inspectionId,parsed.data,hash,data.correlationId,data.cancelRequested??false]);
+      await client.query("INSERT INTO processing_tasks(id,workspace_id,inspection_id,spec,request_hash,correlation_id,cancel_requested,secondary_inspection_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING",[data.id,data.workspaceId,data.inspectionId,parsed.data,hash,data.correlationId,data.cancelRequested??false,secondary?.id??null]);
       const current=(await client.query<Task>("SELECT * FROM processing_tasks WHERE id=$1",[data.id])).rows[0];
       if(!current||current.workspace_id!==data.workspaceId||current.request_hash!==hash)throw new ConflictException();
       if(data.cancelRequested)await client.query("UPDATE processing_tasks SET cancel_requested=true WHERE id=$1 AND status IN ('queued','running')",[data.id]);
@@ -125,7 +127,10 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
         const source=(await lease.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[task.inspection_id,task.workspace_id])).rows[0];
         if(!source?.expected_sha256)throw new InspectionError("SOURCE_NOT_VALIDATED",false);
         const spec=internalProcessingSpec.parse(task.spec);
-        const result=await produceDerivative(this.s3,this.config,{id,workspaceId:task.workspace_id,spec},{objectKey:source.object_key,workspaceId:source.workspace_id,expectedBytes:source.expected_bytes,expectedEtag:source.expected_etag,expectedSha256:source.expected_sha256},abort.signal);
+        let secondary:Source|undefined;
+        if(spec.kind==="clip"&&spec.splitScreen){secondary=(await lease.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[spec.splitScreen.secondaryUploadId,task.workspace_id])).rows[0];if(!secondary?.expected_sha256)throw new InspectionError("SOURCE_NOT_VALIDATED",false);}
+        const input=(row:Source)=>({objectKey:row.object_key,workspaceId:row.workspace_id,expectedBytes:row.expected_bytes,expectedEtag:row.expected_etag,expectedSha256:row.expected_sha256});
+        const result=await produceDerivative(this.s3,this.config,{id,workspaceId:task.workspace_id,spec},input(source),abort.signal,secondary?input(secondary):undefined);
         const succeeded=await lease.query("UPDATE processing_tasks SET status='succeeded',result=$2,finished_at=now(),cleanup_pending=false WHERE id=$1 AND NOT cancel_requested AND status='running' AND attempts=$3 RETURNING id",[id,result,attempt]);
         if(!succeeded.rows[0])throw new InspectionError("CANCELLED",false);
         recordDerivativeAttempt(task.spec.kind,"succeeded",(performance.now()-started)/1000,result.artifacts.reduce((total,a)=>total+a.bytes,0));

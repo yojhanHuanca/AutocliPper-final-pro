@@ -1,11 +1,11 @@
 import {z} from "zod";
 import {ApiProperty,ApiPropertyOptional,getSchemaPath,OmitType} from "@nestjs/swagger";
-import {framingSchema,subtitleStyleSchema,subtitleCueSchema,internalProcessingSpec,FramingDto,SubtitleStyleDto,SubtitleCueDto,ProcessingSpecDto,ProcessingStatusDto} from "./processing.js";
+import {framingSchema,splitScreenSchema,subtitleStyleSchema,subtitleCueSchema,internalProcessingSpec,FramingDto,SplitScreenDto,SubtitleStyleDto,SubtitleCueDto,ProcessingSpecDto,ProcessingStatusDto} from "./processing.js";
 const noCaptions=z.object({source:z.literal("none")}).strict();
 const userCaptions=z.object({source:z.literal("user"),cues:z.array(subtitleCueSchema).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
 const transcriptCaptions=z.object({source:z.literal("transcript"),analysisId:z.uuid(),style:subtitleStyleSchema.optional()}).strict();
-export const editorSpec=z.object({version:z.literal(1),kind:z.literal("clip"),startSeconds:z.number().finite().nonnegative().max(14400),endSeconds:z.number().finite().positive().max(14400),aspect:z.enum(["source","vertical","square","horizontal"]),framing:framingSchema.optional(),subtitles:z.union([noCaptions,userCaptions,transcriptCaptions]).default({source:"none"})}).strict().superRefine((value,context)=>{
-  const validation=internalProcessingSpec.safeParse({version:1,kind:"clip",startSeconds:value.startSeconds,endSeconds:value.endSeconds,aspect:value.aspect,...(value.framing?{framing:value.framing}:{}),...(value.subtitles.source==="user"?{subtitles:{provenance:"user",cues:value.subtitles.cues,...(value.subtitles.style?{style:value.subtitles.style}:{})}}:{})});
+export const editorSpec=z.object({version:z.literal(1),kind:z.literal("clip"),startSeconds:z.number().finite().nonnegative().max(14400),endSeconds:z.number().finite().positive().max(14400),aspect:z.enum(["source","vertical","square","horizontal"]),framing:framingSchema.optional(),splitScreen:splitScreenSchema.optional(),subtitles:z.union([noCaptions,userCaptions,transcriptCaptions]).default({source:"none"})}).strict().superRefine((value,context)=>{
+  const validation=internalProcessingSpec.safeParse({version:1,kind:"clip",startSeconds:value.startSeconds,endSeconds:value.endSeconds,aspect:value.aspect,...(value.framing?{framing:value.framing}:{}),...(value.splitScreen?{splitScreen:value.splitScreen}:{}),...(value.subtitles.source==="user"?{subtitles:{provenance:"user",cues:value.subtitles.cues,...(value.subtitles.style?{style:value.subtitles.style}:{})}}:{})});
   if(!validation.success)context.addIssue({code:"custom",message:"Invalid editing timeline, framing or captions"});
   if(Buffer.byteLength(JSON.stringify(value),"utf8")>65000)context.addIssue({code:"custom",message:"Editing description exceeds 65,000 bytes"});
 });
@@ -28,6 +28,7 @@ export class EditorSpecDto {
   @ApiProperty({minimum:0,description:"Clip length 0.1–120 seconds."}) endSeconds!:number;
   @ApiProperty({enum:["source","vertical","square","horizontal"]}) aspect!:string;
   @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;
+  @ApiPropertyOptional({type:SplitScreenDto}) splitScreen?:SplitScreenDto;
   @ApiPropertyOptional({oneOf:[{$ref:getSchemaPath(NoEditorCaptionsDto)},{$ref:getSchemaPath(UserEditorCaptionsDto)},{$ref:getSchemaPath(TranscriptEditorCaptionsDto)}]}) subtitles?:NoEditorCaptionsDto|UserEditorCaptionsDto|TranscriptEditorCaptionsDto;
 }
 export class EditorRevisionSummaryDto {

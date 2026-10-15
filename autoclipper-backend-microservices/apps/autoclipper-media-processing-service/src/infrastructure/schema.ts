@@ -58,6 +58,7 @@ export const inspectionTasks = pgTable(
 export const processingTasks = pgTable("processing_tasks", {
   id: uuid().primaryKey(), workspaceId: uuid("workspace_id").notNull(),
   inspectionId: uuid("inspection_id").notNull().references(()=>inspectionTasks.id),
+  secondaryInspectionId:uuid("secondary_inspection_id").references(()=>inspectionTasks.id),
   spec: jsonb().notNull(), requestHash: text("request_hash").notNull(),
   status: text().notNull().default("queued"), correlationId: uuid("correlation_id").notNull(),
   attempts: integer().notNull().default(0), cancelRequested: boolean("cancel_requested").notNull().default(false),
@@ -70,6 +71,7 @@ export const processingTasks = pgTable("processing_tasks", {
   check("processing_terminal_finished",sql`(${t.status} IN ('succeeded','failed','cancelled')) = (${t.finishedAt} IS NOT NULL)`),
   check("processing_success_result",sql`(${t.status} = 'succeeded') = (${t.result} IS NOT NULL)`),
   check("processing_attempts_nonnegative",sql`${t.attempts} >= 0`),
+  check("secondary_inspection_matches_spec",sql`${t.secondaryInspectionId} IS NOT DISTINCT FROM (${t.spec}->'splitScreen'->>'secondaryUploadId')::uuid`),
 ]);
 export const processingOutbox = pgTable("processing_outbox", {
   taskId:uuid("task_id").primaryKey().references(()=>processingTasks.id,{onDelete:"cascade"}),

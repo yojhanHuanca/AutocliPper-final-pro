@@ -6,10 +6,10 @@ import {z} from "zod";
 import {GetObjectCommand,HeadObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import {body,digest,uuid,authenticatedUser,requireCsrf,internalJson,type ServiceConfig} from "@autoclipper/http-security";
-import {processingSpec,internalProcessingSpec,processingStatus,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
 
-type Upload={id:string;project_id:string;workspace_id:string;state:string};
+type Upload={id:string;project_id:string;workspace_id:string;state:string;expected_bytes:number};
 type Row={editor_revision_id:string|null;id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
 const terminal=(status:string)=>["succeeded","failed","cancelled"].includes(status);
 export class DerivativesManager {
@@ -34,10 +34,15 @@ export class DerivativesManager {
   }
   async sourceForEditor(req:Request,uploadId:string){
     const upload=await this.authorize(req,uploadId,"editor");if(upload.state!=="confirmed")throw new ConflictException();
-    const source=await internalJson<{status:string;result?:{durationSeconds:number;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
+    const source=await internalJson<{status:string;result?:{durationSeconds:number;width:number;height:number;audioCodec:string|null}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
     if(source.status!=="succeeded"||!source.result)throw new ConflictException();
     if(source.result.width>3840||source.result.height>3840)throw new BadRequestException();
     return{upload,metadata:source.result};
+  }
+  async validateEditorSplit(req:Request,primary:Awaited<ReturnType<DerivativesManager["sourceForEditor"]>>,spec:Extract<ValidatedProcessingSpec,{kind:"clip"}>){
+    if(!spec.splitScreen)return;
+    const secondary=await this.sourceForEditor(req,spec.splitScreen.secondaryUploadId);
+    if(primary.upload.workspace_id!==secondary.upload.workspace_id||splitSourceError(spec,primary.metadata,secondary.metadata,primary.upload.expected_bytes,secondary.upload.expected_bytes))throw new BadRequestException();
   }
   private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string,editorRevisionId?:string){
     const upload=await this.authorize(req,uploadId,"editor");
@@ -45,6 +50,7 @@ export class DerivativesManager {
     const source=await internalJson<{status:string;result?:{durationSeconds:number;audioCodec:string|null;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
     if(source.status!=="succeeded"||!source.result)throw new ConflictException();
     if(source.result.width>3840||source.result.height>3840||(spec.kind==="clip"&&spec.endSeconds>source.result.durationSeconds)||(spec.kind==="audio"&&(!source.result.audioCodec||source.result.durationSeconds>3600)))throw new BadRequestException();
+    if(spec.kind==="clip")await this.validateEditorSplit(req,{upload,metadata:source.result},spec);
     const user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({uploadId,spec,...(editorRevisionId?{editorRevisionId}:{})}));
     const reservation=spec.kind==="audio"?134217728:68157440;
     return this.tx(async client=>{
@@ -58,7 +64,7 @@ export class DerivativesManager {
       const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,upload.workspace_id,Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824)]);
       if(!reserved.rows[0])throw new ConflictException();
       const id=randomUUID();
-      await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id,editor_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId,editorRevisionId??null]);
+      await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id,editor_revision_id,secondary_upload_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId,editorRevisionId??null,spec.kind==="clip"?spec.splitScreen?.secondaryUploadId??null:null]);
       return{id,status:"queued"};
     });
   }
@@ -71,7 +77,9 @@ export class DerivativesManager {
   private async resource(req:Request,id:string,minimum:"reader"|"editor"="reader") {
     const row=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE id=$1",[id])).rows[0];
     if(!row)throw new NotFoundException();
-    await this.authorize(req,row.upload_id,minimum);return row;
+    const primary=await this.authorize(req,row.upload_id,minimum);
+    if(row.spec.kind==="clip"&&row.spec.splitScreen){const secondary=await this.authorize(req,row.spec.splitScreen.secondaryUploadId,minimum);if(primary.workspace_id!==secondary.workspace_id)throw new NotFoundException();}
+    return row;
   }
   private async synchronize(row:Row) {
     if(!row.delivered_at||row.settled_at)return row;
@@ -106,7 +114,7 @@ export class DerivativesManager {
     return this.signedArtifact(row,selected);
   }
   async assertReviewExport(revisionId:string,id:string){
-    const stored=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE id=$1 AND editor_revision_id=$2",[id,revisionId])).rows[0];if(!stored)throw new NotFoundException();const row=await this.synchronize(stored);
+    const stored=(await this.pool.query<Row>("SELECT p.* FROM processing_requests p JOIN uploads u ON u.id=p.upload_id JOIN projects pr ON pr.id=u.project_id LEFT JOIN uploads su ON su.id=p.secondary_upload_id LEFT JOIN projects sp ON sp.id=su.project_id WHERE p.id=$1 AND p.editor_revision_id=$2 AND pr.deleted_at IS NULL AND u.state='confirmed' AND (p.secondary_upload_id IS NULL OR (su.state='confirmed' AND sp.deleted_at IS NULL AND su.workspace_id=p.workspace_id))",[id,revisionId])).rows[0];if(!stored)throw new NotFoundException();const row=await this.synchronize(stored);
     if(row.status!=="succeeded"||row.spec.kind!=="clip"||!row.result?.artifacts.some(artifact=>artifact.kind==="video"))throw new ConflictException();return row;
   }
   async downloadForReview(revisionId:string,id:string,expiresAt:Date){return this.signedArtifact(await this.assertReviewExport(revisionId,id),"video",expiresAt);}
