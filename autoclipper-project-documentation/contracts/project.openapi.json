@@ -4609,6 +4609,16 @@
           "cancellationRequested": {
             "type": "boolean"
           },
+          "usageState": {
+            "type": "string",
+            "enum": [
+              "legacy",
+              "pending",
+              "accepted",
+              "rejected"
+            ],
+            "description": "Consumption admission; legacy intents predate usage accounting."
+          },
           "errorCode": {
             "type": "string",
             "nullable": true
@@ -4659,6 +4669,7 @@
           "spec",
           "version",
           "cancellationRequested",
+          "usageState",
           "errorCode",
           "createdAt",
           "deadlineAt",

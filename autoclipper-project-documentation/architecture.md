@@ -1,6 +1,6 @@
 # Arquitectura y decisiones
 
-La distribución desplegada actual y sus ajustes de etapa 2 están en [stage-2.md](stage-2.md). La entrega multimedia agrega un renderer independiente del inspector, ambos de media, y coordinación durable desde proyectos: [stage-3-media.md](stage-3-media.md). Identity, workspace, project y content-analysis tienen comportamiento ejecutable y bases separadas. La [entrega de análisis](stage-3-analysis.md) documenta ASR real local y la selección LLM aún pendiente de configuración. Publicación, billing y notification continúan pendientes.
+La distribución desplegada actual y sus ajustes de etapa 2 están en [stage-2.md](stage-2.md). La entrega multimedia agrega un renderer independiente del inspector, ambos de media, y coordinación durable desde proyectos: [stage-3-media.md](stage-3-media.md). Identity, workspace, project, content-analysis y billing tienen comportamiento ejecutable y bases separadas. La [entrega de análisis](stage-3-analysis.md) documenta ASR real local y la selección LLM aún pendiente de configuración. Billing implementa [consumo de desarrollo para nuevos pipelines](stage-6-consumption.md); publicación, pagos y notification continúan pendientes.
 
 Fecha de la entrega: 13 de octubre de 2026, America/Lima. Título académico: **AutoClipper: Plataforma inteligente basada en inteligencia artificial para la generación y gestión automatizada de clips de video para redes sociales**. Línea: Startup.
 
@@ -33,7 +33,7 @@ Cada servicio tendrá base y roles propios. No se comparten entidades Drizzle ni
 | media-processing | Inspección, trabajos multimedia, render y objetos derivados | Inspección, audio, recortes, subtítulos aportados/de transcripción y descargas reales |
 | content-analysis | Transcripciones, segmentos propuestos, prompts/modelos y estimación de uso IA | Servicio con DB/cola propias; whisper.cpp real. Deepgram/Ollama implementados con configuración y aceptación externa pendientes |
 | social-publishing | Conexiones OAuth, tokens cifrados, programación y conciliación externa | Diseñado |
-| billing | Catálogo versionado, suscripciones, reservas y libro de consumo/créditos | Diseñado |
+| billing | Entitlements, planes versionados, reservas, inbox y ledger de consumo | Implementado para nuevos pipelines de desarrollo, con API reader autorizada; manuales sin ledger, sin pagos/créditos comerciales |
 | notification | Notificaciones, preferencias, entregas de correo y tickets de soporte | Diseñado |
 
 La administración será un conjunto de casos de uso autorizados en el servicio dueño de los datos. No se agrega otro servicio central con acceso de escritura a todas las bases. Los tickets se ubican en notification inicialmente; se separarán si su carga o responsabilidad lo requiere.
@@ -48,7 +48,7 @@ No se crearon aplicaciones vacías. Los paquetes compartidos contienen configura
 4. **S3 mediante AWS SDK; RustFS local.** Almacenamiento privado compatible con S3, independiente del servidor HTTP. Desarrollo usa credenciales de administrador del almacenamiento generadas localmente; producción requiere credencial IAM por servicio/prefijo y TLS. No se afirma compatibilidad de todas las operaciones S3 sin pruebas.
 5. **Correo: adaptador SMTP real local, Postmark como candidato de producción.** Entrega a Mailpit verificada; dominio, credenciales y aceptación de entrega externa pendientes. No hay proveedor simulado activo.
 6. **IA: puertos separados de STT y selección.** whisper.cpp/tiny ofrece una primera aceptación real local sin API de pago. Deepgram admite revisión exacta y presupuesto explícito; Ollama usa digest fijado y salida estructurada validada. Ambos están sin configuración/aceptación real. Ver [límites y recursos](stage-3-analysis.md); proveedor ausente produce `TRANSCRIPTION_NOT_CONFIGURED` o `SELECTION_NOT_CONFIGURED`, nunca contenido inventado.
-7. **Pagos sin proveedor seleccionado.** Evitar una elección incompatible con el país/entidad legal. La etapa 6 implementará consumo interno y contratos antes de cobros. No hay precios definitivos ni transacciones reales.
+7. **Pagos sin proveedor seleccionado.** Evitar una elección incompatible con el país/entidad legal. La etapa 6 implementa primero consumo interno y contratos, sin precios ni transacciones monetarias reales. El incremento actual contabiliza segundos de material por etapa de nuevos pipelines, con límites de desarrollo explícitos; no aplica cuotas comerciales a toda la plataforma.
 8. **Node LTS 24; NestJS 12; TypeScript 5.9.** Se evita Node 25 del host para producción. TypeScript 5.9 satisface los peers de Swagger, ESLint y el generador de tipos; no se adopta TypeScript 7 solo por ser más reciente. Node 24 se usa en contenedores y pruebas de integración.
 
 ## Registro histórico: subconjunto técnico de etapa 1

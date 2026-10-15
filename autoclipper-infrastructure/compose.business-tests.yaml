@@ -11,6 +11,7 @@ services:
       target: verification
     command: ['node','--test','--test-concurrency=1','tests/business/*.test.mjs','tests/acceptance/*.test.mjs']
     environment:
+      NODE_ENV: development
       API_BASE_URL: http://gateway:3000
       MAILPIT_URL: http://mailpit:8025
       TEST_TEMP_DIR: /tmp/fixtures
@@ -23,6 +24,8 @@ services:
       IDENTITY_DATABASE_URL: postgresql://autoclipper_identity_runtime:${IDENTITY_RUNTIME_PASSWORD}@postgres:5432/autoclipper_identity
       WORKSPACE_DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
       PROJECT_DATABASE_URL: postgresql://autoclipper_project_runtime:${PROJECT_RUNTIME_PASSWORD}@postgres:5432/autoclipper_project
+      BILLING_DATABASE_URL: postgresql://autoclipper_billing_runtime:${BILLING_RUNTIME_PASSWORD}@postgres:5432/autoclipper_billing
+      BILLING_URL: http://billing:3007
       ANALYSIS_DATABASE_URL: postgresql://autoclipper_analysis_runtime:${ANALYSIS_RUNTIME_PASSWORD}@postgres:5432/autoclipper_analysis
     depends_on:
       gateway: {condition: service_healthy}
@@ -88,12 +91,15 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       PIPELINE_INTEGRATION_ISOLATED: 'true'
+      BILLING_URL: http://billing:3007
+      BILLING_DATABASE_URL: postgresql://autoclipper_billing_runtime:${BILLING_RUNTIME_PASSWORD}@postgres:5432/autoclipper_billing
       WORKSPACE_DATABASE_URL: postgresql://autoclipper_workspace_runtime:${WORKSPACE_RUNTIME_PASSWORD}@postgres:5432/autoclipper_workspace
       LOG_LEVEL: silent
     depends_on:
       identity: {condition: service_healthy}
       workspace: {condition: service_healthy}
       migrate-project: {condition: service_completed_successfully}
+      billing: {condition: service_healthy}
     mem_limit: 384m
     cpus: 1
     cap_drop: [ALL]

@@ -19,7 +19,7 @@ async function connection(name) {
   return new pg.Pool({ connectionString: url, connectionTimeoutMillis: 3000 });
 }
 test("business services cannot write schemas or connect to another service database", async () => {
-  for (const name of ["identity", "workspace", "project", "analysis"]) {
+  for (const name of ["identity", "workspace", "project", "analysis", "billing"]) {
     const pool = await connection(name);
     try {
       await assert.rejects(

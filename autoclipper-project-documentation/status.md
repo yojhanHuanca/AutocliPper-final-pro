@@ -61,7 +61,9 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Comentarios/aprobaciones/enlaces de revisión/auditoría | IV | Dos usuarios/roles, CAS, aprobación ligada a revisión, reset al editar, auditoría SQL inmutable y grants hash-only con video acotado, expiración/revocación/papelera comprobados. Límite público por proceso; purga integral pendiente |
 | OAuth social, tokens cifrados, publicación/calendario | PD + PC | Etapa 5, permisos/revisión por proveedor |
 | Programación IANA/dedupe/conciliación social | PD | Máquina de estados diseñada, sin envíos reales |
-| Planes/consumo/reservas/conciliación/créditos/webhooks | PD | Etapa 6; sin precios ni cobros simulados |
+| Planes de desarrollo versionados y ledger de consumo | IV parcial | Billing/base propia, API reader autorizada y nuevos pipelines con reserva/consumo/liberación por etapa, concurrencia/dedupe/recovery comprobados. [Alcance y unidad](stage-6-consumption.md); rutas manuales fuera del ledger y legacy sin retroactividad, sin enforcement comercial global |
+| Créditos, suscripciones y webhooks de pagos | PD + PC | Sin precios, cobros ni proveedor simulado; gates de negocio/aceptación pendientes |
+| Admisión comercial que cubra todas las rutas costosas | PD | Gate P0: integrar APIs manuales en ledger o bloquearlas en servidor por configuración; no basta ocultarlas en frontend, preservar lectura/descargas legacy |
 | Proveedor de pagos | PC | Selección requiere entidad, país y necesidades comerciales |
 | Notificaciones/correo/preferencias/soporte | PD + PC | SMTP local y preferencia de correo verificados; entrega externa, eventos y soporte pendientes |
 | Administración autorizada/ajustes auditados | PD | Ninguna ruta global sin permisos |

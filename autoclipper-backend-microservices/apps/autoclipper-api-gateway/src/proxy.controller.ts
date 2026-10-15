@@ -22,6 +22,7 @@ export class ProxyController {
     "processing/*path",
     "analyses/*path",
     "pipelines/*path",
+    "consumption/*path",
     "edits/*path",
     "review-links/*path",
   ])
@@ -34,6 +35,8 @@ export class ProxyController {
     const base =
       root === "auth"
         ? process.env["IDENTITY_URL"]
+        : root === "consumption"
+          ? process.env["BILLING_URL"]
         : root === "workspaces"
           ? process.env["WORKSPACE_URL"]
           : process.env["PROJECT_URL"];

@@ -189,6 +189,7 @@ services:
       IDENTITY_URL: http://identity:3002
       WORKSPACE_URL: http://workspace:3003
       PROJECT_URL: http://project:3004
+      BILLING_URL: http://billing:3007
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Run setup-local.mjs}
     command: ['node', 'apps/autoclipper-api-gateway/dist/main.js']
     ports: ['127.0.0.1:3000:3000']

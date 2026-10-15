@@ -23,6 +23,8 @@ import {AnalysisRuntime} from '../apps/autoclipper-content-analysis-service/dist
 import {EditorController} from '../apps/autoclipper-project-service/dist/interfaces/editor.controller.js';
 import {CollaborationController} from '../apps/autoclipper-project-service/dist/interfaces/collaboration.controller.js';
 import {PipelineController} from '../apps/autoclipper-project-service/dist/interfaces/pipeline.controller.js';
+import {BillingController} from "../apps/autoclipper-billing-service/dist/interfaces/billing.controller.js";
+import {BillingService} from "../apps/autoclipper-billing-service/dist/application/billing.service.js";
 // Contract generation must not instantiate database/queue clients or start workers.
 class MediaContractModule {}
 Module({ controllers: [OperationsController], providers: [{ provide: InspectionRuntime, useValue: {} },{provide:ProcessingRuntime,useValue:{}}] })(MediaContractModule);
@@ -30,7 +32,7 @@ const directory = new URL('../../autoclipper-project-documentation/contracts/', 
 await mkdir(directory, { recursive: true });
 const documents={};
 const contractModule=(controller,service)=>{class ContractModule{}Module({controllers:Array.isArray(controller)?controller:[controller],providers:[{provide:service,useValue:{}}]})(ContractModule);return ContractModule;};
-for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule([ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController,PipelineController],ProjectService)],['analysis',contractModule(InternalAnalysisController,AnalysisRuntime)]]) {
+for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContractModule],['identity',contractModule(IdentityController,IdentityService)],['workspace',contractModule(WorkspaceController,WorkspaceService)],['project',contractModule([ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController,PipelineController],ProjectService)],['analysis',contractModule(InternalAnalysisController,AnalysisRuntime)],['billing',contractModule(BillingController,BillingService)]]) {
   const app = await NestFactory.create(module, { logger: false });
   try {
     const document = configureHttp(app, loadGatewayConfig(), name === 'gateway' ? 'api-gateway' : name==='media'?'media-processing-service':`${name}-service`);
@@ -38,7 +40,7 @@ for (const [name, module] of [['gateway', GatewayModule], ['media', MediaContrac
   } finally { await app.close(); }
 }
 const publicDocument=documents.gateway;
-for(const name of ['identity','workspace','project']){const document=documents[name];for(const [path,operation]of Object.entries(document.paths)){if(!path.includes('/health/')&&!path.includes('/internal/'))publicDocument.paths[path]=globalThis.structuredClone(operation);}publicDocument.components.schemas={...publicDocument.components.schemas,...document.components.schemas};}
+for(const name of ['identity','workspace','project','billing']){const document=documents[name];for(const [path,operation]of Object.entries(document.paths)){if(!path.includes('/health/')&&!path.includes('/internal/'))publicDocument.paths[path]=globalThis.structuredClone(operation);}publicDocument.components.schemas={...publicDocument.components.schemas,...document.components.schemas};}
 publicDocument.components.securitySchemes={...publicDocument.components.securitySchemes,cookieSession:{type:'apiKey',in:'cookie',name:'autoclipper_access'},refreshSession:{type:'apiKey',in:'cookie',name:'autoclipper_refresh'}};
 publicDocument.components.schemas.ErrorResponse={type:'object',required:['code','message','correlationId'],properties:{code:{type:'string'},message:{type:'string'},correlationId:{type:'string',format:'uuid'}}};
 for(const [path,item]of Object.entries(publicDocument.paths))for(const [method,operation]of Object.entries(item)){if(!['get','post','patch','delete'].includes(method)||path.includes('/health/'))continue;for(const status of ['400','401','403','404','409','412','413','429','503'])operation.responses[status]??={description:'Classified error with a safe correlation identifier',content:{'application/json':{schema:{$ref:'#/components/schemas/ErrorResponse'}}}};if(['post','patch','delete'].includes(method)){operation.parameters??=[];operation.parameters.push({in:'header',name:'X-CSRF-Token',required:true,schema:{type:'string'},description:'Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin.'});}const publicAuth=['/v1/auth/providers','/v1/auth/google/challenge','/v1/auth/google','/v1/auth/csrf','/v1/auth/register','/v1/auth/verify','/v1/auth/login','/v1/auth/password/forgot','/v1/auth/password/reset','/v1/auth/logout'];operation.security=publicAuth.includes(path)||path.startsWith('/v1/review-links/')?[]:path==='/v1/auth/refresh'?[{refreshSession:[]}]:[{cookieSession:[]}];}

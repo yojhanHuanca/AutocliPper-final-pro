@@ -8,10 +8,12 @@ import {authenticatedUser,body,digest,internalJson,requireCsrf,uuid,workspaceAcc
 import {logger} from "@autoclipper/observability";
 import type {DerivativesManager} from "./derivatives.manager.js";
 import {transcriptClip} from "./transcript-clip.js";
+import type {UsageManager} from "./usage.manager.js";
+import type {UsageReservation} from "@autoclipper/api-contracts";
 
 const AUDIO_BYTES=134217728,RENDER_BYTES=68157440;
 type Status="queued"|"audio"|"analysis"|"render"|"stopping"|"succeeded"|"failed"|"cancelled";
-type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:PipelineSpec;correlation_id:string;status:Status;version:number;remaining_reservation_bytes:number;cancel_requested:boolean;error_code:string|null;created_at:Date;deadline_at:Date;finished_at:Date|null};
+type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:PipelineSpec;correlation_id:string;status:Status;version:number;remaining_reservation_bytes:number;cancel_requested:boolean;error_code:string|null;created_at:Date;deadline_at:Date;finished_at:Date|null;usage_state:"legacy"|"pending"|"accepted"|"rejected";usage_spec:UsageReservation|null;usage_error:string|null};
 type Processing={id:string;status:string;settled_at:Date|null;result:ProcessingStatus["result"]};
 type Analysis={id:string;finished_at:Date|null;cached_status:AnalysisStatus|null};
 const preflight=z.object({ready:z.boolean(),code:z.string().nullable(),httpStatus:z.number().int().min(200).max(599)}).strict();
@@ -20,7 +22,7 @@ const preflight=z.object({ready:z.boolean(),code:z.string().nullable(),httpStatu
 // transactional outboxes; Media/Analysis remain the sole owners of execution.
 export class PipelineManager {
   private cursor:string|undefined;
-  constructor(private readonly pool:pg.Pool,private readonly config:ServiceConfig,private readonly analysisUrl:string,private readonly derivatives:DerivativesManager){}
+  constructor(private readonly pool:pg.Pool,private readonly config:ServiceConfig,private readonly analysisUrl:string,private readonly derivatives:DerivativesManager,private readonly usage:UsageManager){}
   private async tx<T>(work:(client:pg.PoolClient)=>Promise<T>){const client=await this.pool.connect();try{await client.query("BEGIN");const value=await work(client);await client.query("COMMIT");return value;}catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}}
   async begin(req:Request,uploadId:string,input:unknown,correlationId:string){
     requireCsrf(req,this.config);
@@ -37,7 +39,7 @@ export class PipelineManager {
       const quota=(await client.query("SELECT workspace_id FROM workspace_storage WHERE workspace_id=$1 FOR UPDATE",[source.upload.workspace_id])).rows[0];if(!quota)throw new ConflictException();
       const count=(await client.query<{count:string}>("SELECT count(*) FROM pipelines WHERE workspace_id=$1 AND finished_at IS NULL",[source.upload.workspace_id])).rows[0];if(Number(count?.count??0)>=4)throw new ConflictException();
       const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[AUDIO_BYTES+RENDER_BYTES,source.upload.workspace_id,Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824)]);if(!reserved.rows[0])throw new ConflictException();
-      const id=randomUUID(),created=(await client.query<Row>("INSERT INTO pipelines(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,correlation_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *",[id,uploadId,source.upload.project_id,source.upload.workspace_id,user.id,key,hash,spec,correlationId])).rows[0]!;
+      const id=randomUUID(),created=(await client.query<Row>("INSERT INTO pipelines(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,correlation_id,usage_spec) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *",[id,uploadId,source.upload.project_id,source.upload.workspace_id,user.id,key,hash,spec,correlationId,{version:1,pipelineId:id,workspaceId:source.upload.workspace_id,creatorId:user.id,sourceSeconds:source.metadata.durationSeconds,clipSeconds:spec.endSeconds-spec.startSeconds}])).rows[0]!;
       await client.query("INSERT INTO pipeline_events(pipeline_id,version,status) VALUES($1,1,'queued')",[id]);return created;
     });return this.present(row);
   }
@@ -51,7 +53,7 @@ export class PipelineManager {
     const analysis=(await client.query<Analysis>("SELECT id,finished_at,cached_status FROM analysis_requests WHERE pipeline_id=$1",[id])).rows[0];
     return{audio:processed.find(row=>row.kind==="audio"),render:processed.find(row=>row.kind==="clip"),analysis};
   }
-  private async present(row:Row){const child=await this.children(this.pool,row.id),events=(await this.pool.query<{version:number;status:string;at:Date}>("SELECT version,status,at FROM pipeline_events WHERE pipeline_id=$1 ORDER BY version LIMIT 8",[row.id])).rows;return{id:row.id,status:row.status,spec:row.spec,version:row.version,cancellationRequested:row.cancel_requested,errorCode:row.error_code,createdAt:row.created_at.toISOString(),deadlineAt:row.deadline_at.toISOString(),finishedAt:row.finished_at?.toISOString()??null,audioProcessingId:child.audio?.id??null,analysisId:child.analysis?.id??null,renderProcessingId:child.render?.id??null,reservedBytes:row.remaining_reservation_bytes,events:events.map(event=>({...event,at:event.at.toISOString()}))};}
+  private async present(row:Row){const child=await this.children(this.pool,row.id),events=(await this.pool.query<{version:number;status:string;at:Date}>("SELECT version,status,at FROM pipeline_events WHERE pipeline_id=$1 ORDER BY version LIMIT 8",[row.id])).rows;return{id:row.id,status:row.status,spec:row.spec,version:row.version,cancellationRequested:row.cancel_requested,usageState:row.usage_state,errorCode:row.error_code,createdAt:row.created_at.toISOString(),deadlineAt:row.deadline_at.toISOString(),finishedAt:row.finished_at?.toISOString()??null,audioProcessingId:child.audio?.id??null,analysisId:child.analysis?.id??null,renderProcessingId:child.render?.id??null,reservedBytes:row.remaining_reservation_bytes,events:events.map(event=>({...event,at:event.at.toISOString()}))};}
   async status(req:Request,id:string){return this.present(await this.resource(req,id));}
   async cancel(req:Request,id:string){requireCsrf(req,this.config);await this.resource(req,id,"editor");return this.tx(async client=>{const row=(await client.query<Row>("SELECT * FROM pipelines WHERE id=$1 FOR UPDATE",[id])).rows[0]!;if(row.finished_at)throw new ConflictException();await client.query("UPDATE pipelines SET cancel_requested=true WHERE id=$1",[id]);return{cancellationRequested:true};});}
   async download(req:Request,id:string,kind:string){const row=await this.resource(req,id);const selected=body(z.enum(["video","srt","vtt"]),kind);if(row.status!=="succeeded")throw new ConflictException();const child=await this.children(this.pool,id);if(!child.render)throw new ConflictException();return this.derivatives.download(req,child.render.id,selected);}
@@ -61,6 +63,7 @@ export class PipelineManager {
     await client.query("INSERT INTO pipeline_events(pipeline_id,version,status) VALUES($1,$2,$3)",[row.id,row.version+1,status]);row.status=status;row.version++;
   }
   private async finish(client:pg.PoolClient,row:Row,status:"succeeded"|"failed"|"cancelled"){
+    if(!await this.usage.reconciled(client,row))return;
     if(row.remaining_reservation_bytes)await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes-$1 WHERE workspace_id=$2",[row.remaining_reservation_bytes,row.workspace_id]);
     // All three statements commit together; the CHECK requires zero at terminal.
     await client.query("UPDATE pipelines SET remaining_reservation_bytes=0,finished_at=now(),status=$2,version=version+1 WHERE id=$1",[row.id,status]);
@@ -87,11 +90,13 @@ export class PipelineManager {
     const children=await this.children(client,id);
     let error=row.error_code;
     if(!error&&!row.cancel_requested){
-      if(!active||revoked)error="PIPELINE_AUTHORIZATION_REVOKED";
+      if(row.usage_state==="rejected")error=`PIPELINE_${row.usage_error??"USAGE_REJECTED"}`;
+      else if(!active||revoked)error="PIPELINE_AUTHORIZATION_REVOKED";
       else if(row.deadline_at.getTime()<=Date.now())error="PIPELINE_DEADLINE_EXCEEDED";
       else if([children.audio,children.render].some(child=>child&&["failed","cancelled"].includes(child.status)))error="PIPELINE_MEDIA_STAGE_FAILED";
       else if(children.analysis?.finished_at&&children.analysis.cached_status?.status!=="succeeded")error="PIPELINE_ANALYSIS_STAGE_FAILED";
     }
+    await this.usage.capture(client,row,children,row.cancel_requested||Boolean(error)||row.status==="stopping");
     if(row.cancel_requested||error||row.status==="stopping"){
       if(error&&!row.error_code){await client.query("UPDATE pipelines SET error_code=$2 WHERE id=$1",[id,error]);row.error_code=error;}
       await this.transition(client,row,"stopping");
@@ -99,6 +104,7 @@ export class PipelineManager {
       await client.query("UPDATE analysis_requests SET cancel_requested=true WHERE pipeline_id=$1 AND finished_at IS NULL",[id]);
       if([children.audio,children.render].every(child=>!child||child.settled_at)&&(!children.analysis||children.analysis.finished_at))await this.finish(client,row,row.error_code?"failed":"cancelled");return;
     }
+    if(row.usage_state==="pending")return;
     if(row.status==="queued"){
       if(await this.processing(client,row,{version:1,kind:"audio"},AUDIO_BYTES))await this.transition(client,row,"audio");
     }else if(row.status==="audio"&&children.audio?.settled_at){

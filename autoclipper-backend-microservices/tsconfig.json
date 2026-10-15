@@ -36,6 +36,9 @@
     },
     {
       "path": "apps/autoclipper-content-analysis-service"
+    },
+    {
+      "path": "apps/autoclipper-billing-service"
     }
   ]
 }

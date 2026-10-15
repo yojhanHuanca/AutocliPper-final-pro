@@ -65,3 +65,7 @@ EditorSpecDto incorpora splitScreen opcional: secondaryUploadId, layout side_by_
 ## Pipeline manual en servidor
 
 POST `/uploads/{id}/pipelines` recibe PipelineSpecDto estricto: provider whisper_cpp, language explícito, selection none e intervalo/aspect manual. GET/DELETE `/pipelines/{id}` consulta/cancela; GET `/pipelines/{id}/download` firma video/SRT/VTT. Respuestas acotadas a ocho transiciones, sin claves S3 ni transcripción completa. Idempotency-Key obligatorio al crear, cookie/Origin/CSRF y roles actuales; la idempotencia no sustituye autorización. Un solo POST crea la intención, no cada etapa desde Angular. No admite LLM/pago/URLs/IDs de etapas del cliente. Contratos públicos regenerados y detalles en [stage-3-orchestration.md](stage-3-orchestration.md).
+
+## Consumo de desarrollo
+
+GET `/consumption/workspaces/{id}` y GET `/consumption/workspaces/{id}/ledger` requieren reader vigente; este último pagina por beforeId y limita 50 movimientos. No hay mutaciones públicas de planes/créditos. Los contratos públicos Billing/gateway y tipos generados describen segundos de material por etapa y planes development sin moneda/precio. PipelineStatusDto añade usageState legacy/pending/accepted/rejected. Reserva/conciliación internas usan schemas versionados estrictos en consumption.ts, credencial interna e inbox/outbox; no se publican como rutas de navegador. Manuales mantienen cuotas técnicas pero están fuera del ledger, gate P0 previo a admisión comercial. [Semántica y ejemplos](stage-6-consumption.md).

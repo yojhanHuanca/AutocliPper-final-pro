@@ -24,6 +24,7 @@ export class PipelineStatusDto {
   @ApiProperty({type:PipelineSpecDto}) spec!:PipelineSpecDto;
   @ApiProperty() version!:number;
   @ApiProperty() cancellationRequested!:boolean;
+  @ApiProperty({enum:["legacy","pending","accepted","rejected"],description:"Consumption admission; legacy intents predate usage accounting."}) usageState!:string;
   @ApiProperty({type:String,nullable:true}) errorCode!:string|null;
   @ApiProperty({format:"date-time"}) createdAt!:string;
   @ApiProperty({format:"date-time"}) deadlineAt!:string;

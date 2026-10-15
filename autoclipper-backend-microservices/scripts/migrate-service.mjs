@@ -3,7 +3,7 @@ import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 const service=process.argv[2];
-if(!['identity','workspace','project','analysis'].includes(service))throw new Error('Unknown migration service');
+if(!['identity','workspace','project','analysis','billing'].includes(service))throw new Error('Unknown migration service');
 if(!process.env.MIGRATION_DATABASE_URL)throw new Error('MIGRATION_DATABASE_URL required');
 const pool=new pg.Pool({connectionString:process.env.MIGRATION_DATABASE_URL,max:1,connectionTimeoutMillis:3000});
 const client=await pool.connect();

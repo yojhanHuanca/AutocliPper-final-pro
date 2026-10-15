@@ -53,6 +53,8 @@ La entrega multimedia añade en media `processing_tasks` (fuente inspeccionada p
 
 Project `0008_pipelines` añade intención/spec/hash inmutable por API, estado/plazo/cancelación y reserva no transferida; `pipeline_events` impide UPDATE/DELETE y limita historial por versión. Processing y analysis_requests referencian la intención mediante FK local; índices únicos impiden duplicar audio/clip/análisis por pipeline. El estado terminal exige finished_at y reserva no transferida cero. Los hijos concilian sus propias reservas antes del cierre. Ver [orquestación](stage-3-orchestration.md); no hay FK ni lectura SQL entre bases.
 
+Billing `0000_consumption` añade versiones inmutables de planes de desarrollo, asignaciones internas, períodos UTC/saldos, decisiones idempotentes de admisión, reservas, inbox, settlements únicos por etapa y ledger inmutable. Identificadores externos son opacos, sin FK a Project/Workspace. Project `0009_pipeline_usage` conserva la intención de reserva y outbox de reportes con payload inmutable; estados anteriores legacy siguen sin cargos retroactivos. Solo nuevos pipelines participan en este incremento. [Unidad, política, API y gate comercial](stage-6-consumption.md).
+
 La tabla describe el alcance completo. Las entidades enumeradas como implementadas al inicio de este documento ya tienen migraciones y endpoints de etapa 2; las demás se implementarán con sus casos de uso y pruebas, evitando tablas sin comportamiento.
 
 | Dueño | Entidades y restricciones previstas |

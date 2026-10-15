@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-for service in identity workspace project analysis; do
+for service in identity workspace project analysis billing; do
   upper="${service^^}"
   owner_var="${upper}_OWNER_PASSWORD"
   runtime_var="${upper}_RUNTIME_PASSWORD"
@@ -19,5 +19,6 @@ REVOKE ALL ON SCHEMA public FROM PUBLIC;
 SELECT format('ALTER SCHEMA public OWNER TO %I', :'owner') \gexec
 SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'runtime') \gexec
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO %I', :'owner', :'runtime') \gexec
+SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO %I', :'owner', :'runtime') \gexec
 SQL
 done

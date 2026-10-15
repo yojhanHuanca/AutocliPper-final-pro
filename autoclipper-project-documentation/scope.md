@@ -9,7 +9,7 @@ La entrega actual acredita el recorrido de cuenta a transcripción local real y 
 | 3 | Extracción, proveedor real de transcripción, selección validada, render/subtítulos, estado y descarga; flujo real completo | Audio, whisper.cpp real y render/descarga con orquestación durable servidor verificados; intervalo manual explícito, selección real y traducción pendientes |
 | 4 | Especificación de edición versionada, concurrencia, revisiones, marca, comentarios, aprobación y review links | Edición/colaboración/split verificados; marca/audio avanzado pendientes |
 | 5 | OAuth y publicación/calendario por proveedor permitido, zonas IANA, dedupe y conciliación | Pendiente; revisión oficial y credenciales al implementar |
-| 6 | Consumo interno, reservas/conciliación, planes versionados, proveedor de pagos si se elige, soporte/admin autorizados | Pendiente |
+| 6 | Consumo interno, reservas/conciliación, planes versionados, proveedor de pagos si se elige, soporte/admin autorizados | Ledger/planes de desarrollo verificados para nuevos pipelines; rutas manuales fuera del ledger, gate P0 antes de admisión comercial. Pagos/créditos/soporte/admin pendientes |
 | 7 | Carga, recuperación ante cortes reales, seguridad, restore completo, evaluación de tesis y documentación final | Pruebas base disponibles; evaluación final pendiente |
 
 ## Siguiente recorrido funcional

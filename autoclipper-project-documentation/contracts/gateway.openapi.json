@@ -11562,6 +11562,264 @@
           }
         ]
       }
+    },
+    "/v1/consumption/workspaces/{id}": {
+      "get": {
+        "operationId": "BillingController_consumption",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumptionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "consumption"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/consumption/workspaces/{id}/ledger": {
+      "get": {
+        "operationId": "BillingController_ledger",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageLedgerDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "consumption"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -14894,6 +15152,16 @@
           "cancellationRequested": {
             "type": "boolean"
           },
+          "usageState": {
+            "type": "string",
+            "enum": [
+              "legacy",
+              "pending",
+              "accepted",
+              "rejected"
+            ],
+            "description": "Consumption admission; legacy intents predate usage accounting."
+          },
           "errorCode": {
             "type": "string",
             "nullable": true
@@ -14944,6 +15212,7 @@
           "spec",
           "version",
           "cancellationRequested",
+          "usageState",
           "errorCode",
           "createdAt",
           "deadlineAt",
@@ -14953,6 +15222,165 @@
           "renderProcessingId",
           "reservedBytes",
           "events"
+        ]
+      },
+      "DevelopmentPlanDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "development"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "description": "Immutable version digest; no commercial price."
+          },
+          "processingSecondsPerMonth": {
+            "type": "number",
+            "minimum": 1
+          },
+          "activePipelines": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "version",
+          "processingSecondsPerMonth",
+          "activePipelines"
+        ]
+      },
+      "ConsumptionDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "material_seconds_per_stage"
+            ]
+          },
+          "plan": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DevelopmentPlanDto"
+              }
+            ]
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "consumedSeconds": {
+            "type": "number"
+          },
+          "consumedMinutes": {
+            "type": "number"
+          },
+          "reservedSeconds": {
+            "type": "number"
+          },
+          "availableSeconds": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "unit",
+          "plan",
+          "periodStart",
+          "periodEnd",
+          "consumedSeconds",
+          "consumedMinutes",
+          "reservedSeconds",
+          "availableSeconds"
+        ]
+      },
+      "UsageLedgerEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "pipelineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "analysis",
+              "render"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "reserve",
+              "consume",
+              "release"
+            ]
+          },
+          "seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "pipelineId",
+          "stage",
+          "kind",
+          "seconds",
+          "at",
+          "periodStart"
+        ]
+      },
+      "UsageLedgerDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageLedgerEntryDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
         ]
       },
       "ErrorResponse": {
