@@ -1,6 +1,6 @@
 # Orquestación durable con intervalo manual
 
-Incremento verificado localmente; CI se registra después de comprobar el SHA publicado. Una petición a Project conserva la intención upload inspeccionado→audio→ASR local→render. El navegador consulta estado y descarga el resultado, sin crear cada etapa. Usa únicamente whisper.cpp local y `selection.mode=none`; el intervalo es manual y explícito. No acredita selección automática LLM, nuevas integraciones ni producción.
+Incremento publicado privado en `c38afeefac150aad1dc1b30060186852f4d38a06`, verificado localmente y por [CI 38673694628](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38673694628): quality/infrastructure/business success. Una petición a Project conserva la intención upload inspeccionado→audio→ASR local→render. El navegador consulta estado y descarga el resultado, sin crear cada etapa. Usa únicamente whisper.cpp local y `selection.mode=none`; el intervalo es manual y explícito. No acredita selección automática LLM, nuevas integraciones ni producción.
 
 ## Contrato
 
@@ -61,7 +61,7 @@ La aceptación opt-in local conserva cuenta/email, upload e inspección, whisper
 | Nueva frontera HTTP con fuente inspeccionada real | 1 aprobada; 4.11 segundos, incluidos CSRF/otro usuario/contrato/cancelación |
 | npm audit de construcción | Cero vulnerabilidades reportadas |
 
-Los conteos incluyen padres. El tiempo del pipeline es una medición de una fuente sintética de 13.8 segundos en este equipo; no es un SLO ni evaluación de calidad. La regresión completa de negocio se acreditará con el SHA de CI; no se presenta la aceptación dirigida como esa suite completa.
+Los conteos incluyen padres. El tiempo del pipeline es una medición de una fuente sintética de 13.8 segundos en este equipo; no es un SLO ni evaluación de calidad. Se comprobaron logs del SHA de CI: 27 unitarias/HTTP, 34 infraestructura, 56 de la regresión completa de negocio, siete de Analysis con fixtures y siete de orquestación con estados explícitos, cero fallos y cero omisiones. CI no ejecuta whisper.cpp real; ese resultado corresponde a la aceptación local opt-in.
 
 Incidencias de ejecución: al restaurar Compose con el override de tests se iniciaron por error verificadores junto a aplicación; se detuvieron, se retiraron cuatro jobs/un objeto propios del proveedor fixture y se añadieron perfiles test. Esas ejecuciones interrumpidas no cuentan como aprobadas. Dos invocaciones Compose simultáneas intentaron recrear storage-init y una falló antes de ejecutar tests; se continuó con dependencias ya preparadas y `--no-deps`, sin retirar volúmenes. Una ejecución de recuperación de Analysis tuvo cinco aprobadas y un subcaso/padre fallidos por una espera que expiró; la repetición aislada pasó siete sin cambiar el código ni relajar el plazo. No se atribuye una causa no demostrada a esa espera.
 

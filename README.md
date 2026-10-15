@@ -6,7 +6,7 @@ Ver [pantalla dividida, políticas y evidencia](autoclipper-project-documentatio
 
 Identidad incluye 2FA TOTP, recuperación, perfil y solicitudes de privacidad. El adaptador Google valida credenciales en servidor; su prueba externa con una cuenta real sigue pendiente. Ver [límites de Google](autoclipper-project-documentation/google-identity.md) y [seguridad de identidad](autoclipper-project-documentation/identity-security.md).
 
-La [entrega de orquestación](autoclipper-project-documentation/stage-3-orchestration.md) pasó localmente 27 unitarias/HTTP, 34 infraestructura, 7 recuperación de análisis con fixtures, 7 orquestación con estados explícitos, 7 del flujo whisper.cpp real y una de frontera HTTP. Incluye SIGKILL únicamente del proceso orquestador aislado; los fixtures no acreditan inferencia. CI de su nuevo SHA se registra tras verificarlo.
+La [entrega de orquestación](autoclipper-project-documentation/stage-3-orchestration.md) pasó localmente 27 unitarias/HTTP, 34 infraestructura, 7 recuperación de análisis con fixtures, 7 orquestación con estados explícitos, 7 del flujo whisper.cpp real y una de frontera HTTP. Incluye SIGKILL únicamente del proceso orquestador aislado; los fixtures no acreditan inferencia. [CI 38673694628](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38673694628) aprobó los tres jobs para `c38afee`, incluida la regresión completa de 56 tests de negocio y las dos suites de siete fixtures.
 
 La etapa 1 está publicada en `cf6912b`, con CI remoto aprobado. La entrega de etapa 2 y sus verificaciones se describen en [stage-2.md](autoclipper-project-documentation/stage-2.md). Swagger público en [gateway](http://localhost:3000/docs); correo de desarrollo en [Mailpit](http://localhost:19025).
 

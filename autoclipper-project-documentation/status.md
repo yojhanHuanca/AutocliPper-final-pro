@@ -27,6 +27,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | CI de edición versionada, encuadre y plantillas | IV | Run 38629797508 aprobado en los tres jobs; commit 721336e. Editor con ASR real acreditado localmente, sin pesos en CI |
 | CI de comentarios, revisión/aprobaciones y enlaces limitados | IV | Run 38638350096 aprobado en quality/infrastructure/business; commit 93dfc02. ASR real conservado por prueba local de seis tests |
 | CI de pantalla dividida con dos fuentes autorizadas | IV | [Run 38669973228](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38669973228) aprobado en quality/infrastructure/business para 02003a2: 26 unitarias, 34 infraestructura, 55 negocio y 7 análisis fixtures. ASR real y composición acreditados localmente |
+| CI de orquestación durable con intervalo manual | IV | [Run 38673694628](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38673694628) quality/infrastructure/business success para c38afee: 27 unitarias, 34 infraestructura, 56 negocio, 7 análisis fixtures y 7 orquestación. ASR real acreditado localmente |
 | Imágenes de aplicación y stack completo | IV | Ver comandos y resultado final en verification.md |
 | Publicación etapa 1 en remoto | IV | Privado confirmado mediante API; commit cf6912b publicado con autorización |
 | Registro/verificación, login y recuperación de contraseña | IV | SMTP real local, tokens de un uso; aceptación funcional con dos cuentas |
