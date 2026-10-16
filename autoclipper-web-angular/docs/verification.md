@@ -62,3 +62,5 @@ Build de producción y typecheck aprobados. No fue posible hacer la revisión vi
 ### Recuperación de sesión
 
 Veintiuna pruebas pasan. La restauración propaga fallos 5xx/red y libera el intento compartido para que se pueda reintentar; solo un 401 tras refresh se trata como sesión vencida. El guard distingue ambos caminos, conserva `returnUrl` y añade `connection=unavailable` para el aviso existente. Build y typecheck aprobados; bundle inicial 315.62 KB raw, 87.02 KB estimados. Revisión visual no disponible en este turno porque Work deshabilita el control local del navegador.
+
+El guard del selector de espacios también conserva `returnUrl` si su petición falla después de restaurar la sesión. Veintidós pruebas pasan; build y typecheck aprobados. Bundle inicial 315.64 KB raw, ~87.00 KB estimados.

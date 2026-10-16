@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { HttpErrorResponse, SessionStore, ApiSecurity, ApiTransport, sessionGuard } from '../../.local/tests/client.mjs';
+import { HttpErrorResponse, SessionStore, ApiSecurity, ApiTransport, sessionGuard, WorkspaceStore, workspaceGuard } from '../../.local/tests/client.mjs';
 import { Router } from '@angular/router';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const renderer = {insertRootElement(){}, removeAllRootElements(){}};
@@ -44,5 +44,18 @@ test('guard preserves the destination and identifies an unavailable session serv
   try {
     const result=await TestBed.runInInjectionContext(()=>sessionGuard({},destination));
     assert.deepEqual(result,{commands:['/login'],options:{queryParams:{returnUrl:destination.url,connection:'unavailable'}}});
+  } finally { TestBed.resetTestingModule(); }
+});
+
+test('workspace lookup outage also preserves the requested protected page', async () => {
+  TestBed.configureTestingModule({providers:[
+    {provide:WorkspaceStore,useValue:{loadWorkspaces:async()=>{throw new Error('offline');}}},
+    {provide:TestComponentRenderer,useValue:renderer},
+    {provide:Router,useValue:{createUrlTree:(commands,options)=>({commands,options})}},
+  ]});
+  try {
+    const state={url:'/app/projects/project-123'};
+    const result=await TestBed.runInInjectionContext(()=>workspaceGuard({},state));
+    assert.deepEqual(result,{commands:['/login'],options:{queryParams:{connection:'unavailable',returnUrl:state.url}}});
   } finally { TestBed.resetTestingModule(); }
 });
