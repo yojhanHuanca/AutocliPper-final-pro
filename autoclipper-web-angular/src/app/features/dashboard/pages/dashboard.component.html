@@ -1,0 +1,114 @@
+@if (!design && !workspace.workspaces().length) { <ac-workspace-setup/> }
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">HAZ ESPACIO PARA LA PRÓXIMA IDEA</span>
+    <h1>Tu contenido, otra historia.</h1>
+    <p>
+      {{
+        design
+          ? "Una mirada al espacio donde tus ideas tomarán forma."
+          : "Hola, " +
+            (session.user()?.name ?? "") +
+            ". Continúa un proyecto o empieza con un nuevo video."
+      }}
+    </p>
+  </div>
+  <a
+    class="button primary"
+    [routerLink]="design ? '/design/projects' : '/app/projects'"
+    ><ac-icon name="plus" />Ir a proyectos</a
+  >
+</section>
+<div class="stats-grid">
+  <article class="stat-card">
+    <span class="stat-icon"><ac-icon name="folder" /></span>
+    <div>
+      <span>Proyectos consultados</span
+      ><strong>{{ projectsCount() ?? "—" }}</strong
+      ><small>{{
+        projectsCount() !== null
+          ? "Listado actual · máximo 100"
+          : design
+            ? "Conecta tu cuenta para consultar"
+            : "Esperando datos del servidor"
+      }}</small>
+    </div>
+  </article>
+  <article class="stat-card">
+    <span class="stat-icon"><ac-icon name="film" /></span>
+    <div>
+      <span>Tu próximo clip</span
+      ><strong class="stat-text">Empieza con una idea</strong
+      ><small>Los clips se consultan dentro de cada proyecto</small>
+    </div>
+  </article>
+  <article class="stat-card">
+    <span class="stat-icon"><ac-icon name="shield" /></span>
+    <div>
+      <span>Tu espacio, tus permisos</span
+      ><strong class="stat-text">{{ roleLabel() }}</strong
+      ><small>{{
+        design
+          ? "Sin permisos administrativos simulados"
+          : "Permisos comprobados por el servidor"
+      }}</small>
+    </div>
+  </article>
+</div>
+
+<div class="dashboard-grid">
+  <ac-project-collection
+    [compact]="true"
+    (loadedCount)="projectsCount.set($event)"
+  />
+  <aside class="dashboard-aside">
+    <article class="getting-started">
+      <span class="eyebrow">DEL VIDEO AL CLIP</span>
+      <h2>Un recorrido. Tu propio ritmo.</h2>
+      <ol>
+        <li>
+          <span>01</span>
+          <div>
+            <strong>Crea tu proyecto</strong>
+            <p>Un lugar para tu próxima idea.</p>
+          </div>
+        </li>
+        <li>
+          <span>02</span>
+          <div>
+            <strong>Sube tu material</strong>
+            <p>Privado, validado y listo para trabajar.</p>
+          </div>
+        </li>
+        <li>
+          <span>03</span>
+          <div>
+            <strong>Elige tu momento</strong>
+            <p>Transcripción local e intervalo manual.</p>
+          </div>
+        </li>
+        <li>
+          <span>04</span>
+          <div>
+            <strong>Dale forma y exporta</strong>
+            <p>Revisiones, subtítulos y un nuevo corte.</p>
+          </div>
+        </li>
+      </ol>
+      <ac-icon class="aside-scissors" name="scissors" />
+    </article>
+    <article class="panel compact">
+      <ac-icon name="users" />
+      <h3>Historias que se revisan en equipo.</h3>
+      <p>
+        Comentarios y aprobaciones viven dentro del editor de cada clip. El
+        acceso depende de tu rol.
+      </p>
+      @if (design) {
+        <a class="text-link" routerLink="/design/editor"
+          >Explorar editor<ac-icon name="arrow"
+        /></a>
+      }
+    </article>
+  </aside>
+</div>

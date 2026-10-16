@@ -1,0 +1,10 @@
+<section class="panel">
+  <span class="eyebrow">TU PRIMER ESPACIO</span>
+  <h2>Dale un lugar a tus historias.</h2>
+  <p>Crea tu espacio personal para organizar proyectos y cargar tu propio material.</p>
+  @if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
+  <form #form="ngForm" (ngSubmit)="form.valid && create()" class="inline-form">
+    <label>Nombre del espacio<input name="workspaceName" [(ngModel)]="name" maxlength="100" required placeholder="Mi estudio"></label>
+    <button class="button primary" type="submit" [disabled]="busy() || form.invalid">Crear espacio<ac-icon name="plus"/></button>
+  </form>
+</section>

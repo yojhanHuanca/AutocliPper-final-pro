@@ -1,0 +1,145 @@
+@if (!compact()) {
+  <section class="page-heading">
+    <div>
+      <span class="eyebrow">{{
+        !compact() ? "TU ARCHIVO CREATIVO" : "HAZ ESPACIO PARA LA PRÓXIMA IDEA"
+      }}</span>
+      <h1>{{ !compact() ? "Tus proyectos." : "Tus proyectos." }}</h1>
+      <p>
+        {{
+          design
+            ? "Una mirada al espacio donde tus ideas tomarán forma."
+            : "Hola, " +
+              (session.user()?.name ?? "") +
+              ". Continúa un proyecto o empieza con un nuevo video."
+        }}
+      </p>
+    </div>
+    <button
+      class="button primary"
+      type="button"
+      (click)="newProject.set(!newProject())"
+      [disabled]="design || !canEdit()"
+    >
+      <ac-icon name="plus" />Nuevo proyecto
+    </button>
+  </section>
+}
+@if (error()) {
+  <div class="alert error" role="alert">
+    {{ error() }}<button type="button" (click)="load()">Reintentar</button>
+  </div>
+}
+@if (newProject()) {
+  <form
+    class="panel inline-form"
+    #createForm="ngForm"
+    (ngSubmit)="createForm.valid && create()"
+  >
+    <label
+      >Nombre del proyecto<input
+        name="projectName"
+        [(ngModel)]="projectName"
+        required
+        maxlength="150"
+        placeholder="El nombre de tu próxima historia" /></label
+    ><button
+      class="button primary"
+      type="submit"
+      [disabled]="busy() || createForm.invalid"
+    >
+      Crear proyecto</button
+    ><button class="button" type="button" (click)="newProject.set(false)">
+      Cancelar
+    </button>
+  </form>
+}
+
+<section class="panel project-panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">EL PUNTO DE PARTIDA</span>
+      <h2>{{ compact() ? "Proyectos recientes" : "Todos los proyectos" }}</h2>
+    </div>
+    <button
+      class="button small"
+      type="button"
+      (click)="newProject.set(!newProject())"
+      [disabled]="design || !canEdit()"
+    >
+      <ac-icon name="plus" />Nuevo
+    </button>
+    <form class="search-form" (ngSubmit)="load()">
+      <ac-icon name="search" /><input
+        aria-label="Buscar proyectos por nombre"
+        name="search"
+        [(ngModel)]="search"
+        [disabled]="design"
+        placeholder="Buscar proyecto"
+      /><button type="submit" [disabled]="design || busy()">Buscar</button>
+    </form>
+  </div>
+  @if (busy()) {
+    <div class="loading-state" role="status">
+      <span class="spinner"></span>Consultando tus proyectos…
+    </div>
+  } @else {
+    @for (project of projects(); track project.id) {
+      <article class="project-row">
+        <div class="project-art" aria-hidden="true">
+          <ac-icon name="film" />
+        </div>
+        <div>
+          <h3>{{ project.name }}</h3>
+          <p>
+            Creado {{ project.createdAt | date: "mediumDate" }} · Versión
+            {{ project.version }}
+          </p>
+          <span class="badge">Proyecto real</span>
+        </div>
+        <a class="button small" [routerLink]="['/app/projects', project.id]"
+          >Abrir<ac-icon name="arrow"
+        /></a>
+      </article>
+    } @empty {
+      <div class="empty-state">
+        <div class="empty-illustration" aria-hidden="true">
+          <div class="empty-film"><span></span><span></span><span></span></div>
+          <div class="empty-frame"><ac-icon name="play" /></div>
+          <div class="empty-scissors"><ac-icon name="scissors" /></div>
+        </div>
+        <span class="eyebrow">AQUÍ COMIENZA ALGO BUENO</span>
+        <h3>
+          {{
+            design
+              ? "Imagina tu próxima historia aquí."
+              : loaded()
+                ? "Tu próximo proyecto empieza aquí."
+                : "Tus proyectos aparecerán al conectar."
+          }}
+        </h3>
+        <p>
+          {{
+            search
+              ? "No encontramos proyectos con ese nombre."
+              : "Reúne tu material, dale un nombre y crea un espacio para cada idea. Cada archivo será privado y se comprobará antes de procesarlo."
+          }}
+        </p>
+        @if (design) {
+          <a class="button" routerLink="/login"
+            >Conectar mi cuenta<ac-icon name="arrow"
+          /></a>
+        } @else {
+          <button
+            class="button"
+            type="button"
+            (click)="newProject.set(true)"
+            [disabled]="!canEdit()"
+          >
+            Crear primer proyecto<ac-icon name="plus" />
+          </button>
+        }
+      </div>
+    }
+  }
+</section>

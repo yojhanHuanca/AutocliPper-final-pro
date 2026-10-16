@@ -1,0 +1,46 @@
+<section class="editor-heading">
+  <div>
+    <span class="eyebrow">EL ESTUDIO / EDITOR</span>
+    <h1>{{ vm.draft()?.name ?? "Cada detalle cuenta." }}</h1>
+    <span class="muted">{{
+      vm.design
+        ? "Estructura del editor · Sin contenido de cuenta"
+        : vm.draft()
+          ? "Revisión guardada " +
+            vm.draft()!.version +
+            (vm.dirty() ? " · Cambios sin guardar" : " · Al día")
+          : "Cargando revisión…"
+    }}</span>
+  </div>
+  <div class="button-row">
+    <button class="button" type="button" (click)="vm.tab.set('history')">
+      <ac-icon name="clock" />Historial</button
+    ><button
+      class="button"
+      type="button"
+      (click)="vm.requestReview()"
+      [disabled]="vm.design || vm.busy() || vm.dirty() || !vm.review()"
+    >
+      Enviar a revisión</button
+    ><button
+      class="button primary"
+      type="button"
+      (click)="vm.render()"
+      [disabled]="vm.design || vm.busy() || vm.dirty() || !vm.draft()"
+    >
+      Exportar revisión<ac-icon name="download" />
+    </button>
+  </div>
+</section>
+@if (vm.error()) {
+  <div class="alert error" role="alert">{{ vm.error() }}</div>
+}
+@if (vm.message()) {
+  <div class="alert" role="status">{{ vm.message() }}</div>
+}
+<div class="editor-layout">
+  <ac-editor-rail />
+  <ac-editor-preview />
+  <ac-editor-inspector />
+  <ac-editor-timeline />
+</div>

@@ -1,0 +1,43 @@
+<span class="eyebrow">HISTORIAL</span>
+<h2>Cada decisión, guardada.</h2>
+<p>Restaurar crea una nueva revisión; conserva las anteriores.</p>
+@for (revision of vm.history(); track revision.id) {
+  <div class="history-row">
+    <div>
+      <strong>Revisión {{ revision.version }}</strong
+      ><small>{{ revision.createdAt | date: "medium" }}</small
+      ><span>{{ revision.action }}</span>
+    </div>
+    <button
+      type="button"
+      class="button small"
+      (click)="vm.restore(revision.version)"
+      [disabled]="
+        vm.design ||
+        vm.busy() ||
+        vm.dirty() ||
+        revision.version === vm.draft()?.version
+      "
+    >
+      Restaurar
+    </button>
+  </div>
+} @empty {
+  <div class="empty-inline">
+    <ac-icon name="clock" />
+    <p>Las revisiones reales aparecerán aquí.</p>
+  </div>
+}
+@if (vm.nextVersion()) {
+  <button class="button small" type="button" (click)="vm.loadHistory(true)">
+    Más revisiones
+  </button>
+}
+<button
+  class="button full"
+  type="button"
+  (click)="vm.reload()"
+  [disabled]="vm.design || vm.busy()"
+>
+  Recargar y descartar formulario
+</button>

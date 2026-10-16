@@ -1,0 +1,56 @@
+<span class="eyebrow">REVISIÓN DEL EQUIPO</span>
+<h2>Otra mirada ayuda.</h2>
+<p>
+  Estado: <span class="badge">{{ vm.review()?.status ?? "Sin datos" }}</span>
+</p>
+<button
+  class="button full"
+  type="button"
+  (click)="vm.approve()"
+  [disabled]="
+    vm.design || vm.busy() || vm.dirty() || vm.review()?.status !== 'review'
+  "
+>
+  Aprobar revisión actual</button
+><small class="muted"
+  >Solo owner/admin del espacio; el servidor valida el permiso.</small
+>
+<form #commentForm="ngForm" (ngSubmit)="commentForm.valid && vm.comment()">
+  <label
+    >Comentario<textarea
+      name="comment"
+      [(ngModel)]="vm.commentText"
+      maxlength="2000"
+      required
+      [disabled]="vm.design"
+    ></textarea></label
+  ><label
+    >Segundo relativo al clip<input
+      type="number"
+      name="time"
+      [(ngModel)]="vm.commentTime"
+      min="0"
+      [max]="vm.spec.endSeconds - vm.spec.startSeconds"
+      step="0.1"
+      required
+      [disabled]="vm.design" /></label
+  ><button
+    class="button primary full"
+    type="submit"
+    [disabled]="vm.design || vm.busy() || commentForm.invalid"
+  >
+    Añadir comentario
+  </button>
+</form>
+@for (item of vm.comments(); track item.id) {
+  <article class="comment">
+    <span>{{ item.timeSeconds }}s · R{{ item.revisionVersion }}</span>
+    <p>{{ item.text ?? "Comentario retirado" }}</p>
+    <small>{{ item.createdAt | date: "short" }}</small>
+  </article>
+}
+@if (vm.nextComment()) {
+  <button class="button small" type="button" (click)="vm.loadComments(true)">
+    Más comentarios
+  </button>
+}

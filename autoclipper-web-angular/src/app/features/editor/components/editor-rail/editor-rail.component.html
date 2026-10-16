@@ -1,0 +1,32 @@
+<aside class="editor-rail panel">
+  <span class="eyebrow">HERRAMIENTAS</span>
+  @for (item of vm.tabs; track item.id) {
+    <button
+      type="button"
+      [class.active]="vm.tab() === item.id"
+      [attr.aria-pressed]="vm.tab() === item.id"
+      (click)="vm.tab.set(item.id)"
+    >
+      <ac-icon [name]="item.icon" />{{ item.label }}
+    </button>
+  }
+  <div class="editor-source">
+    <ac-icon name="film" /><strong>{{
+      vm.draft() ? "Fuente autorizada" : "Tu material va aquí"
+    }}</strong
+    ><small>{{
+      vm.draft()
+        ? "El borrador conserva su upload de origen."
+        : "Crea un borrador desde un proyecto para comenzar."
+    }}</small>
+    @if (vm.draft()) {
+      <a
+        class="text-link"
+        [routerLink]="['/app/projects', vm.draft()!.projectId]"
+        >Volver al proyecto</a
+      >
+    } @else {
+      <a class="text-link" routerLink="/vm.design">Ver panel</a>
+    }
+  </div>
+</aside>

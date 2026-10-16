@@ -1,0 +1,121 @@
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">CADA ETAPA CUENTA</span>
+    <h1>Tu consumo, a la vista.</h1>
+    <p>Segundos de material procesado por etapa en este espacio.</p>
+  </div>
+  <button class="button" type="button" (click)="load()" [disabled]="busy()">
+    Actualizar<ac-icon name="arrow" />
+  </button>
+</section>
+@if (error()) {
+  <div class="alert error" role="alert">{{ error() }}</div>
+}
+@if (consumption(); as usage) {
+  <div class="stats-grid">
+    <article class="stat-card">
+      <ac-icon name="chart" />
+      <div>
+        <span>Consumido</span
+        ><strong
+          >{{ usage.consumedSeconds | number: "1.0-2" }}
+          <small>s</small></strong
+        ><small
+          >{{ usage.consumedMinutes | number: "1.0-2" }} minutos de material por
+          etapa</small
+        >
+      </div>
+    </article>
+    <article class="stat-card">
+      <ac-icon name="clock" />
+      <div>
+        <span>Reservado</span
+        ><strong
+          >{{ usage.reservedSeconds | number: "1.0-2" }}
+          <small>s</small></strong
+        ><small>Reservas pendientes de conciliación</small>
+      </div>
+    </article>
+    <article class="stat-card">
+      <ac-icon name="shield" />
+      <div>
+        <span>Disponible</span
+        ><strong
+          >{{ usage.availableSeconds | number: "1.0-2" }}
+          <small>s</small></strong
+        ><small>Según el plan de desarrollo actual</small>
+      </div>
+    </article>
+  </div>
+  <article class="panel">
+    <span class="eyebrow">PLAN DE DESARROLLO</span>
+    <h2>{{ usage.plan?.label ?? "Sin plan asignado" }}</h2>
+    <p>
+      Periodo: {{ usage.periodStart | date: "mediumDate" }} —
+      {{ usage.periodEnd | date: "mediumDate" }}
+    </p>
+    <p class="resource-id">
+      Versión del plan: {{ usage.plan?.version ?? "—" }}
+    </p>
+  </article>
+} @else {
+  <div class="panel empty-inline">
+    <ac-icon name="chart" />
+    <p>
+      {{
+        busy() ? "Consultando consumo…" : "No hay datos de consumo consultados."
+      }}
+    </p>
+  </div>
+}
+<p class="alert">
+  Consumo de desarrollo, sin precios, cobros ni créditos comerciales. Los nuevos
+  pipelines concilian por etapa; las APIs manuales y trabajos anteriores tienen
+  un alcance distinto. No representa una cuota comercial global.
+</p>
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Movimientos del periodo.</h2>
+    <span class="muted">Hasta 50 movimientos por página</span>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Etapa</th>
+          <th>Movimiento</th>
+          <th>Segundos</th>
+          <th>Pipeline</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of ledger(); track entry.id) {
+          <tr>
+            <td>{{ entry.at | date: "medium" }}</td>
+            <td>{{ entry.stage }}</td>
+            <td>
+              <span class="badge">{{ entry.kind }}</span>
+            </td>
+            <td>{{ entry.seconds | number: "1.0-2" }}</td>
+            <td class="resource-id">{{ entry.pipelineId }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5">No hay movimientos consultados en este periodo.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (nextId()) {
+    <button
+      class="button"
+      type="button"
+      (click)="loadMore()"
+      [disabled]="busy()"
+    >
+      Más movimientos
+    </button>
+  }
+</section>

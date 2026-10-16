@@ -1,0 +1,64 @@
+@layer components {
+.editor-rail {
+  padding: 17px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+}
+.editor-rail > .eyebrow {
+  font-size: 7px;
+  padding: 0 4px;
+  margin-bottom: 14px;
+}
+.editor-rail > button {
+  border: 0;
+  background: none;
+  border-radius: 7px;
+  padding: 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  text-align: left;
+  min-height: 43px;
+  color: var(--muted);
+}
+.editor-rail > button ac-icon {
+  width: 16px;
+  height: 16px;
+}
+.editor-rail > button.active {
+  color: var(--accent);
+  background: var(--tint);
+}
+.editor-source {
+  display: grid;
+  justify-items: start;
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding: 20px 5px;
+  gap: 12px;
+}
+.editor-source > ac-icon {
+  width: 40px;
+  height: 40px;
+  color: #bbc3ad;
+}
+.editor-source strong {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.editor-source small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.editor-source .text-link {
+  font-size: 9px;
+  line-height: 1.6;
+}
+ac-editor-rail {
+  display: contents;
+}
+
+}

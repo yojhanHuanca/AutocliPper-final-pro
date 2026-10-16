@@ -1,0 +1,31 @@
+@layer components {
+/* Versioned editor */
+.editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 24px;
+}
+.editor-heading h1 {
+  font-size: 27px;
+  margin: 7px 0;
+}
+.editor-heading > .button-row {
+  justify-content: flex-end;
+}
+.editor-heading .button {
+  font-size: 10px;
+  min-height: 38px;
+  padding: 10px 12px;
+}
+.editor-heading .muted {
+  font-size: 10px;
+}
+.editor-layout {
+  display: grid;
+  grid-template-columns: 145px minmax(240px, 1fr) 290px;
+  gap: 13px;
+}
+
+}

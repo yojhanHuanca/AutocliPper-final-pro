@@ -1,0 +1,57 @@
+<span class="eyebrow">SUBTÍTULOS</span>
+<h2>Cada palabra importa.</h2>
+<label
+  >Origen<select [(ngModel)]="vm.captionSource" (ngModelChange)="vm.touchForm()" [disabled]="vm.design">
+    <option value="none">Sin subtítulos</option>
+    <option value="user">Texto aportado</option>
+    <option value="transcript" [disabled]="!vm.analysisId">Transcripción vinculada</option>
+  </select></label
+>
+@if (vm.captionSource === "transcript") {
+  <p>Usamos la transcripción autorizada vinculada a este borrador. El servidor conserva su procedencia y tiempos.</p>
+}
+@if (vm.captionSource === "user") {
+  <p>Los tiempos corresponden al video original. Usa texto simple, sin etiquetas.</p>
+  @for (cue of vm.cues; track $index) {
+    <fieldset class="caption-cue">
+      <legend>Frase {{ $index + 1 }}</legend>
+      <div class="form-grid">
+        <label>Inicio (s)<input type="number" [(ngModel)]="cue.startSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design"></label>
+        <label>Fin (s)<input type="number" [(ngModel)]="cue.endSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design"></label>
+      </div>
+      <label>Texto<textarea [(ngModel)]="cue.text" (ngModelChange)="vm.touchForm()" maxlength="500" rows="2" [disabled]="vm.design"></textarea></label>
+      <button class="button small" type="button" (click)="vm.removeCue($index)" [disabled]="vm.design">Retirar frase</button>
+    </fieldset>
+  } @empty { <p class="muted">Añade tu primera frase para comenzar.</p> }
+  <button class="button full" type="button" (click)="vm.addCue()" [disabled]="vm.design || vm.cues.length >= 200">Añadir frase<ac-icon name="plus"/></button>
+}
+@if (!vm.analysisId) { <p class="muted">Para usar transcripción local, crea un borrador desde un clip con transcripción en tu proyecto, o recupera una revisión anterior que la conserve.</p> }
+@if (vm.captionSource !== "none") {
+  <label
+    >Plantilla<select [(ngModel)]="vm.captionTemplate" (ngModelChange)="vm.touchForm()" [disabled]="vm.design">
+      <option value="clean">Clean</option>
+      <option value="boxed">Boxed</option>
+      <option value="bold">Bold</option>
+    </select></label
+  ><label
+    >Posición<select [(ngModel)]="vm.captionPosition" (ngModelChange)="vm.touchForm()" [disabled]="vm.design">
+      <option value="bottom">Inferior</option>
+      <option value="top">Superior</option>
+    </select></label
+  ><label
+    >Tamaño<input
+      type="number"
+      [(ngModel)]="vm.fontSize" (ngModelChange)="vm.touchForm()"
+      min="12"
+      max="40"
+      [disabled]="vm.design"
+  /></label>
+}
+<button
+  class="button primary full"
+  type="button"
+  (click)="vm.save()"
+  [disabled]="vm.design || vm.busy() || !vm.dirty()"
+>
+  Guardar revisión<ac-icon name="check" />
+</button>

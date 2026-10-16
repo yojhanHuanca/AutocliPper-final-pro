@@ -1,0 +1,54 @@
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">ESTRUCTURA ADMINISTRATIVA / PROPUESTA</span>
+    <h1>Una visión de conjunto.</h1>
+    <p>Operación, negocio y confianza en un mismo lugar.</p>
+  </div>
+  <span class="badge">Módulos previstos</span>
+</section>
+<div class="alert">
+  <ac-icon name="shield" />Esta es una exploración pública de estructura, sin
+  datos de usuarios ni controles operativos. La conexión con las APIs administrativas
+  globales está pendiente en esta interfaz; un rol owner/admin de workspace no concede acceso
+  administrativo de plataforma.
+</div>
+<div class="admin-grid">
+  @for (group of groups; track group.title) {
+    <section class="panel admin-group">
+      <span class="admin-icon"><ac-icon [name]="group.icon" /></span
+      ><span class="eyebrow">{{ group.category }}</span>
+      <h2>{{ group.title }}</h2>
+      <p>{{ group.description }}</p>
+      <ul>
+        @for (module of group.modules; track module) {
+          <li>
+            <span>{{ module }}</span
+            ><span class="badge">Previsto</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+<article class="panel admin-settings">
+  <div>
+    <span class="eyebrow">CONFIGURACIÓN DE PLATAFORMA / ESTRUCTURA</span>
+    <h2>Los cambios merecen contexto.</h2>
+    <p>
+      General · Acceso y roles · Procesamiento · Planes · Integraciones ·
+      Retención
+    </p>
+  </div>
+  <div class="admin-audit-steps">
+    <span><ac-icon name="settings" />Impacto revisable</span
+    ><span><ac-icon name="users" />Motivo y autor</span
+    ><span><ac-icon name="clock" />Versión e historial</span>
+  </div>
+  <p class="muted">
+    Sin formularios de operación hasta disponer de contratos, permisos propios y
+    auditoría del servidor.
+  </p>
+</article>
+<a class="text-link" routerLink="/design"
+  >Volver a la propuesta del estudio<ac-icon name="arrow"
+/></a>

@@ -1,0 +1,128 @@
+@layer components {
+.editor-inspector {
+  padding: 20px 17px;
+  margin: 0;
+  max-height: 595px;
+  overflow-y: auto;
+}
+.editor-inspector > .eyebrow {
+  font-size: 8px;
+  margin-bottom: 12px;
+}
+.editor-inspector h2 {
+  font-size: 21px;
+  margin-bottom: 18px;
+}
+.editor-inspector label {
+  font-size: 10px;
+  margin: 17px 0 10px;
+  gap: 7px;
+}
+.editor-inspector input,
+.editor-inspector select,
+.editor-inspector textarea {
+  padding: 9px;
+  font-size: 11px;
+  border-color: var(--border);
+}
+.editor-inspector input[type="range"] {
+  padding: 0;
+}
+.editor-inspector input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+}
+.editor-inspector .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 15px;
+  font-weight: 650;
+}
+.editor-inspector > .button,
+.editor-inspector form > .button {
+  font-size: 11px;
+  padding: 11px 9px;
+}
+.editor-inspector p {
+  font-size: 10px;
+}
+.editor-inspector small {
+  font-size: 9px;
+}
+.history-row {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+.history-row > div {
+  display: grid;
+  gap: 5px;
+}
+.history-row strong {
+  font-size: 11px;
+}
+.history-row small,
+.history-row span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.history-row .button {
+  font-size: 9px;
+  padding: 7px;
+  min-height: 32px;
+}
+.comment {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+.comment > span {
+  font-size: 9px;
+  color: var(--accent);
+}
+.comment p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 9px 0;
+  font-size: 11px;
+  color: var(--text);
+}
+.comment small {
+  color: var(--muted);
+}
+.export-item {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.export-item > strong {
+  font-size: 11px;
+}
+.export-item > small {
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 8px;
+  color: var(--muted);
+}
+.export-item .button {
+  font-size: 9px;
+  min-height: 32px;
+  padding: 7px;
+}
+.export-item .button ac-icon {
+  width: 12px;
+  height: 12px;
+}
+ac-editor-inspector {
+  display: block;
+  min-width: 0;
+}
+
+}

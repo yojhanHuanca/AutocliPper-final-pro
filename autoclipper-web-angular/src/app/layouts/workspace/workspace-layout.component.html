@@ -1,0 +1,141 @@
+<div class="app-shell" [class.menu-open]="menuOpen()">
+  <aside class="sidebar" aria-label="Navegación del estudio">
+    <a class="brand" routerLink="/"><ac-brand/></a>
+    <div class="workspace-select">
+      <span class="workspace-avatar"><ac-icon name="film" /></span>
+      <div>
+        <label for="workspace">ESPACIO DE TRABAJO</label
+        ><select
+          id="workspace"
+          [disabled]="design || !workspace.workspaces().length"
+          [value]="workspace.workspaceId()"
+          (change)="workspace.workspaceId.set($any($event.target).value)"
+        >
+          @if (design) {
+            <option>Vista de estructura</option>
+          } @else {
+            @for (workspace of workspace.workspaces(); track workspace.id) {
+              <option [value]="workspace.id">{{ workspace.name }}</option>
+            } @empty {
+              <option>Sin espacio disponible</option>
+            }
+          }
+        </select>
+      </div>
+    </div>
+    <span class="nav-caption">CREA Y ORGANIZA</span>
+    <nav aria-label="Estudio" (click)="menuOpen.set(false)">
+      <a
+        [routerLink]="base"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ><ac-icon name="grid" />Inicio</a
+      >
+      <a [routerLink]="base + '/projects'" routerLinkActive="active"
+        ><ac-icon name="folder" />Proyectos</a
+      >
+      <span class="nav-disabled"
+        ><ac-icon name="film" />Biblioteca global<small>Previsto</small></span
+      >
+      <span class="nav-disabled"
+        ><ac-icon name="clock" />Calendario<small>Previsto</small></span
+      >
+      @if (!design) {
+        <a routerLink="/app/consumption" routerLinkActive="active"
+          ><ac-icon name="chart" />Consumo</a
+        >
+      }
+    </nav>
+    <div class="sidebar-note">
+      <div class="mini-film">
+        <span></span><span></span><span></span><ac-icon name="scissors" />
+      </div>
+      <strong>Una idea. Otro corte.</strong>
+      <p>Tu próximo clip empieza con tu propio material.</p>
+      <a [routerLink]="design ? '/register' : '/app/projects'" class="text-link"
+        >{{ design ? "Crear mi cuenta" : "Ir a proyectos" }}
+        <ac-icon name="arrow"
+      /></a>
+    </div>
+    <nav class="sidebar-bottom" aria-label="Cuenta">
+      <a [routerLink]="base + '/settings'" routerLinkActive="active"
+        ><ac-icon name="settings" />Configuración</a
+      >
+      @if (design) {
+        <a routerLink="/design/admin"
+          ><ac-icon name="shield" />Estructura admin<small>Previsto</small></a
+        >
+      }
+      <a routerLink="/"><ac-icon name="arrow" />Volver a la web</a>
+    </nav>
+    <div class="sidebar-user">
+      <span class="avatar">{{
+        design ? "AC" : session.user()?.name?.slice(0, 2)?.toUpperCase()
+      }}</span>
+      <div>
+        <strong>{{
+          design ? "Exploración visual" : session.user()?.name
+        }}</strong
+        ><span>{{ design ? "Sin datos de cuenta" : currentRole() }}</span>
+      </div>
+      @if (!design) {
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="Cerrar sesión"
+          (click)="logout()"
+        >
+          <ac-icon name="logout" />
+        </button>
+      }
+    </div>
+  </aside>
+  <div class="app-body">
+    <header class="app-topbar">
+      <div>
+        <button
+          class="icon-button mobile-menu"
+          type="button"
+          aria-label="Abrir o cerrar navegación"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(!menuOpen())"
+        >
+          <ac-icon name="menu" /></button
+        ><span>Mi espacio <span class="muted">/ Estudio</span></span>
+      </div>
+      <div class="topbar-right">
+        <span class="connection" [class.connected]="online()">{{
+          design
+            ? "Exploración de diseño"
+            : online()
+              ? "Servidor conectado"
+              : "Servidor no disponible"
+        }}</span
+        ><span class="avatar small">{{
+          design ? "AC" : session.user()?.name?.slice(0, 2)?.toUpperCase()
+        }}</span>
+      </div>
+    </header>
+    @if (design) {
+      <div class="design-banner">
+        <ac-icon name="settings" /><span
+          ><strong>Propuesta de estructura.</strong> Fondo blanco elegido.
+          Acento Cobalto aprobado. Sin proyectos, métricas ni permisos
+          ficticios.</span
+        ><a routerLink="/login">Conectar mi cuenta <ac-icon name="arrow" /></a>
+      </div>
+    }
+    @if (error()) {
+      <p class="alert error" role="alert">{{ error() }}</p>
+    }
+    <main id="main" class="app-main"><router-outlet /></main>
+    <footer class="app-footer">
+      <span>AutoClipper / Estudio creativo</span
+      ><span>{{
+        design
+          ? "Vista pública de estructura · Sin acceso administrativo"
+          : "Entorno de desarrollo · Funciones según permisos del servidor"
+      }}</span>
+    </footer>
+  </div>
+</div>

@@ -1,0 +1,42 @@
+<section class="editor-stage">
+  <div class="preview-label">
+    <span>{{
+      vm.previewUrl() ? "Render real exportado" : "Área de reproducción"
+    }}</span
+    ><span>{{
+      vm.previewVersion()
+        ? "Revisión " + vm.previewVersion()
+        : "Sin render seleccionado"
+    }}</span>
+  </div>
+  <div class="video-stage">
+    @if (vm.previewUrl()) {
+      <video
+        controls
+        crossorigin="anonymous"
+        preload="metadata"
+        [src]="vm.previewUrl()"
+        aria-label="Render exportado de la revisión elegida"
+      ></video>
+    } @else {
+      <div class="video-placeholder">
+        <div class="frame-corners"><ac-icon name="play" /></div>
+        <strong>Tu historia, en el centro.</strong>
+        <p>
+          {{
+            vm.design
+              ? "Aquí se reproducirá el video autorizado."
+              : "Selecciona una exportación terminada para reproducirla."
+          }}
+        </p>
+        <span>El resultado se comprueba con el render del servidor.</span>
+      </div>
+    }
+  </div>
+  <div class="preview-foot">
+    <ac-icon name="shield" /><span
+      >Las modificaciones del inspector se aplican al guardar y exportar. No se
+      simula un render interactivo.</span
+    >
+  </div>
+</section>

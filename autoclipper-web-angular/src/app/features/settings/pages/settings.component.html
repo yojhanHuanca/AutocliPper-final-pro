@@ -1,0 +1,328 @@
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">A TU MANERA</span>
+    <h1>Tu cuenta. Tu espacio.</h1>
+    <p>Perfil, acceso y preferencias en un mismo lugar.</p>
+  </div>
+  <ac-icon class="heading-icon" name="settings" />
+</section>
+<div class="tab-bar" aria-label="Secciones de configuración">
+  @for (item of ["Perfil", "Seguridad", "Privacidad"]; track item) {
+    <button
+      type="button"
+      [class.active]="tab() === item"
+      [attr.aria-pressed]="tab() === item"
+      (click)="tab.set(item)"
+    >
+      {{ item }}
+    </button>
+  }
+</div>
+@if (error()) {
+  <div class="alert error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="alert success" role="status">{{ message() }}</div>
+}
+<div class="settings-grid">
+  <section>
+    @if (tab() === "Perfil") {
+      <article class="panel">
+        <span class="eyebrow">PERFIL</span>
+        <h2>Así te conoce tu equipo.</h2>
+        <form
+          #profileForm="ngForm"
+          (ngSubmit)="profileForm.valid && saveProfile()"
+        >
+          <label
+            >Nombre<input
+              name="name"
+              [(ngModel)]="name"
+              required
+              maxlength="100"
+              [disabled]="design" /></label
+          ><label
+            >Correo<input
+              [value]="profile()?.email ?? ''"
+              readonly
+              placeholder="Conecta tu cuenta para verlo" /></label
+          ><label
+            >Zona horaria IANA<input
+              name="timezone"
+              [(ngModel)]="timezone"
+              required
+              [disabled]="design"
+              placeholder="America/Lima"
+          /></label>
+          <p class="muted">
+            Esta primera interfaz está disponible en español. El fondo blanco se
+            conserva como decisión de diseño.
+          </p>
+          <button
+            class="button primary"
+            type="submit"
+            [disabled]="design || busy() || profileForm.invalid || !profile()"
+          >
+            Guardar perfil<ac-icon name="check" />
+          </button>
+        </form>
+      </article>
+    }
+    @if (tab() === "Seguridad") {
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">AUTENTICACIÓN EN DOS PASOS</span>
+            <h2>Un paso más de protección.</h2>
+          </div>
+          <span class="badge">{{
+            mfa() ? (mfa()!.enabled ? "Activada" : "Desactivada") : "Sin datos"
+          }}</span>
+        </div>
+        <p>
+          Protege el acceso con tu aplicación autenticadora. Los códigos y datos
+          de alta solo se muestran en esta sesión de pantalla.
+        </p>
+        @if (mfa()?.enabled) {
+          <p>
+            Códigos de recuperación restantes:
+            {{ mfa()!.recoveryCodesRemaining }}
+          </p>
+        }
+        <form #securityForm="ngForm" (ngSubmit)="$event.preventDefault()">
+          <label
+            >Contraseña actual<input
+              type="password"
+              name="proof"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+              required
+              [disabled]="design"
+          /></label>
+          @if (mfa()?.enabled || setupUri()) {
+            <label
+              >{{
+                setupUri()
+                  ? "Código TOTP de 6 dígitos"
+                  : "Código TOTP o de recuperación"
+              }}<input
+                name="factor"
+                [(ngModel)]="factor"
+                autocomplete="one-time-code"
+                [disabled]="design"
+            /></label>
+          }
+          <div class="button-row">
+            @if (!mfa()?.enabled && !setupUri()) {
+              <button
+                class="button primary"
+                type="button"
+                (click)="setupMfa()"
+                [disabled]="design || busy() || !password"
+              >
+                Preparar 2FA
+              </button>
+            }
+            @if (setupUri()) {
+              <button
+                class="button primary"
+                type="button"
+                (click)="enableMfa()"
+                [disabled]="busy() || !factor || !password"
+              >
+                Confirmar activación
+              </button>
+            }
+            @if (mfa()?.enabled) {
+              <button
+                class="button"
+                type="button"
+                (click)="rotateCodes()"
+                [disabled]="busy() || !password || !factor"
+              >
+                Renovar códigos</button
+              ><button
+                class="button danger"
+                type="button"
+                (click)="disableMfa()"
+                [disabled]="busy() || !password || !factor"
+              >
+                Desactivar 2FA
+              </button>
+            }
+          </div>
+        </form>
+        @if (setupUri()) {
+          <div class="sensitive-box">
+            <strong>Añade este URI en tu autenticador.</strong>
+            <p>
+              Dato sensible y temporal. No lo compartas. Confirma con el código
+              generado por tu app.
+            </p>
+            <textarea
+              readonly
+              rows="4"
+              [value]="setupUri()"
+              aria-label="URI sensible de inscripción del autenticador"
+            ></textarea
+            ><button
+              class="button small"
+              type="button"
+              (click)="setupUri.set('')"
+            >
+              Ocultar URI
+            </button>
+          </div>
+        }
+        @if (recoveryCodes().length) {
+          <div class="sensitive-box">
+            <strong>Guarda estos códigos ahora.</strong>
+            <p>
+              Cada código se usa una vez. No se guardan en el almacenamiento del
+              navegador.
+            </p>
+            <div class="recovery-codes">
+              @for (code of recoveryCodes(); track code) {
+                <code>{{ code }}</code>
+              }
+            </div>
+            <button
+              class="button small"
+              type="button"
+              (click)="recoveryCodes.set([])"
+            >
+              Ya los guardé · Ocultar
+            </button>
+          </div>
+        }
+      </article>
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>Sesiones activas.</h2>
+          <button
+            class="button small"
+            type="button"
+            (click)="loadSessions()"
+            [disabled]="design || busy()"
+          >
+            Actualizar
+          </button>
+        </div>
+        @for (item of sessions(); track item.id) {
+          <div class="session-row">
+            <ac-icon name="shield" />
+            <div>
+              <strong>Sesión {{ item.id.slice(0, 8) }}</strong
+              ><small>Creada {{ item.createdAt | date: "medium" }}</small
+              ><small>Vence {{ item.expiresAt | date: "medium" }}</small>
+            </div>
+            <button
+              class="button small"
+              type="button"
+              (click)="revoke(item.id)"
+              [disabled]="busy() || !!item.revokedAt"
+            >
+              {{ item.revokedAt ? "Revocada" : "Cerrar sesión" }}
+            </button>
+          </div>
+        } @empty {
+          <div class="empty-inline">
+            <ac-icon name="shield" />
+            <p>
+              Las sesiones autorizadas aparecerán aquí. El contrato no
+              identifica dispositivo ni ubicación.
+            </p>
+          </div>
+        }
+      </article>
+    }
+    @if (tab() === "Privacidad") {
+      <article class="panel">
+        <span class="eyebrow">PRIVACIDAD Y DATOS</span>
+        <h2>Gestiona tus solicitudes.</h2>
+        <p>
+          El backend registra solicitudes de exportación o eliminación. Su
+          ejecución integral entre servicios está pendiente; registrarlas no
+          elimina ni exporta automáticamente tus datos.
+        </p>
+        <form
+          #privacyForm="ngForm"
+          (ngSubmit)="privacyForm.valid && requestPrivacy()"
+        >
+          <label
+            >Tipo de solicitud<select
+              name="kind"
+              [(ngModel)]="privacyKind"
+              [disabled]="design"
+            >
+              <option value="export">Exportación de datos</option>
+              <option value="deletion">Solicitud de eliminación</option>
+            </select></label
+          ><label
+            >Contraseña actual<input
+              name="privacyProof"
+              type="password"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+              required
+              [disabled]="design" /></label
+          ><label
+            >Código 2FA si está activado<input
+              name="privacyFactor"
+              [(ngModel)]="factor"
+              autocomplete="one-time-code"
+              [disabled]="design" /></label
+          ><button
+            class="button primary"
+            type="submit"
+            [disabled]="design || busy() || privacyForm.invalid"
+          >
+            Registrar solicitud
+          </button>
+        </form>
+      </article>
+      <article class="panel">
+        <h2>Solicitudes registradas.</h2>
+        @for (item of privacy(); track item.id) {
+          <div class="history-row">
+            <strong>{{ item.kind }}</strong
+            ><span>{{ item.state }}</span
+            ><small>{{ item.createdAt | date: "medium" }}</small>
+          </div>
+        } @empty {
+          <p class="muted">No hay solicitudes consultadas.</p>
+        }
+      </article>
+    }
+  </section>
+  <aside>
+    <article class="panel profile-summary">
+      <span class="avatar large">{{
+        design ? "AC" : name.slice(0, 2).toUpperCase()
+      }}</span
+      ><span class="eyebrow">TU PERFIL</span>
+      <h2>
+        {{
+          design
+            ? "Tu nombre aparecerá aquí."
+            : (profile()?.name ?? "Cargando cuenta…")
+        }}
+      </h2>
+      <p>
+        {{ design ? "Sin datos ficticios de identidad." : profile()?.email }}
+      </p>
+      <span class="badge">{{
+        design ? "Exploración de estructura" : "Sesión autenticada"
+      }}</span>
+    </article>
+    <article class="panel compact">
+      <ac-icon name="users" />
+      <h3>Equipos e integraciones.</h3>
+      <p>
+        El selector del estudio usa tus espacios y roles reales. La
+        administración avanzada de membresías e integraciones tendrá su propia
+        entrega de interfaz.
+      </p>
+    </article>
+  </aside>
+</div>

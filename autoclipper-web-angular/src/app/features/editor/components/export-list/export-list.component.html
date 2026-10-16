@@ -1,0 +1,49 @@
+<span class="eyebrow">EXPORTACIONES</span>
+<h2>Una versión concreta.</h2>
+<p>Cada exportación está ligada a una revisión guardada.</p>
+<button
+  class="button full"
+  type="button"
+  (click)="vm.loadExports()"
+  [disabled]="vm.design || vm.busy()"
+>
+  Actualizar exportaciones
+</button>
+@for (item of vm.exports(); track item.id) {
+  <article class="export-item">
+    <strong>{{ item.status }}</strong
+    ><small>Revisión: {{ vm.revisionLabel(item.editorRevisionId) }}</small>
+    @if (item.errorCode) {
+      <p>{{ item.errorCode }}</p>
+    }
+    @if (item.status === "succeeded") {
+      <button class="button small" type="button" (click)="vm.preview(item)">
+        Reproducir<ac-icon name="play" />
+      </button>
+      <div class="button-row">
+        @for (artifact of item.artifacts; track artifact.kind) {
+          <button
+            class="button small"
+            type="button"
+            (click)="vm.download(item.id, artifact.kind)"
+          >
+            {{ artifact.kind }}<ac-icon name="download" />
+          </button>
+        }
+      </div>
+    } @else if (item.status === "queued" || item.status === "running") {
+      <button
+        class="button small"
+        type="button"
+        (click)="vm.cancelRender(item.id)"
+      >
+        Solicitar cancelación
+      </button>
+    }
+  </article>
+} @empty {
+  <div class="empty-inline">
+    <ac-icon name="download" />
+    <p>Aún no hay exportaciones consultadas.</p>
+  </div>
+}

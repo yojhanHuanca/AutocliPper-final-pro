@@ -1,0 +1,140 @@
+@layer components {
+.back-link {
+  font-size: 10px;
+  margin-bottom: 15px;
+}
+.project-workflow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.project-workflow .panel > .eyebrow {
+  font-size: 9px;
+  margin-bottom: 14px;
+}
+.upload-drop {
+  border: 1px dashed #bec6b3;
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: center;
+  justify-items: center;
+  padding: 30px 15px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  font-size: 13px;
+}
+.upload-drop > ac-icon {
+  width: 35px;
+  height: 35px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.upload-drop > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.upload-drop > input {
+  font-size: 10px;
+  max-width: 260px;
+  background: #fff;
+  margin-top: 8px;
+}
+.resource-status {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 16px;
+  margin-top: 18px;
+}
+.resource-status > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+}
+.resource-status > div > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.resource-status p {
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.resource-status .button {
+  margin-top: 12px;
+}
+.pipeline-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 18px;
+  margin: 22px 0;
+}
+.pipeline-card h3 {
+  font-size: 16px;
+}
+.pipeline-events {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 20px;
+  display: grid;
+  gap: 15px;
+}
+.pipeline-events li {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+.pipeline-events li ac-icon {
+  color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+.pipeline-events small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  margin-top: 3px;
+}
+.pipeline-card .resource-id {
+  margin-top: 17px;
+}
+.edit-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.edit-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 13px;
+  transition: transform 0.2s;
+}
+.edit-card:hover {
+  transform: translateY(-3px);
+}
+.edit-art {
+  height: 100px;
+  background: var(--surface);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  color: #aeb5a4;
+}
+.edit-art ac-icon {
+  width: 35px;
+  height: 35px;
+}
+.edit-card h3 {
+  font-size: 15px;
+}
+.edit-card p {
+  font-size: 10px;
+}
+.edit-card .text-link {
+  font-size: 10px;
+}
+
+}

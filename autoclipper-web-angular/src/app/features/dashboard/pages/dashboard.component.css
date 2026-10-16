@@ -1,0 +1,67 @@
+@layer components {
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 23px;
+  align-items: start;
+}
+.getting-started {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 25px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 21px;
+}
+.getting-started > .eyebrow {
+  font-size: 8px;
+}
+.getting-started h2 {
+  font-size: 27px;
+  margin: 13px 0 25px;
+}
+.getting-started ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 23px;
+}
+.getting-started li {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+.getting-started li > span {
+  border: 1px solid #d9ddcf;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  font-size: 8px;
+  color: var(--accent);
+  background: white;
+}
+.getting-started li strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+.getting-started li p {
+  font-size: 9px;
+  margin: 4px 0 0;
+  line-height: 1.6;
+}
+.aside-scissors {
+  position: absolute;
+  right: 12px;
+  top: 29px;
+  width: 45px;
+  height: 45px;
+  color: #dedfd6;
+  transform: rotate(-15deg);
+}
+
+}

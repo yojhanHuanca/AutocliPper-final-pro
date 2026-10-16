@@ -1,0 +1,259 @@
+<main id="main">
+  <section class="hero wrap">
+    <div class="eyebrow">
+      <span class="live-dot"></span> EL SIGUIENTE CAPÍTULO DE TU CONTENIDO
+    </div>
+    <h1>Las grandes historias<br />merecen <em>otro corte.</em></h1>
+    <div class="hero-bottom">
+      <p>
+        De una conversación larga a ese momento que quieres compartir. Transcribe,
+        dale forma y crea tu próximo clip, en un mismo estudio.
+      </p>
+      <a class="button primary" routerLink="/register"
+        >Empieza tu historia <ac-icon name="arrow"
+      /></a>
+    </div>
+    <div
+      class="hero-art"
+      aria-label="Composición ilustrativa: un video se transforma en clips"
+    >
+      <div class="hero-image">
+        <picture
+          ><source
+            srcset="
+              /images/creator-960.webp   960w,
+              /images/creator-1440.webp 1440w
+            "
+            sizes="(max-width: 700px) 100vw, 70vw"
+            type="image/webp" />
+          <img
+            src="/images/creator-1440.webp"
+            width="1440"
+            height="960"
+            alt="Creadora ficticia conversando frente a un micrófono en un estudio de grabación"
+            fetchpriority="high" /></picture
+        ><span class="image-tag"
+          ><span></span> UNA HISTORIA. MUCHAS POSIBILIDADES.</span
+        >
+      </div>
+      <div class="cut-line"></div>
+      <div class="cut-tool"><ac-icon name="scissors" /></div>
+      <div class="floating-clip">
+        <img
+          src="/images/creator-480.webp"
+          alt=""
+          width="480"
+          height="320"
+        /><span class="clip-format">9:16</span
+        ><strong>Una idea puede<br /><mark>cambiarlo todo.</mark></strong
+        ><span class="clip-caption">Composición ilustrativa</span>
+      </div>
+      <div class="hero-timeline">
+        <ac-icon name="play" />
+        <div class="waveform">
+          @for (bar of bars; track $index) {
+            <i [style.height.%]="bar"></i>
+          }
+        </div>
+        <span>Tu momento empieza aquí</span>
+      </div>
+    </div>
+    <div class="hero-footnote">
+      <span>Transcripción local · Edición versionada · Exportación privada</span
+      ><button
+        type="button"
+        class="motion-toggle"
+        [attr.aria-pressed]="motionPaused()"
+        (click)="motionPaused.set(!motionPaused())"
+      >
+        {{
+          motionPaused() ? "Reanudar animaciones" : "Pausar animaciones"
+        }}</button
+      ><span>DESLIZA PARA DESCUBRIR ↓</span>
+    </div>
+  </section>
+
+  <section class="story-section wrap" id="proceso">
+    <div class="section-intro">
+      <span class="eyebrow">01 / DEL MATERIAL A LA HISTORIA</span>
+      <h2>El contenido ya es tuyo.<br /><em>Ahora dale otra vida.</em></h2>
+      <p>Un recorrido conectado, con el control creativo en tus manos.</p>
+    </div>
+    <div class="story-layout">
+      <div class="story-screen" [attr.data-scene]="scene()">
+        <div class="screen-top">
+          <span><ac-icon name="scissors" /> AutoClipper / estudio</span
+          ><span>Recorrido ilustrativo</span>
+        </div>
+        <div class="story-photo">
+          <img
+            src="/images/creator-960.webp"
+            alt="La misma escena acompaña el recorrido de carga, transcripción, edición y exportación"
+            loading="lazy"
+            width="960"
+            height="640"
+          />
+          <div class="story-overlay">
+            <span>{{ sceneLabels[scene()] }}</span
+            ><strong>{{ sceneTitles[scene()] }}</strong>
+          </div>
+        </div>
+        <div class="film-strip">
+          @for (n of [1, 2, 3, 4, 5, 6]; track n) {
+            <span
+              ><img
+                src="/images/creator-480.webp"
+                alt=""
+                loading="lazy"
+                width="480"
+                height="320"
+            /></span>
+          }
+          <ac-icon name="scissors" />
+        </div>
+        <div class="story-controls" aria-label="Escenas de la demostración">
+          @for (title of sceneLabels; track $index) {
+            <button
+              type="button"
+              [class.active]="scene() === $index"
+              [attr.aria-pressed]="scene() === $index"
+              (click)="scene.set($index)"
+            >
+              <span>0{{ $index + 1 }}</span
+              >{{ title }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="story-chapters">
+        @for (chapter of chapters; track $index) {
+          <article class="chapter" [attr.data-chapter]="$index">
+            <span class="chapter-number">0{{ $index + 1 }}</span>
+            <h3>{{ chapter.title }}</h3>
+            <p>{{ chapter.copy }}</p>
+            <span class="chapter-detail">{{ chapter.detail }}</span>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="studio-section" id="estudio">
+    <div class="wrap">
+      <div class="section-intro">
+        <span class="eyebrow">02 / TU ESPACIO CREATIVO</span>
+        <h2>Menos ventanas.<br /><em>Más intención.</em></h2>
+      </div>
+      <div class="studio-composition">
+        <div class="studio-rail">
+          <ac-icon name="film" /><ac-icon name="captions" /><ac-icon
+            name="settings"
+          /><ac-icon name="clock" />
+        </div>
+        <div class="studio-media">
+          <img
+            src="/images/creator-960.webp"
+            alt="Composición ilustrativa de una escena en el editor"
+            width="960"
+            height="640"
+            loading="lazy"
+          />
+          <div class="studio-subtitle">
+            LAS IDEAS MERECEN<br /><mark>ENCONTRAR SU VOZ.</mark>
+          </div>
+        </div>
+        <div class="studio-inspector">
+          <span class="eyebrow">COMPOSICIÓN ILUSTRATIVA</span>
+          <h3>El detalle hace la diferencia.</h3>
+          <div>
+            <ac-icon name="captions" /><span>Subtítulos con tiempos</span>
+          </div>
+          <div>
+            <ac-icon name="scissors" /><span>Intervalo elegido por ti</span>
+          </div>
+          <div>
+            <ac-icon name="clock" /><span>Revisiones recuperables</span>
+          </div>
+          <a class="text-link" routerLink="/design/editor"
+            >Explorar estructura del editor <ac-icon name="arrow"
+          /></a>
+        </div>
+        <div class="studio-track">
+          <span>VIDEO</span>
+          <div></div>
+          <span>SUBTÍTULOS</span>
+          <div></div>
+        </div>
+      </div>
+      <div class="studio-notes">
+        <article>
+          <span>01</span>
+          <h3>Un corte con intención.</h3>
+          <p>
+            Elige el intervalo y el formato. El servidor conecta audio,
+            transcripción local y render.
+          </p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Cada versión cuenta.</h3>
+          <p>
+            Guarda revisiones, recupera una anterior y envía el clip a revisión
+            de tu equipo.
+          </p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>El resultado es tuyo.</h3>
+          <p>
+            Exporta MP4 y subtítulos SRT/VTT mediante descargas privadas de
+            duración limitada.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="capabilities wrap" id="alcance">
+    <div class="section-intro">
+      <span class="eyebrow">03 / SIN LETRA PEQUEÑA</span>
+      <h2>Un estudio en evolución.<br /><em>Una promesa clara.</em></h2>
+    </div>
+    <div class="capability-grid">
+      <article class="available">
+        <span class="eyebrow">DISPONIBLE EN EL BACKEND ACTUAL</span>
+        <h3>Crear, revisar, exportar.</h3>
+        <ul>
+          <li><ac-icon name="check" />Carga privada e inspección de video</li>
+          <li><ac-icon name="check" />Transcripción con whisper.cpp local</li>
+          <li><ac-icon name="check" />Corte manual, encuadre y subtítulos</li>
+          <li><ac-icon name="check" />Revisiones y pantalla dividida</li>
+          <li><ac-icon name="check" />Colaboración y consumo de desarrollo</li>
+        </ul>
+      </article>
+      <article>
+        <span class="eyebrow">EN EL HORIZONTE · AÚN NO DISPONIBLE</span>
+        <h3>La historia continúa.</h3>
+        <p>
+          Selección automática real, importación social, traducción, marca,
+          mezcla musical, publicación y pagos requieren nuevas entregas o
+          validación.
+        </p>
+        <p>
+          Esta versión conecta con el entorno de desarrollo. La disponibilidad
+          de transcripción depende de su configuración.
+        </p>
+      </article>
+    </div>
+  </section>
+  <section class="closing wrap">
+    <div class="closing-logo"><ac-brand variant="full"/></div>
+    <span class="eyebrow">TU SIGUIENTE HISTORIA EMPIEZA CON UN CORTE</span>
+    <h2>Haz espacio para<br /><em>lo que importa.</em></h2>
+    <a class="button primary" routerLink="/register"
+      >Abrir mi estudio <ac-icon name="arrow" /></a
+    ><a class="text-link" routerLink="/design"
+      >Ver propuesta del panel <ac-icon name="arrow"
+    /></a>
+  </section>
+</main>

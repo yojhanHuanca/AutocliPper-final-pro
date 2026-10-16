@@ -1,0 +1,5 @@
+node_modules/
+.angular/
+.local/
+dist/
+src/app/core/contracts/gateway.generated.d.ts

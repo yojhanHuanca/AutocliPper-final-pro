@@ -1,0 +1,268 @@
+<a class="text-link back-link" routerLink="/app/projects"
+  >← Volver a proyectos</a
+>
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">TU HISTORIA, EN PROCESO</span>
+    <h1>{{ project()?.name ?? "Cargando proyecto…" }}</h1>
+    <p>Archivo privado → inspección → transcripción local → clip.</p>
+  </div>
+  <button class="button" type="button" (click)="reload()" [disabled]="busy()">
+    Actualizar<ac-icon name="arrow" />
+  </button>
+</section>
+@if (error()) {
+  <div class="alert error" role="alert">{{ error() }}</div>
+}
+@if (message()) {
+  <div class="alert" role="status">{{ message() }}</div>
+}
+<div class="project-workflow">
+  <section class="panel">
+    <span class="eyebrow">01 / MATERIAL DE ORIGEN</span>
+    <h2>Trae tu video.</h2>
+    <p>
+      Hasta 100 MiB. El archivo se valida antes de habilitar el procesamiento.
+    </p>
+    <label class="upload-drop"
+      ><ac-icon name="upload" /><strong>{{
+        file?.name ?? "Selecciona tu archivo de video"
+      }}</strong
+      ><span>MP4, WebM, MOV o MKV</span
+      ><input
+        type="file"
+        accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv"
+        [disabled]="busy() || !canEdit()"
+        (change)="choose($event)" /></label
+    ><button
+      class="button primary"
+      type="button"
+      (click)="upload()"
+      [disabled]="!file || busy() || !canEdit()"
+    >
+      {{ uploading() ? "Cargando…" : "Cargar archivo privado"
+      }}<ac-icon name="upload" />
+    </button>
+    <details class="resume-details">
+      <summary>Consultar una carga existente</summary>
+      <p>
+        El contrato actual no ofrece listado global de cargas. Introduce el ID
+        de una carga de este proyecto para continuar.
+      </p>
+      <label
+        >ID de carga<input
+          [(ngModel)]="uploadId"
+          placeholder="UUID de la carga"
+          autocomplete="off" /></label
+      ><button
+        class="button small"
+        type="button"
+        (click)="inspect()"
+        [disabled]="busy() || !uploadId"
+      >
+        Consultar
+      </button>
+    </details>
+    @if (uploadStatus(); as status) {
+      <div class="resource-status">
+        <div>
+          <strong>Archivo: {{ status.state }}</strong
+          ><span>{{ status.bytes / 1024 / 1024 | number: "1.1-1" }} MiB</span>
+        </div>
+        <p>
+          Inspección:
+          <span class="badge">{{
+            status.inspection?.status ?? "Pendiente de inspección"
+          }}</span>
+        </p>
+        @if (status.inspection?.result; as metadata) {
+          <p>
+            {{ metadata.width }} × {{ metadata.height }} ·
+            {{ metadata.durationSeconds }} s
+          </p>
+        }
+        <small class="resource-id">ID: {{ status.id }}</small>
+        @if (status.state === "pending") {
+          <button
+            class="button small"
+            type="button"
+            (click)="abortUpload()"
+            [disabled]="busy() || !canEdit()"
+          >
+            Abortar carga pendiente
+          </button>
+        }
+      </div>
+    }
+  </section>
+  <section class="panel">
+    <span class="eyebrow">02 / TU MOMENTO</span>
+    <h2>Elige dónde empieza.</h2>
+    <p>
+      El intervalo es manual. El servidor encadena extracción de audio,
+      transcripción local y render.
+    </p>
+    <form
+      #pipelineForm="ngForm"
+      (ngSubmit)="pipelineForm.valid && startPipeline()"
+    >
+      <div class="form-grid">
+        <label
+          >Inicio (segundos)<input
+            type="number"
+            name="start"
+            [(ngModel)]="startSeconds"
+            min="0"
+            max="300"
+            step="0.1"
+            required /></label
+        ><label
+          >Fin (segundos)<input
+            type="number"
+            name="end"
+            [(ngModel)]="endSeconds"
+            min="0.1"
+            max="300"
+            step="0.1"
+            required /></label
+        ><label
+          >Formato<select name="aspect" [(ngModel)]="aspect">
+            <option value="vertical">Vertical · 9:16</option>
+            <option value="square">Cuadrado · 1:1</option>
+            <option value="horizontal">Horizontal · 16:9</option>
+            <option value="source">Original</option>
+          </select></label
+        ><label
+          >Idioma<select name="language" [(ngModel)]="language">
+            <option value="auto">Detectar</option>
+            <option value="es">Español</option>
+            <option value="en">Inglés</option>
+          </select></label
+        >
+      </div>
+      <p class="muted">
+        Clip de 0,1 a 120 segundos; fuente de hasta 300 segundos para el
+        proveedor local actual.
+      </p>
+      <button
+        class="button primary"
+        type="submit"
+        [disabled]="
+          busy() || pipelineForm.invalid || !inspected() || !canEdit()
+        "
+      >
+        Crear clip con transcripción<ac-icon name="scissors" />
+      </button>
+    </form>
+    @if (pipeline(); as task) {
+      <div class="pipeline-card">
+        <div class="panel-heading">
+          <h3>Estado: {{ task.status }}</h3>
+          <span class="badge">{{ task.usageState }}</span>
+        </div>
+        <ol class="pipeline-events">
+          @for (event of task.events; track $index) {
+            <li>
+              <ac-icon name="clock" /><span
+                >{{ event.status
+                }}<small>{{ event.at | date: "medium" }}</small></span
+              >
+            </li>
+          }
+        </ol>
+        @if (task.errorCode) {
+          <p class="alert error">{{ task.errorCode }}</p>
+        }
+        @if (task.status === "succeeded") {
+          <div class="button-row">
+            <button
+              class="button"
+              type="button"
+              (click)="downloadPipeline('video')"
+            >
+              MP4<ac-icon name="download" /></button
+            ><button
+              class="button"
+              type="button"
+              (click)="downloadPipeline('srt')"
+            >
+              SRT</button
+            ><button
+              class="button"
+              type="button"
+              (click)="downloadPipeline('vtt')"
+            >
+              VTT
+            </button>
+          </div>
+        } @else if (!["failed", "cancelled"].includes(task.status)) {
+          <button
+            class="button small"
+            type="button"
+            (click)="cancelPipeline()"
+            [disabled]="busy() || !canEdit()"
+          >
+            Solicitar cancelación
+          </button>
+        }
+        <small class="resource-id">Pipeline: {{ task.id }}</small>
+      </div>
+    }
+    <details>
+      <summary>Retomar un procesamiento existente</summary>
+      <label
+        >ID del pipeline<input
+          [(ngModel)]="pipelineId"
+          autocomplete="off" /></label
+      ><button
+        type="button"
+        class="button small"
+        (click)="pollPipeline()"
+        [disabled]="!pipelineId"
+      >
+        Consultar estado
+      </button>
+    </details>
+  </section>
+</div>
+<section class="panel">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">03 / DALE FORMA</span>
+      <h2>Clips y revisiones.</h2>
+    </div>
+    <button
+      class="button"
+      type="button"
+      (click)="createEdit()"
+      [disabled]="busy() || !inspected() || !canEdit()"
+    >
+      Crear borrador del intervalo<ac-icon name="plus" />
+    </button>
+  </div>
+  <p>
+    El borrador usa el intervalo y formato anteriores. Si el pipeline terminó,
+    puede conservar su transcripción autorizada.
+  </p>
+  <div class="edit-list">
+    @for (edit of edits(); track edit.id) {
+      <a [routerLink]="['/app/edits', edit.id]" class="edit-card"
+        ><div class="edit-art"><ac-icon name="film" /></div>
+        <h3>{{ edit.name }}</h3>
+        <p>
+          Revisión {{ edit.version }} ·
+          {{ edit.updatedAt | date: "mediumDate" }}
+        </p>
+        <span class="text-link">Abrir editor<ac-icon name="arrow" /></span
+      ></a>
+    } @empty {
+      <div class="empty-inline">
+        <ac-icon name="scissors" />
+        <div>
+          <h3>Tu próximo corte tiene un lugar aquí.</h3>
+          <p>Carga e inspecciona un video para crear tu primer borrador.</p>
+        </div>
+      </div>
+    }
+  </div>
+</section>

@@ -1,0 +1,116 @@
+<div class="auth-layout">
+  <div class="auth-content">
+    <main id="main" class="auth-form">
+      <span class="eyebrow">TU ESPACIO CREATIVO</span>
+      <h1>{{ title }}</h1>
+      <p>{{ description }}</p>
+      @if (error()) {
+        <div class="alert error" role="alert">{{ error() }}</div>
+      }
+      @if (message()) {
+        <div class="alert success" role="status">{{ message() }}</div>
+      }
+      <form #form="ngForm" (ngSubmit)="form.valid && submit()">
+        @if (mode === "register") {
+          <label
+            >Nombre<input
+              name="name"
+              [(ngModel)]="name"
+              required
+              maxlength="100"
+              autocomplete="name"
+          /></label>
+        }
+        @if (mode === "login" || mode === "register" || mode === "forgot") {
+          <label
+            >Correo electrónico<input
+              type="email"
+              name="email"
+              [(ngModel)]="email"
+              required
+              email
+              maxlength="254"
+              autocomplete="email"
+              placeholder="tu@correo.com"
+          /></label>
+        }
+        @if (mode === "verify" || mode === "reset") {
+          <label
+            >Token recibido por correo<input
+              name="token"
+              [(ngModel)]="token"
+              required
+              autocomplete="off"
+              spellcheck="false"
+          /></label>
+        }
+        @if (mode === "login" || mode === "register" || mode === "reset") {
+          <label
+            >{{ mode === "reset" ? "Nueva contraseña" : "Contraseña"
+            }}<input
+              type="password"
+              name="password"
+              [(ngModel)]="password"
+              required
+              [minlength]="mode === 'login' ? 1 : 12"
+              maxlength="128"
+              [autocomplete]="
+                mode === 'login' ? 'current-password' : 'new-password'
+              "
+          /></label>
+          @if (mode !== "login") {
+            <small class="muted">Entre 12 y 128 caracteres.</small>
+          }
+        }
+        @if (mode === "login") {
+          <details>
+            <summary>Mi cuenta usa autenticación en dos pasos</summary>
+            <label
+              >Código TOTP o de recuperación<input
+                name="factor"
+                [(ngModel)]="factor"
+                autocomplete="one-time-code"
+            /></label>
+          </details>
+          <a routerLink="/forgot" class="text-link">Olvidé mi contraseña</a>
+        }
+        <button
+          class="button primary full"
+          [disabled]="busy() || form.invalid"
+          type="submit"
+        >
+          {{ busy() ? "Un momento…" : action }}<ac-icon name="arrow" />
+        </button>
+      </form>
+      <div class="auth-links">
+        @if (mode === "login") {
+          <span
+            >¿Primera historia aquí?
+            <a routerLink="/register">Crea tu cuenta</a></span
+          >
+        } @else {
+          <a routerLink="/login">Volver a iniciar sesión</a>
+        }
+        <a routerLink="/verify">Verificar correo</a
+        ><a routerLink="/reset">Tengo un token de recuperación</a>
+      </div>
+      <p class="auth-limit">
+        Google requiere aceptación externa y no está habilitado en esta
+        interfaz. El correo del entorno local se entrega en Mailpit.
+      </p>
+    </main>
+  </div>
+  <aside class="auth-visual">
+    <img
+      src="/images/creator-1440.webp"
+      alt="Creadora ficticia en un estudio de grabación"
+      width="1440"
+      height="960"
+    />
+    <div>
+      <span class="eyebrow">UNA HISTORIA. MUCHAS POSIBILIDADES.</span>
+      <h2>El siguiente corte<br />puede ser<br /><em>el comienzo.</em></h2>
+      <small>Fotografía ilustrativa generada</small>
+    </div>
+  </aside>
+</div>

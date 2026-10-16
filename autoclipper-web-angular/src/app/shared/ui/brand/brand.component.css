@@ -1,0 +1,19 @@
+@layer components {
+  :host { display: block; width: 194px; max-width: 100%; flex-shrink: 1; }
+  .brand-compact { display: flex; align-items: center; gap: 2%; width: 100%; }
+  .brand-emblem { width: 22%; aspect-ratio: 670 / 725; position: relative; overflow: hidden; flex-shrink: 0; }
+  .brand-wordmark { width: 76%; aspect-ratio: 1490 / 270; position: relative; overflow: hidden; flex-shrink: 0; }
+  .brand-emblem img, .brand-wordmark img { display: block; position: absolute; max-width: none; height: auto; }
+  /* Exact presentation crops of the same approved v4 raster. No redrawing or deformation. */
+  .brand-emblem img { width: 323.880597%; left: 0; top: 0; }
+  .brand-wordmark img { width: 145.637584%; left: -43.624161%; top: -92.592593%; }
+  :host(.full) { width: 520px; }
+  :host(.full) .brand-master { display: block; width: 100%; height: auto; }
+  :host(.full) .brand-compact { display: none; }
+  @media(max-width:560px) {
+    :host { width: 176px; }
+    :host(.full) { width: 230px; }
+    :host(.full) .brand-master { display: none; }
+    :host(.full) .brand-compact { display: flex; }
+  }
+}

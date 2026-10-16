@@ -1,0 +1,88 @@
+@layer components {
+:host {
+  display: block;
+}
+/* Account access */
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+}
+.auth-content {
+  padding: 38px 50px;
+}
+.auth-form {
+  max-width: 390px;
+  margin: 70px auto 75px;
+}
+.auth-form h1 {
+  font-size: 39px;
+  margin: 18px 0;
+}
+.auth-form > p {
+  font-size: 14px;
+}
+.auth-form label {
+  margin-top: 22px;
+}
+.auth-form .text-link {
+  font-size: 12px;
+  margin: 9px 0;
+}
+.auth-links {
+  display: grid;
+  gap: 13px;
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+  padding-top: 20px;
+  font-size: 12px;
+}
+.auth-links a {
+  color: var(--accent);
+  font-weight: 600;
+}
+.auth-limit {
+  font-size: 10px !important;
+  margin-top: 26px;
+}
+.auth-visual {
+  position: relative;
+  background: #26251f;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+.auth-visual > img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: 54% center;
+  position: absolute;
+}
+.auth-visual:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, #1b1915d9, transparent 85%);
+}
+.auth-visual > div {
+  position: absolute;
+  z-index: 1;
+  bottom: 75px;
+  left: 55px;
+  right: 25px;
+  color: white;
+}
+.auth-visual .eyebrow {
+  color: #fffc;
+}
+.auth-visual h2 {
+  font-size: clamp(44px, 5vw, 70px);
+  font-weight: 500;
+  margin: 25px 0 30px;
+}
+.auth-visual small {
+  color: #fffa;
+  font-size: 9px;
+}
+
+}

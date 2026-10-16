@@ -1,0 +1,147 @@
+<aside class="editor-inspector panel">
+  @if (vm.tab() === "composition") {
+    <span class="eyebrow">COMPOSICIÓN</span>
+    <h2>Encuentra tu encuadre.</h2>
+    <form #specForm="ngForm" (ngSubmit)="specForm.valid && vm.save()">
+      <div class="form-grid">
+        <label
+          >Inicio (s)<input
+            type="number"
+            name="start"
+            [(ngModel)]="vm.spec.startSeconds" (ngModelChange)="vm.touchForm()"
+            min="0"
+            step="0.1"
+            required
+            [disabled]="vm.design" /></label
+        ><label
+          >Fin (s)<input
+            type="number"
+            name="end"
+            [(ngModel)]="vm.spec.endSeconds" (ngModelChange)="vm.touchForm()"
+            min="0.1"
+            step="0.1"
+            required
+            [disabled]="vm.design"
+        /></label>
+      </div>
+      <label
+        >Formato<select
+          name="aspect"
+          [(ngModel)]="vm.spec.aspect" (ngModelChange)="vm.touchForm()"
+          [disabled]="vm.design"
+        >
+          <option value="vertical">Vertical · 9:16</option>
+          <option value="square">Cuadrado · 1:1</option>
+          <option value="horizontal">Horizontal · 16:9</option>
+          <option value="source">Original</option>
+        </select></label
+      ><label
+        >Encuadre horizontal<input
+          type="range"
+          name="cropX"
+          [(ngModel)]="vm.cropX" (ngModelChange)="vm.touchForm()"
+          min="0"
+          max="1"
+          step="0.01"
+          [disabled]="vm.design" /></label
+      ><label
+        >Encuadre vertical<input
+          type="range"
+          name="cropY"
+          [(ngModel)]="vm.cropY" (ngModelChange)="vm.touchForm()"
+          min="0"
+          max="1"
+          step="0.01"
+          [disabled]="vm.design" /></label
+      ><label class="checkbox"
+        ><input
+          type="checkbox"
+          name="split"
+          [(ngModel)]="vm.splitEnabled" (ngModelChange)="vm.touchForm()"
+          [disabled]="vm.design"
+        />Pantalla dividida</label
+      >
+      @if (vm.splitEnabled) {
+        <label
+          >ID de segunda carga autorizada<input
+            name="secondary"
+            [(ngModel)]="vm.secondaryUploadId" (ngModelChange)="vm.touchForm()"
+            required
+            [disabled]="vm.design"
+            placeholder="UUID de carga del mismo espacio" /></label
+        ><label
+          >Distribución<select
+            name="layout"
+            [(ngModel)]="vm.splitLayout" (ngModelChange)="vm.touchForm()"
+            [disabled]="vm.design"
+          >
+            <option value="stacked">Arriba / abajo</option>
+            <option value="side_by_side">Lado a lado</option>
+          </select></label
+        ><label
+          >Proporción principal ·
+          {{ vm.primaryRatio * 100 | number: "1.0-0" }}%<input
+            type="range"
+            name="ratio"
+            [(ngModel)]="vm.primaryRatio" (ngModelChange)="vm.touchForm()"
+            min="0.2"
+            max="0.8"
+            step="0.01"
+            [disabled]="vm.design" /></label
+        ><label
+          >Inicio del secundario (s)<input
+            type="number"
+            name="secondaryStart"
+            [(ngModel)]="vm.secondaryStart" (ngModelChange)="vm.touchForm()"
+            min="0"
+            max="14400"
+            [disabled]="vm.design" /></label
+        ><label
+          >Al terminar el secundario<select
+            name="shortInput"
+            [(ngModel)]="vm.shortInput" (ngModelChange)="vm.touchForm()"
+            [disabled]="vm.design"
+          >
+            <option value="freeze">Congelar último frame</option>
+            <option value="reject">Rechazar si es más corto</option>
+          </select></label
+        ><label
+          >Fuente de audio<select
+            name="audio"
+            [(ngModel)]="vm.splitAudio" (ngModelChange)="vm.touchForm()"
+            [disabled]="vm.design"
+          >
+            <option value="primary">Principal</option>
+            <option value="secondary">Secundario</option>
+            <option value="none">Silencio</option>
+          </select></label
+        >
+      }
+      <button
+        class="button primary full"
+        type="submit"
+        [disabled]="
+          vm.design ||
+          vm.busy() ||
+          specForm.invalid ||
+          !vm.dirty() ||
+          !vm.draft()
+        "
+      >
+        Guardar revisión<ac-icon name="check" />
+      </button>
+    </form>
+  }
+  @if (vm.tab() === "captions") {
+    <ac-editor-captions />
+  }
+  @if (vm.tab() === "history") {
+    <ac-revision-history />
+  }
+  @if (vm.tab() === "review") {
+    <ac-review-panel />
+  }
+  @if (vm.tab() === "exports") {
+    <ac-export-list />
+  }
+</aside>

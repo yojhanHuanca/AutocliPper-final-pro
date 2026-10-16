@@ -1,0 +1,258 @@
+@layer components {
+/* Studio shell */
+.app-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 242px minmax(0, 1fr);
+  background: #fff;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  border-right: 1px solid var(--border);
+  padding: 29px 17px 16px;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  z-index: 30;
+  overflow-y: auto;
+}
+.sidebar > .brand {
+  font-size: 22px;
+  padding-left: 9px;
+  margin-bottom: 34px;
+}
+.sidebar .brand ac-icon {
+  width: 28px;
+  height: 28px;
+}
+.workspace-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+.workspace-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--tint);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.workspace-select > div {
+  min-width: 0;
+  flex: 1;
+}
+.workspace-select label {
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 0 0 5px;
+}
+.workspace-select select {
+  padding: 2px 0;
+  border: 0;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fff;
+}
+.nav-caption {
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  padding: 0 13px;
+  margin-bottom: 12px;
+}
+.sidebar nav {
+  display: grid;
+  gap: 4px;
+}
+.sidebar nav > a,
+.nav-disabled {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  min-height: 44px;
+  color: #575e55;
+}
+.sidebar nav > a.active {
+  background: var(--tint);
+  color: var(--accent);
+  font-weight: 700;
+  position: relative;
+}
+.sidebar nav > a.active:before {
+  content: "";
+  position: absolute;
+  left: -17px;
+  width: 3px;
+  top: 10px;
+  bottom: 10px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+.sidebar nav > a:hover {
+  background: var(--surface);
+}
+.sidebar nav ac-icon,
+.nav-disabled ac-icon {
+  width: 18px;
+  height: 18px;
+}
+.sidebar nav small {
+  font-size: 8px;
+  margin-left: auto;
+  color: #757b72;
+}
+.nav-disabled {
+  color: #787e76;
+}
+.nav-disabled small {
+  font-size: 7px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.sidebar-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 17px;
+  margin: 30px 2px 20px;
+  position: relative;
+}
+.sidebar-note > strong {
+  font-size: 12px;
+  display: block;
+  margin-top: 14px;
+}
+.sidebar-note p {
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 8px 0 14px;
+}
+.sidebar-note .text-link {
+  font-size: 10px;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 8px;
+}
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding: 16px 5px 0;
+}
+.sidebar-user > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.sidebar-user strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-user div > span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.app-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.app-topbar {
+  height: 76px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding: 0 35px;
+  gap: 20px;
+  font-size: 11px;
+}
+.app-topbar > div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9px;
+  color: var(--muted);
+}
+.connection:before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #92968b;
+}
+.connection.connected:before {
+  background: #477f3b;
+}
+.mobile-menu {
+  display: none;
+}
+.design-banner {
+  background: #fcfaf5;
+  border-bottom: 1px solid #eee4d0;
+  color: #756b53;
+  font-size: 10px;
+  line-height: 1.7;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 35px;
+}
+.design-banner ac-icon {
+  width: 16px;
+  height: 16px;
+}
+.design-banner > a {
+  margin-left: auto;
+  white-space: nowrap;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.app-main {
+  padding: 35px;
+  flex: 1;
+  min-width: 0;
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+}
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 9px;
+  color: #747a71;
+  margin: 20px 35px 0;
+  padding: 18px 0 70px;
+  border-top: 1px solid var(--border);
+}
+
+}
