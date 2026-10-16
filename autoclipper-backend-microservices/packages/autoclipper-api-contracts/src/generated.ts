@@ -1539,6 +1539,12 @@ export interface components {
             framing?: components["schemas"]["FramingDto"];
             subtitles?: components["schemas"]["UserSubtitlesDto"];
         };
+        ErrorResponse: {
+            code: string;
+            message: string;
+            /** Format: uuid */
+            correlationId: string;
+        };
         SplitScreenDto: {
             /**
              * Format: uuid
@@ -2129,12 +2135,6 @@ export interface components {
         UsageLedgerDto: {
             items: components["schemas"]["UsageLedgerEntryDto"][];
             nextBeforeId: string | null;
-        };
-        ErrorResponse: {
-            code: string;
-            message: string;
-            /** Format: uuid */
-            correlationId: string;
         };
     };
     responses: never;
@@ -7182,7 +7182,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Classified error with a safe correlation identifier */
+            /** @description Manual processing is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Use an admitted pipeline. Reads, downloads and cancellation remain authorized separately. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7840,7 +7840,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Classified error with a safe correlation identifier */
+            /** @description Manual analysis is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial, for all providers and selection variants. Use an admitted pipeline. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8159,7 +8159,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Classified error with a safe correlation identifier */
+            /** @description Manual and proposal-based renders are blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Existing analyses remain readable. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8919,7 +8919,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Classified error with a safe correlation identifier */
+            /** @description Every revision export, including split screen and transcript variants, is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Draft editing, history and existing exports remain authorized separately. */
             403: {
                 headers: {
                     [name: string]: unknown;

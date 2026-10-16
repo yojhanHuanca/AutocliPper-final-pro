@@ -13,6 +13,7 @@ const execute=promisify(execFile),spec={version:1,provider:'whisper_cpp',languag
 // it does NOT claim media execution or inference. The opt-in suite proves those.
 test('durable pipeline transitions, crash replay, cancellation, limits and quota with explicit stage fixtures',{timeout:120000},async t=>{
   assert.equal(process.env.PIPELINE_INTEGRATION_ISOLATED,'true');
+  assert.equal(process.env.PROCESSING_ADMISSION_MODE,'commercial');
   await assert.rejects(fetch('http://project:3004/v1/health/live',{signal:AbortSignal.timeout(2000)}),'Stop the application Project dispatcher before this isolated suite');
   for(let i=0;i<2;i++)await execute(process.execPath,['scripts/migrate-service.mjs','project'],{env:process.env,timeout:30000});
   const alice=await verifiedAccountFixture(),bob=await verifiedAccountFixture();
@@ -21,7 +22,7 @@ test('durable pipeline transitions, crash replay, cancellation, limits and quota
   const server=createServer(async(req,res)=>{let data='';for await(const chunk of req)data+=chunk;const input=JSON.parse(data||'{}');assert.equal(req.headers['x-service-token'],process.env.INTERNAL_TOKEN);res.setHeader('content-type','application/json');if(req.url==='/v1/internal/inspection-status'&&input.id===uploadId)res.end(JSON.stringify({status:'succeeded',result:{durationSeconds:8,width:320,height:240,audioCodec:'aac'}}));else if(req.url==='/v1/internal/analysis-preflight')res.end(JSON.stringify({ready,code:ready?null:'TRANSCRIPTION_NOT_CONFIGURED',httpStatus:ready?200:503}));else{res.statusCode=404;res.end('{}');}});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.address().port}`;process.env.MEDIA_URL=url;process.env.ANALYSIS_URL=url;
   const request=(user,key=randomUUID())=>({headers:{origin:'http://localhost:4200',cookie:[...user.c.jar].map(([k,v])=>`${k}=${v}`).join(';'),'x-csrf-token':user.c.jar.get('autoclipper_csrf'),'idempotency-key':key}});
-  const start=()=>{service=new ProjectService();};
+  const start=()=>{service=new ProjectService();assert.equal(service.config.PROCESSING_ADMISSION_MODE,'commercial');};
   const step=async()=>{await service.usage.dispatch();await service.pipelines.dispatch();await service.usage.dispatch();await service.pipelines.dispatch();};
   const stop=async()=>{if(service){await service.onModuleDestroy();service=undefined;}};
   const create=async(input=spec,key=randomUUID())=>service.pipelines.begin(request(alice,key),uploadId,input,randomUUID());

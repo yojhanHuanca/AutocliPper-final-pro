@@ -6401,7 +6401,7 @@
             }
           },
           "403": {
-            "description": "Classified error with a safe correlation identifier",
+            "description": "Manual processing is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Use an admitted pipeline. Reads, downloads and cancellation remain authorized separately.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7326,7 +7326,7 @@
             }
           },
           "403": {
-            "description": "Classified error with a safe correlation identifier",
+            "description": "Manual analysis is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial, for all providers and selection variants. Use an admitted pipeline.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7748,7 +7748,7 @@
             }
           },
           "403": {
-            "description": "Classified error with a safe correlation identifier",
+            "description": "Manual and proposal-based renders are blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Existing analyses remain readable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8786,7 +8786,7 @@
             }
           },
           "403": {
-            "description": "Classified error with a safe correlation identifier",
+            "description": "Every revision export, including split screen and transcript variants, is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Draft editing, history and existing exports remain authorized separately.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13269,6 +13269,26 @@
           "aspect"
         ]
       },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "correlationId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "SplitScreenDto": {
         "type": "object",
         "properties": {
@@ -15382,26 +15402,6 @@
           "items",
           "nextBeforeId"
         ]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "correlationId"
-        ],
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "correlationId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
       }
     }
   }

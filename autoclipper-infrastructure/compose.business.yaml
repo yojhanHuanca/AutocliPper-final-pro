@@ -122,6 +122,7 @@ services:
       MEDIA_URL: http://media:3001
       ANALYSIS_URL: http://analysis:3006
       BILLING_URL: http://billing:3007
+      PROCESSING_ADMISSION_MODE: ${PROCESSING_ADMISSION_MODE:-development}
       S3_ENDPOINT: http://storage:9000
       S3_PUBLIC_ENDPOINT: http://127.0.0.1:19000
       S3_REGION: us-east-1

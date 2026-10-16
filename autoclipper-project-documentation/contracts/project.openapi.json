@@ -507,6 +507,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Manual processing is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Use an admitted pipeline. Reads, downloads and cancellation remain authorized separately.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -844,6 +854,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Manual analysis is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial, for all providers and selection variants. Use an admitted pipeline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -960,6 +980,16 @@
                       "type": "string"
                     }
                   }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Manual and proposal-based renders are blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Existing analyses remain readable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1297,6 +1327,16 @@
                       "type": "string"
                     }
                   }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Every revision export, including split screen and transcript variants, is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Draft editing, history and existing exports remain authorized separately.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -2724,6 +2764,28 @@
           "startSeconds",
           "endSeconds",
           "aspect"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "RESOURCE_NOT_FOUND"
+          },
+          "message": {
+            "type": "string",
+            "example": "Request could not be completed"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "correlationId"
         ]
       },
       "SplitScreenDto": {

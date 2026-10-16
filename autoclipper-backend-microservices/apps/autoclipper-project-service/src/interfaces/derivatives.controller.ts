@@ -1,7 +1,7 @@
 import {Controller,Post,Get,Delete,Req,Res,Body,Param,Query,Inject,HttpCode} from "@nestjs/common";
 import type {Request,Response} from "express";
-import {ApiTags,ApiBody,ApiHeader,ApiCreatedResponse,ApiOkResponse,ApiQuery,ApiExtraModels,getSchemaPath} from "@nestjs/swagger";
-import {ProcessingSpecDto,ProcessingStatusDto,AudioProcessingSpecDto,ClipProcessingSpecDto} from "@autoclipper/api-contracts";
+import {ApiTags,ApiBody,ApiHeader,ApiCreatedResponse,ApiOkResponse,ApiQuery,ApiExtraModels,ApiForbiddenResponse,getSchemaPath} from "@nestjs/swagger";
+import {ProcessingSpecDto,ProcessingStatusDto,AudioProcessingSpecDto,ClipProcessingSpecDto,ErrorResponse} from "@autoclipper/api-contracts";
 import {uuid} from "@autoclipper/http-security";
 import {ProjectService} from "../application/project.service.js";
 @ApiTags("processing")
@@ -10,6 +10,7 @@ import {ProjectService} from "../application/project.service.js";
 export class DerivativesController {
   constructor(@Inject(ProjectService)readonly service:ProjectService){}
   @Post("uploads/:id/processing")
+  @ApiForbiddenResponse({type:ErrorResponse,description:"Manual processing is blocked with MANUAL_PROCESSING_NOT_ADMITTED when server PROCESSING_ADMISSION_MODE=commercial. Use an admitted pipeline. Reads, downloads and cancellation remain authorized separately."})
   @ApiBody({schema:{oneOf:[{$ref:getSchemaPath(AudioProcessingSpecDto)},{$ref:getSchemaPath(ClipProcessingSpecDto)}]}})
   @ApiHeader({name:"Idempotency-Key",required:true})
   @ApiCreatedResponse({schema:{type:"object",required:["id","status"],properties:{id:{type:"string",format:"uuid"},status:{type:"string"}}}})

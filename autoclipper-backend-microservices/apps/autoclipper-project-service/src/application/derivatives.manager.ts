@@ -5,7 +5,7 @@ import {randomUUID} from "node:crypto";
 import {z} from "zod";
 import {GetObjectCommand,HeadObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
-import {body,digest,uuid,authenticatedUser,requireCsrf,internalJson,type ServiceConfig} from "@autoclipper/http-security";
+import {body,digest,uuid,authenticatedUser,requireCsrf,requireManualProcessingAdmission,internalJson,type ServiceConfig} from "@autoclipper/http-security";
 import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
 
@@ -47,6 +47,7 @@ export class DerivativesManager {
   }
   private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string,editorRevisionId?:string){
     const upload=await this.authorize(req,uploadId,"editor");
+    requireManualProcessingAdmission(this.config);
     if(upload.state!=="confirmed")throw new ConflictException();
     const source=await internalJson<{status:string;result?:{durationSeconds:number;audioCodec:string|null;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
     if(source.status!=="succeeded"||!source.result)throw new ConflictException();

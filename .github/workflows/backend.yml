@@ -81,6 +81,11 @@ jobs:
         run: |
           docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app stop project
           docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app run --rm pipeline-verification
+      - name: Verify commercial admission and historical access through HTTP
+        working-directory: autoclipper-infrastructure
+        run: |
+          docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app up -d --no-build --no-deps --wait analysis
+          docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app run --rm --no-deps admission-verification
       - name: Show dependency state on failure
         if: failure()
         working-directory: autoclipper-infrastructure

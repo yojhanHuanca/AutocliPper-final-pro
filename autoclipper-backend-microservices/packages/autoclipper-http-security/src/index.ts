@@ -47,6 +47,7 @@ const configSchema = z.object({
   IDENTITY_URL: z.url().default("http://127.0.0.1:3002"),
   WORKSPACE_URL: z.url().default("http://127.0.0.1:3003"),
   CSRF_SIGNING_KEY: z.string().min(32),
+  PROCESSING_ADMISSION_MODE: z.enum(["development","commercial"]).default("development"),
 });
 export function loadServiceConfig() {
   const parsed = configSchema.safeParse(process.env);
@@ -57,6 +58,9 @@ export function loadServiceConfig() {
   return { ...loadGatewayConfig(), ...parsed.data };
 }
 export type ServiceConfig = ReturnType<typeof loadServiceConfig>;
+export function requireManualProcessingAdmission(config:Pick<ServiceConfig,"PROCESSING_ADMISSION_MODE">){
+  if(config.PROCESSING_ADMISSION_MODE==="commercial")throw new ForbiddenException({code:"MANUAL_PROCESSING_NOT_ADMITTED"});
+}
 export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export const opaqueToken = () => randomBytes(32).toString("base64url");

@@ -4,7 +4,7 @@ import type pg from "pg";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
 import {analysisSpec,analysisStatus,type AnalysisSpec,type AnalysisStatus} from "@autoclipper/api-contracts";
-import {authenticatedUser,body,digest,internalJson,requireCsrf,uuid,type ServiceConfig} from "@autoclipper/http-security";
+import {authenticatedUser,body,digest,internalJson,requireCsrf,requireManualProcessingAdmission,uuid,type ServiceConfig} from "@autoclipper/http-security";
 import {logger} from "@autoclipper/observability";
 import {transcriptClip} from "./transcript-clip.js";
 import type {DerivativesManager} from "./derivatives.manager.js";
@@ -21,6 +21,7 @@ export class AnalysisManager {
   async begin(req:Request,audioId:string,input:unknown,correlationId:string){
     requireCsrf(req,this.config);
     const audio=await this.derivatives.audioForAnalysis(req,audioId),spec=body(analysisSpec,input),user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({audioId,spec}));
+    requireManualProcessingAdmission(this.config);
     const prior=(await this.pool.query<Row>("SELECT * FROM analysis_requests WHERE creator_id=$1 AND idempotency_key=$2",[user.id,key])).rows[0];
     if(prior){if(prior.request_hash!==hash)throw new ConflictException();return{id:prior.id,status:prior.cached_status?.status??"queued"};}
     const checked=body(preflight,await internalJson(this.url,"/v1/internal/analysis-preflight",this.config,{spec,durationSeconds:audio.source.durationSeconds}));
