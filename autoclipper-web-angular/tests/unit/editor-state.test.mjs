@@ -7,7 +7,7 @@ import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-
 import { ActivatedRoute } from '@angular/router';
 import { EditorState, EditorApi, DESIGN_MODE } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
-test('timeline replaces initial bounds after async load and follows local form edits', async () => {
+test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   let resolveEdit;
   const response = new Promise(resolve => { resolveEdit = resolve; });
   const api = { edit:()=>response, history:async()=>({items:[],nextBeforeVersion:null}), comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
@@ -22,5 +22,15 @@ test('timeline replaces initial bounds after async load and follows local form e
     state.spec.endSeconds=17; state.captionSource='none'; state.touchForm();
     assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:17,captionSource:'none'});
     assert.equal(state.dirty(),true);
+    state.captionSource='user'; state.cues=[{startSeconds:12,endSeconds:18,text:''}]; state.touchForm();
+    assert.equal(state.invalidCaptions(),true);
+    assert.match(state.captionIssues()[0].times,/intervalo/);
+    assert.match(state.captionIssues()[0].text,/500/);
+    state.cues[0].endSeconds=17; state.cues[0].text='Frase corregida.'; state.touchForm();
+    assert.equal(state.invalidCaptions(),false);
+    state.spec.startSeconds=13; state.touchForm();
+    assert.equal(state.invalidCaptions(),true);
+    state.captionSource='none'; state.touchForm();
+    assert.equal(state.invalidCaptions(),false);
   } finally { TestBed.resetTestingModule(); }
 });

@@ -3,4 +3,7 @@
   .caption-cue legend { color: var(--accent); padding: 0 5px; font-size: 11px; font-weight: 650; }
   .caption-cue .form-grid { gap: 0 10px; }
   .caption-cue textarea { min-height: 65px; }
+  .cue-count { display: block; font-size: 11px; margin: -6px 0 12px; }
+  .cue-error { color: #9b2424; font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+  .caption-cue [aria-invalid="true"] { border-color: #9b2424; }
 }

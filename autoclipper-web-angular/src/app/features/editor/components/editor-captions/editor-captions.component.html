@@ -12,14 +12,22 @@
 }
 @if (vm.captionSource === "user") {
   <p>Los tiempos corresponden al video original. Usa texto simple, sin etiquetas.</p>
+  <p class="muted">Intervalo del clip: {{ vm.timeline().startSeconds }}–{{ vm.timeline().endSeconds }} s · {{ vm.cues.length }}/200 frases</p>
   @for (cue of vm.cues; track $index) {
     <fieldset class="caption-cue">
       <legend>Frase {{ $index + 1 }}</legend>
       <div class="form-grid">
-        <label>Inicio (s)<input type="number" [(ngModel)]="cue.startSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design"></label>
-        <label>Fin (s)<input type="number" [(ngModel)]="cue.endSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design"></label>
+        <label>Inicio (s)<input type="number" [(ngModel)]="cue.startSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.times" [attr.aria-describedby]="vm.captionIssues()[$index]?.times ? 'cue-times-' + $index : null"></label>
+        <label>Fin (s)<input type="number" [(ngModel)]="cue.endSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.times" [attr.aria-describedby]="vm.captionIssues()[$index]?.times ? 'cue-times-' + $index : null"></label>
       </div>
-      <label>Texto<textarea [(ngModel)]="cue.text" (ngModelChange)="vm.touchForm()" maxlength="500" rows="2" [disabled]="vm.design"></textarea></label>
+      @if (vm.captionIssues()[$index]?.times) {
+        <p class="cue-error" [id]="'cue-times-' + $index">{{ vm.captionIssues()[$index].times }}</p>
+      }
+      <label>Texto<textarea [(ngModel)]="cue.text" (ngModelChange)="vm.touchForm()" maxlength="500" rows="2" [disabled]="vm.design" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.text" [attr.aria-describedby]="vm.captionIssues()[$index]?.text ? 'cue-text-' + $index : null"></textarea></label>
+      <span class="muted cue-count">{{ cue.text.length }}/500 caracteres</span>
+      @if (vm.captionIssues()[$index]?.text) {
+        <p class="cue-error" [id]="'cue-text-' + $index">{{ vm.captionIssues()[$index].text }}</p>
+      }
       <button class="button small" type="button" (click)="vm.removeCue($index)" [disabled]="vm.design">Retirar frase</button>
     </fieldset>
   } @empty { <p class="muted">Añade tu primera frase para comenzar.</p> }
@@ -51,7 +59,7 @@
   class="button primary full"
   type="button"
   (click)="vm.save()"
-  [disabled]="vm.design || vm.busy() || !vm.dirty()"
+  [disabled]="vm.design || vm.busy() || !vm.dirty() || vm.invalidCaptions()"
 >
   Guardar revisión<ac-icon name="check" />
 </button>

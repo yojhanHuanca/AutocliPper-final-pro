@@ -5,7 +5,7 @@ import { ActivatedRoute } from "@angular/router";
 import type { Response } from "../../../core/contracts/api-types";
 import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
-import { validateCaptionCues } from '../models/caption-cues';
+import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
 import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
 @Injectable()
 export class EditorState {
@@ -33,6 +33,15 @@ export class EditorState {
     return { startSeconds: this.spec.startSeconds, endSeconds: this.spec.endSeconds, captionSource: this.captionSource };
   });
   touchForm(): void { this.formVersion.update(version => version + 1); }
+  readonly captionIssues = computed(() => {
+    this.formVersion();
+    return this.captionSource === 'user'
+      ? this.cues.map(cue => captionCueIssues(cue, this.spec.startSeconds, this.spec.endSeconds)) : [];
+  });
+  readonly invalidCaptions = computed(() => {
+    this.formVersion();
+    return this.captionSource === 'user' && (!this.cues.length || this.cues.length > 200 || this.captionIssues().some(issue => issue.times || issue.text));
+  });
   readonly tabs = [
     { id: "composition", label: "Composición", icon: "settings" },
     { id: "captions", label: "Subtítulos", icon: "captions" },
