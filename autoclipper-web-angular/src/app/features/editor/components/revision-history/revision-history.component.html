@@ -29,7 +29,7 @@
   </div>
 }
 @if (vm.nextVersion()) {
-  <button class="button small" type="button" (click)="vm.loadHistory(true)">
+  <button class="button small" type="button" (click)="vm.moreHistory()" [disabled]="vm.design || vm.busy()">
     Más revisiones
   </button>
 }

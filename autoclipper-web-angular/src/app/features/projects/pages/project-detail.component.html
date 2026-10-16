@@ -51,7 +51,7 @@
       </p>
       <label
         >ID de carga<input
-          [(ngModel)]="uploadId"
+          [ngModel]="uploadId" (ngModelChange)="selectUpload($event)" [disabled]="busy()"
           placeholder="UUID de la carga"
           autocomplete="off" /></label
       ><button
@@ -212,13 +212,13 @@
       <summary>Retomar un procesamiento existente</summary>
       <label
         >ID del pipeline<input
-          [(ngModel)]="pipelineId"
+          [ngModel]="pipelineId" (ngModelChange)="selectPipeline($event)" [disabled]="busy()"
           autocomplete="off" /></label
       ><button
         type="button"
         class="button small"
         (click)="pollPipeline()"
-        [disabled]="!pipelineId"
+        [disabled]="busy() || !pipelineId"
       >
         Consultar estado
       </button>
@@ -241,8 +241,12 @@
     </button>
   </div>
   <p>
-    El borrador usa el intervalo y formato anteriores. Si el pipeline terminó,
-    puede conservar su transcripción autorizada.
+    El borrador usa el intervalo y formato anteriores.
+    @if (hasLinkedTranscript()) {
+      Conserva la transcripción autorizada del pipeline iniciado aquí para esta carga.
+    } @else {
+      Se creará sin subtítulos. Un pipeline consultado por ID no acredita su vínculo con la carga seleccionada.
+    }
   </p>
   <div class="edit-list">
     @for (edit of edits(); track edit.id) {

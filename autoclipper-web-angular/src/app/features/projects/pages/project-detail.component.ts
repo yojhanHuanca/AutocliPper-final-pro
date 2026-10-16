@@ -46,6 +46,9 @@ export class ProjectComponent {
   file: File | null = null;
   uploadId = "";
   pipelineId = "";
+  private pipelineUploadId = '';
+  private uploadGeneration = 0;
+  private pipelineGeneration = 0;
   startSeconds = 0;
   endSeconds = 30;
   aspect: Schema<"PipelineSpecDto">["aspect"] = "vertical";
@@ -61,10 +64,11 @@ export class ProjectComponent {
     const stored = sessionStorage.getItem(this.storageKey());
     if (stored) {
       try {
-        const refs: { uploadId?: string; pipelineId?: string } =
+        const refs: { uploadId?: string; pipelineId?: string; pipelineUploadId?: string } =
           JSON.parse(stored);
         this.uploadId = refs.uploadId ?? "";
         this.pipelineId = refs.pipelineId ?? "";
+        this.pipelineUploadId = refs.pipelineUploadId ?? '';
       } catch {
         /* Ignore an invalid local resume reference. */
       }
@@ -82,7 +86,7 @@ export class ProjectComponent {
   private remember(): void {
     sessionStorage.setItem(
       this.storageKey(),
-      JSON.stringify({ uploadId: this.uploadId, pipelineId: this.pipelineId }),
+      JSON.stringify({ uploadId: this.uploadId, pipelineId: this.pipelineId, pipelineUploadId: this.pipelineUploadId }),
     );
   }
   canEdit(): boolean {
@@ -93,7 +97,25 @@ export class ProjectComponent {
     );
   }
   inspected(): boolean {
-    return this.uploadStatus()?.inspection?.status === "succeeded";
+    const status = this.uploadStatus();
+    return status?.id === this.uploadId.trim() && status?.projectId === this.id && status?.inspection?.status === 'succeeded';
+  }
+  selectUpload(id: string): void {
+    this.uploadId = id;
+    this.uploadGeneration++;
+    clearTimeout(this.inspectionTimer);
+    this.uploadStatus.set(null);
+  }
+  selectPipeline(id: string): void {
+    this.pipelineId = id;
+    this.pipelineUploadId = '';
+    this.pipelineGeneration++;
+    clearTimeout(this.timer);
+    this.pipeline.set(null);
+  }
+  hasLinkedTranscript(): boolean {
+    const task = this.pipeline();
+    return !!task?.analysisId && task.status === 'succeeded' && task.id === this.pipelineId.trim() && this.pipelineUploadId === this.uploadId.trim();
   }
   choose(event: Event): void {
     this.file = (event.target as HTMLInputElement).files?.[0] ?? null;
@@ -119,8 +141,7 @@ export class ProjectComponent {
         this.file!,
         (stage) => this.message.set(stage),
         (id) => {
-          this.uploadId = id;
-          this.uploadStatus.set(null);
+          this.selectUpload(id);
           this.remember();
         },
       );
@@ -135,8 +156,10 @@ export class ProjectComponent {
   async inspect(): Promise<void> {
     clearTimeout(this.inspectionTimer);
     if (!this.uploadId) return;
+    const id = this.uploadId.trim(), generation = ++this.uploadGeneration;
     try {
-      const status = await this.api.upload(this.uploadId);
+      const status = await this.api.upload(id);
+      if (generation !== this.uploadGeneration || this.disposed) return;
       if (status.projectId !== this.id)
         throw new Error("La carga consultada pertenece a otro proyecto.");
       this.uploadStatus.set(status);
@@ -148,6 +171,7 @@ export class ProjectComponent {
       )
         this.inspectionTimer = setTimeout(() => void this.inspect(), 4000);
     } catch (error) {
+      if (generation !== this.uploadGeneration || this.disposed) return;
       this.uploadStatus.set(null);
       this.error.set(errorMessage(error));
     }
@@ -170,6 +194,8 @@ export class ProjectComponent {
   }
   async startPipeline(): Promise<void> {
     await this.run(async () => {
+      if (!this.inspected()) throw new Error('Consulta una carga inspeccionada de este proyecto antes de procesar.');
+      const uploadId = this.uploadId.trim();
       this.validateInterval();
       const body: Schema<"PipelineSpecDto"> = {
         version: 1,
@@ -180,16 +206,18 @@ export class ProjectComponent {
         endSeconds: this.endSeconds,
         aspect: this.aspect,
       };
-      const serialized = JSON.stringify(body);
+      const serialized = JSON.stringify({ uploadId, body });
       if (serialized !== this.pipelineBody) {
         this.pipelineBody = serialized;
         this.pipelineKey = crypto.randomUUID();
       }
       const result = await this.api.createPipeline(
-        this.uploadId,
+        uploadId,
         body,
         this.pipelineKey,
       );
+      this.selectPipeline(result.id);
+      this.pipelineUploadId = uploadId;
       this.pipeline.set(result);
       this.pipelineId = result.id;
       this.remember();
@@ -201,8 +229,10 @@ export class ProjectComponent {
   async pollPipeline(): Promise<void> {
     clearTimeout(this.timer);
     if (!this.pipelineId) return;
+    const id = this.pipelineId.trim(), generation = ++this.pipelineGeneration;
     try {
-      const task = await this.api.pipeline(this.pipelineId);
+      const task = await this.api.pipeline(id);
+      if (generation !== this.pipelineGeneration || this.disposed) return;
       this.pipeline.set(task);
       this.remember();
       if (
@@ -211,6 +241,8 @@ export class ProjectComponent {
       )
         this.timer = setTimeout(() => void this.pollPipeline(), 4000);
     } catch (error) {
+      if (generation !== this.pipelineGeneration || this.disposed) return;
+      this.pipeline.set(null);
       this.error.set(errorMessage(error));
     }
   }
@@ -228,9 +260,11 @@ export class ProjectComponent {
   }
   async createEdit(): Promise<void> {
     await this.run(async () => {
+      if (!this.inspected()) throw new Error('Consulta una carga inspeccionada de este proyecto antes de crear el borrador.');
+      const uploadId = this.uploadId.trim();
       this.validateInterval();
       const analysisId =
-        this.pipeline()?.status === "succeeded"
+        this.hasLinkedTranscript()
           ? this.pipeline()?.analysisId
           : null;
       const body: Schema<"CreateEditDto"> = {
@@ -246,13 +280,13 @@ export class ProjectComponent {
             : { source: "none" },
         },
       };
-      const serialized = JSON.stringify(body);
+      const serialized = JSON.stringify({ uploadId, body });
       if (serialized !== this.editBody) {
         this.editBody = serialized;
         this.editKey = crypto.randomUUID();
       }
       const result = await this.api.createEdit(
-        this.uploadId,
+        uploadId,
         body,
         this.editKey,
       );

@@ -50,7 +50,7 @@
   </article>
 }
 @if (vm.nextComment()) {
-  <button class="button small" type="button" (click)="vm.loadComments(true)">
+  <button class="button small" type="button" (click)="vm.moreComments()" [disabled]="vm.design || vm.busy()">
     Más comentarios
   </button>
 }

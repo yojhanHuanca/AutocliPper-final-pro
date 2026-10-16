@@ -8,6 +8,7 @@ import { EditorTimelineComponent } from "../components/editor-timeline/editor-ti
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-editor",
+  host: { '(window:beforeunload)': 'beforeUnload($event)' },
   providers: [EditorState],
   imports: [
     IconComponent,
@@ -21,4 +22,10 @@ import { EditorTimelineComponent } from "../components/editor-timeline/editor-ti
 })
 export class EditorComponent {
   readonly vm = inject(EditorState);
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.vm.dirty()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
 }

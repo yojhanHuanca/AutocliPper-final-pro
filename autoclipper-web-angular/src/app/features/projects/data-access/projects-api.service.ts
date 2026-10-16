@@ -1,6 +1,7 @@
 import { Injectable, inject } from "@angular/core";
 import type { Schema, Response } from "../../../core/contracts/api-types";
 import { ApiTransport } from "../../../core/http/api-transport.service";
+import { uploadContentType } from '../models/upload-file';
 @Injectable({ providedIn: "root" })
 export class ProjectsApi {
   private readonly api = inject(ApiTransport);
@@ -63,18 +64,7 @@ export class ProjectsApi {
     progress: (stage: string) => void,
     remember: (id: string) => void,
   ): Promise<Schema<"UploadStatusDto">> {
-    const allowed: string[] = [
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
-      "video/x-matroska",
-    ];
-    if (!allowed.includes(file.type))
-      throw new Error(
-        "Formato no admitido. Usa MP4, WebM, MOV o MKV con su tipo de archivo correcto.",
-      );
-    if (file.size === 0 || file.size > 100 * 1024 * 1024)
-      throw new Error("El video debe pesar entre 1 byte y 100 MiB.");
+    const contentType = uploadContentType(file);
     progress("Calculando SHA-256 del archivo…");
     const digest = await crypto.subtle.digest(
       "SHA-256",
@@ -86,7 +76,7 @@ export class ProjectsApi {
     const body: Schema<"UploadDto"> = {
       bytes: file.size,
       sha256,
-      contentType: file.type as Schema<"UploadDto">["contentType"],
+      contentType,
       mode: "put",
     };
     const intent = await this.api.post<Schema<"PutUploadIntentDto">>(

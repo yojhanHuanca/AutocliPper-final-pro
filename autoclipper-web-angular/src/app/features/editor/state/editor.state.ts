@@ -7,11 +7,13 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
 import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
 import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
+import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
   private readonly route = inject(ActivatedRoute);
   private readonly destroy = inject(DestroyRef);
+  private readonly discardConfirmation = inject(EDITOR_DISCARD_CONFIRMATION);
   readonly design = inject(DESIGN_MODE);
   readonly id = this.route.snapshot.paramMap.get("id") ?? "";
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
@@ -111,6 +113,9 @@ export class EditorState {
     this.formVersion();
     return !!this.initialForm && this.snapshot() !== this.initialForm;
   }
+  confirmDiscard(): boolean {
+    return !this.dirty() || this.discardConfirmation();
+  }
   addCue(): void {
     if (this.design || this.cues.length >= 200) return;
     const startSeconds = this.cues.at(-1)?.endSeconds ?? this.spec.startSeconds;
@@ -152,6 +157,7 @@ export class EditorState {
     this.touchForm();
   }
   async reload(): Promise<void> {
+    if (this.busy() || !this.confirmDiscard()) return;
     await this.run(async () => {
       const result = await this.api.edit(this.id);
       this.accept(result.draft, result.etag);
@@ -230,6 +236,9 @@ export class EditorState {
     );
     this.nextVersion.set(result.nextBeforeVersion);
   }
+  async moreHistory(): Promise<void> {
+    await this.run(() => this.loadHistory(true));
+  }
   async restore(version: number): Promise<void> {
     await this.run(async () => {
       const draft = this.draft();
@@ -278,6 +287,9 @@ export class EditorState {
       append ? [...this.comments(), ...result.items] : result.items,
     );
     this.nextComment.set(result.nextBeforeId);
+  }
+  async moreComments(): Promise<void> {
+    await this.run(() => this.loadComments(true));
   }
   async comment(): Promise<void> {
     await this.run(async () => {
