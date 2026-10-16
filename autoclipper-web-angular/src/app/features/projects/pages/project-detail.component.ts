@@ -42,6 +42,7 @@ export class ProjectComponent {
   readonly busy = signal(false);
   readonly uploading = signal(false);
   readonly error = signal("");
+  readonly loadNotice = signal("");
   readonly message = signal("");
   file: File | null = null;
   uploadId = "";
@@ -122,12 +123,20 @@ export class ProjectComponent {
   }
   async reload(): Promise<void> {
     await this.run(async () => {
-      const [project, edits] = await Promise.all([
+      this.loadNotice.set("");
+      const [projectResult, editsResult] = await Promise.allSettled([
         this.api.get(this.id),
         this.api.edits(this.id),
       ]);
-      this.project.set(project);
-      this.edits.set(edits.items);
+      if (projectResult.status === "rejected") throw projectResult.reason;
+      this.project.set(projectResult.value);
+      if (editsResult.status === "fulfilled") {
+        this.edits.set(editsResult.value.items);
+      } else {
+        this.loadNotice.set(
+          `El proyecto está disponible, pero no se pudieron cargar sus revisiones: ${errorMessage(editsResult.reason)}`,
+        );
+      }
     });
     if (this.uploadId) await this.inspect();
     if (this.pipelineId) await this.pollPipeline();
@@ -299,6 +308,7 @@ export class ProjectComponent {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set("");
+    this.loadNotice.set("");
     try {
       await action();
     } catch (error) {
