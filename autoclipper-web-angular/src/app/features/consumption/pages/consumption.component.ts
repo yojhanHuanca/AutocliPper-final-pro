@@ -12,6 +12,7 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
+import { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../models/ledger-labels';
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -21,6 +22,9 @@ import { IconComponent } from "../../../shared/ui/icon/icon.component";
   styleUrl: "./consumption.component.css",
 })
 export class ConsumptionComponent {
+  readonly stageLabel = consumptionStageLabel;
+  readonly kindLabel = consumptionKindLabel;
+  readonly shortPipelineId = pipelineShortId;
   readonly workspace = inject(WorkspaceStore);
 
   private readonly api = inject(ConsumptionApi);

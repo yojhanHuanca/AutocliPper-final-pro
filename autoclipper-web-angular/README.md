@@ -65,7 +65,7 @@ npm run test:live
 
 Esta suite requiere servicios ya saludables, Mailpit local, FFmpeg en PATH y whisper.cpp configurado. Crea cuentas `example.test`, un espacio y material de prueba identificados; no envía correo externo, no arranca/detiene servicios, no modifica SQL ni cambia infraestructura. Deja el proyecto QA para revisión. Usa la grabación sintética declarada en `../autoclipper-backend-microservices/tests/fixtures/README.md`; la inferencia y los artefactos son reales. No ejecutar durante migraciones o aceptación de otro chat.
 
-Resultado observado: **build de producción y typecheck aprobados; 17 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
+Resultado observado: **build de producción y typecheck aprobados; 19 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
 
 ## Estructura y diseño
 
@@ -76,3 +76,5 @@ La animación anterior se inspeccionó ejecutando su componente original en solo
 Solo en la landing, los acentos azul → rosado → morado cambian cada 3 segundos con transición de 900 ms. La pausa conserva el color actual y movimiento reducido mantiene Cobalto sin temporizador; el fondo blanco y los paneles/editor conservan sus tokens aprobados.
 
 El editor protege cambios de composición/subtítulos al navegar, recargar el formulario o cerrar la pestaña (el aviso de cierre depende del navegador). Los errores al pedir más revisiones/comentarios conservan la página ya cargada. En proyectos, cambiar IDs invalida estados y respuestas anteriores. Una transcripción solo se vincula automáticamente si el pipeline fue creado aquí para esa carga; consultar un pipeline arbitrario por ID no prueba su procedencia. Se admiten archivos con MIME vacío únicamente por extensión MP4/WebM/MOV/MKV; la inspección del servidor sigue siendo obligatoria.
+
+En ajustes de perfil se comprueba la zona horaria con Intl antes de guardar y se puede descartar el formulario. El URI de alta 2FA muestra el plazo recibido de la API; se oculta al vencer o cambiar de sección. Códigos y pruebas sensibles se limpian al salir de Seguridad. El ledger muestra nombres en español y conserva el ID completo de pipeline en el atributo de detalle.

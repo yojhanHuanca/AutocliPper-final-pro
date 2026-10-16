@@ -93,12 +93,12 @@
         @for (entry of ledger(); track entry.id) {
           <tr>
             <td>{{ entry.at | date: "medium" }}</td>
-            <td>{{ entry.stage }}</td>
+            <td>{{ stageLabel(entry.stage) }}</td>
             <td>
-              <span class="badge">{{ entry.kind }}</span>
+              <span class="badge">{{ kindLabel(entry.kind) }}</span>
             </td>
             <td>{{ entry.seconds | number: "1.0-2" }}</td>
-            <td class="resource-id">{{ entry.pipelineId }}</td>
+            <td class="resource-id" [title]="entry.pipelineId">{{ shortPipelineId(entry.pipelineId) }}</td>
           </tr>
         } @empty {
           <tr>

@@ -14,6 +14,7 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
+import { isValidIanaTimezone } from '../models/timezone';
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -27,6 +28,8 @@ export class SettingsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly session = inject(SessionStore);
   private readonly destroy = inject(DestroyRef);
+  private setupTimer?: ReturnType<typeof setTimeout>;
+  readonly setupSeconds = signal(0);
   readonly design = inject(DESIGN_MODE);
   readonly tab = signal("Perfil");
   readonly profile = signal<Schema<"ProfileResponseDto"> | null>(null);
@@ -49,6 +52,7 @@ export class SettingsComponent {
       this.factor = "";
       this.setupUri.set("");
       this.recoveryCodes.set([]);
+      clearInterval(this.setupTimer);
     });
     if (!this.design) void this.load();
   }
@@ -77,10 +81,37 @@ export class SettingsComponent {
         preferences: { timezone: this.timezone.trim() },
       } satisfies Schema<"UpdateProfileDto">);
       this.profile.set(result);
+      this.name = result.name;
+      this.timezone = result.preferences.timezone;
       const user = this.session.user();
       if (user) this.session.user.set({ ...user, name: result.name });
       this.message.set("Perfil actualizado.");
     });
+  }
+  timezoneValid(): boolean {
+    return isValidIanaTimezone(this.timezone);
+  }
+  resetProfile(): void {
+    const profile = this.profile();
+    if (!profile) return;
+    this.name = profile.name;
+    this.timezone = profile.preferences.timezone;
+    this.error.set('');
+    this.message.set('Cambios descartados.');
+  }
+  selectTab(tab: string): void {
+    if (tab !== 'Seguridad') this.clearSensitive();
+    this.tab.set(tab);
+  }
+  hideSetup(): void { this.clearSensitive(); }
+  private clearSensitive(): void {
+    clearInterval(this.setupTimer);
+    this.setupTimer = undefined;
+    this.setupSeconds.set(0);
+    this.setupUri.set('');
+    this.recoveryCodes.set([]);
+    this.factor = '';
+    this.password = '';
   }
   async loadSessions(): Promise<void> {
     if (this.design) return;
@@ -103,6 +134,20 @@ export class SettingsComponent {
     await this.run(async () => {
       const result = await this.api.setupMfa(this.password);
       this.setupUri.set(result.otpauthUri);
+      clearInterval(this.setupTimer);
+      this.setupSeconds.set(result.expiresInSeconds);
+      this.setupTimer = setInterval(() => {
+        const remaining = this.setupSeconds() - 1;
+        this.setupSeconds.set(Math.max(remaining, 0));
+        if (remaining <= 0) {
+          clearInterval(this.setupTimer);
+          this.setupTimer = undefined;
+          this.setupUri.set('');
+          this.factor = '';
+          this.password = '';
+          this.message.set('El alta de 2FA venció. Vuelve a prepararla para continuar.');
+        }
+      }, 1000);
       this.message.set(
         `Alta preparada; vence en ${result.expiresInSeconds} segundos.`,
       );
@@ -116,6 +161,9 @@ export class SettingsComponent {
       });
       this.recoveryCodes.set(result.recoveryCodes);
       this.setupUri.set("");
+      clearInterval(this.setupTimer);
+      this.setupTimer = undefined;
+      this.setupSeconds.set(0);
       this.mfa.set(await this.api.mfa());
       this.message.set("2FA activada. Guarda los códigos de recuperación.");
     });
