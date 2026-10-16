@@ -5,9 +5,12 @@ import { SessionStore } from "../auth/session.store";
 export const sessionGuard: CanActivateFn = async (_route, state) => {
   const session = inject(SessionStore);
   const router = inject(Router);
-  if (!(await session.restore()))
+  try {
+    if (await session.restore()) return true;
+  } catch {
     return router.createUrlTree(["/login"], {
-      queryParams: { returnUrl: state.url },
+      queryParams: { returnUrl: state.url, connection: 'unavailable' },
     });
-  return true;
+  }
+  return router.createUrlTree(["/login"], { queryParams: { returnUrl: state.url } });
 };

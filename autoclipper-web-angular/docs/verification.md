@@ -58,3 +58,7 @@ Build final aprobado: bundle inicial 315.46 KB raw, unos 87.03 KB estimados de t
 Diecinueve pruebas pasan, incluido el helper de zonas horarias IANA. Perfil valida la zona con `Intl`, muestra «Descartar cambios» y conserva valores del servidor tras guardar. El secreto temporal de alta MFA presenta cuenta regresiva usando el vencimiento del servidor; al vencer se limpia URI, código y contraseña. Al abandonar Seguridad también se borran URI/códigos en memoria. La estructura pública mantiene controles deshabilitados. El ledger traduce etapas y movimientos conocidos y acorta el ID visual con el valor íntegro disponible como título.
 
 Build de producción y typecheck aprobados. No fue posible hacer la revisión visual final en esta sesión: el navegador local está deshabilitado en ajustes de Work. El servidor API continúa sin responder, por lo que los cambios de perfil, MFA, sesiones, privacidad y ledger no tienen validación real por UI en esta ejecución.
+
+### Recuperación de sesión
+
+Veintiuna pruebas pasan. La restauración propaga fallos 5xx/red y libera el intento compartido para que se pueda reintentar; solo un 401 tras refresh se trata como sesión vencida. El guard distingue ambos caminos, conserva `returnUrl` y añade `connection=unavailable` para el aviso existente. Build y typecheck aprobados; bundle inicial 315.62 KB raw, 87.02 KB estimados. Revisión visual no disponible en este turno porque Work deshabilita el control local del navegador.

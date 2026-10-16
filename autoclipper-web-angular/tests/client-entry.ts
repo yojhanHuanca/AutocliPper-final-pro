@@ -1,5 +1,5 @@
 export { API_BASE_URL } from '../src/app/core/config/api-config.token';
-export { ApiSecurity } from '../src/app/core/http/api-security.service';
+export { ApiTransport } from '../src/app/core/http/api-transport.service';
 export { apiInterceptor } from '../src/app/core/http/api.interceptor';
 export { errorMessage } from '../src/app/core/http/api-error';
 export { validateCaptionCues } from '../src/app/features/editor/models/caption-cues';
@@ -17,3 +17,6 @@ export { WorkspaceStore } from '../src/app/features/workspaces/data-access/works
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
 export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
+export { sessionGuard } from '../src/app/core/guards/session.guard';
+export { HttpErrorResponse } from '@angular/common/http';
+export { ApiSecurity } from '../src/app/core/http/api-security.service';

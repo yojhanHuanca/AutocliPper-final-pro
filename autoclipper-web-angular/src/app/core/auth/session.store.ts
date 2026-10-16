@@ -23,7 +23,10 @@ export class SessionStore {
         this.user.set(user);
         return true;
       })
-      .catch(() => false)
+      .catch((error) => {
+        if (error instanceof HttpErrorResponse && error.status === 401) return false;
+        throw error;
+      })
       .finally(() => {
         this.restoring = undefined;
       }));
