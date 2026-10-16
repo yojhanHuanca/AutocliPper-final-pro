@@ -44,6 +44,13 @@ jobs:
         with:
           node-version: '24.21.0'
       - run: node autoclipper-infrastructure/setup-local.mjs
+      - name: Verify clean PostgreSQL bootstrap without restart
+        working-directory: autoclipper-infrastructure
+        run: |
+          docker compose up -d --wait postgres
+          test "$(docker inspect --format '{{.RestartCount}}' autoclipper-postgres-1)" = 0
+          test "$(docker compose exec -T postgres psql -U autoclipper_bootstrap -d postgres -Atc "SELECT count(*) FROM pg_database WHERE datname IN ('autoclipper_media','autoclipper_identity','autoclipper_workspace','autoclipper_project','autoclipper_analysis','autoclipper_billing')")" = 6
+          test "$(docker compose exec -T postgres psql -U autoclipper_bootstrap -d postgres -Atc "SELECT count(*) FROM pg_roles WHERE rolname ~ '^autoclipper_(media|identity|workspace|project|analysis|billing)_(owner|runtime)$'")" = 12
       - name: Build and run actual dependency tests
         working-directory: autoclipper-infrastructure
         run: docker compose --profile app --profile test run --build --rm verification

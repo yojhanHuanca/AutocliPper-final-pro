@@ -34,10 +34,12 @@ services:
       ANALYSIS_OWNER_PASSWORD: ${ANALYSIS_OWNER_PASSWORD:?Run setup-stage2.mjs}
       ANALYSIS_RUNTIME_PASSWORD: ${ANALYSIS_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
       PROJECT_RUNTIME_PASSWORD: ${PROJECT_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
+      BILLING_OWNER_PASSWORD: ${BILLING_OWNER_PASSWORD:?Run setup-stage2.mjs}
+      BILLING_RUNTIME_PASSWORD: ${BILLING_RUNTIME_PASSWORD:?Run setup-stage2.mjs}
     ports: ['127.0.0.1:15432:5432']
     volumes: ['postgres-data:/var/lib/postgresql', './postgres/init-media.sh:/docker-entrypoint-initdb.d/10-media.sh:ro','./postgres/init-business.sh:/docker-entrypoint-initdb.d/20-business.sh:ro']
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U autoclipper_bootstrap -d postgres']
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U autoclipper_bootstrap -d postgres']
       interval: 5s
       timeout: 3s
       retries: 15
