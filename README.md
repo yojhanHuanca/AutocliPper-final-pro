@@ -12,6 +12,8 @@ El [incremento de consumo](autoclipper-project-documentation/stage-6-consumption
 
 La etapa 1 está publicada en `cf6912b`, con CI remoto aprobado. La entrega de etapa 2 y sus verificaciones se describen en [stage-2.md](autoclipper-project-documentation/stage-2.md). Swagger público en [gateway](http://localhost:3000/docs); correo de desarrollo en [Mailpit](http://localhost:19025).
 
+La [admisión por modo](autoclipper-project-documentation/stage-6-commercial-admission.md) quedó cerrada con [CI 38837993047](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38837993047) para `c9e57aa`, los tres jobs aprobados: 29 unitarias/HTTP, 34 infraestructura, 62 negocio, 7 Analysis fixtures, 8 orquestación commercial y 8 admisión HTTP, sin fallos/omisiones. Se verificó además una matriz local con whisper.cpp real y ledger; CI usa fixtures explícitos y no descarga modelos. Bootstrap limpio de seis bases/doce roles sin reinicios aprobado. El stack local conserva development por defecto; el modo commercial no habilita pagos ni producción.
+
 - [Guía local](autoclipper-project-documentation/local-development.md)
 - [Arquitectura y decisiones](autoclipper-project-documentation/architecture.md)
 - [Estado por requisito](autoclipper-project-documentation/status.md)
