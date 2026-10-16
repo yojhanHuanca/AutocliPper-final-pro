@@ -65,7 +65,7 @@ npm run test:live
 
 Esta suite requiere servicios ya saludables, Mailpit local, FFmpeg en PATH y whisper.cpp configurado. Crea cuentas `example.test`, un espacio y material de prueba identificados; no envía correo externo, no arranca/detiene servicios, no modifica SQL ni cambia infraestructura. Deja el proyecto QA para revisión. Usa la grabación sintética declarada en `../autoclipper-backend-microservices/tests/fixtures/README.md`; la inferencia y los artefactos son reales. No ejecutar durante migraciones o aceptación de otro chat.
 
-Resultado observado: **build de producción y typecheck aprobados; 22 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
+Resultado observado: **build de producción y typecheck aprobados; 23 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
 
 ## Estructura y diseño
 
@@ -82,3 +82,5 @@ En ajustes de perfil se comprueba la zona horaria con Intl antes de guardar y se
 Si al entrar en una ruta protegida el servidor responde que la sesión venció, se va al login conservando el destino. Si la API no está disponible, se conserva el mismo destino y se muestra el aviso de conexión; no se confunde con un rechazo de credenciales.
 
 La ruta solicitada también se conserva si falla la carga del selector de espacios luego de restaurar la sesión.
+
+Los ajustes cargan perfil, 2FA, privacidad y sesiones por separado; si uno falla, se conservan los demás datos y se indica qué consulta no respondió.

@@ -58,17 +58,27 @@ export class SettingsComponent {
   }
   async load(): Promise<void> {
     await this.run(async () => {
-      const [profile, mfa, privacy] = await Promise.all([
+      const results = await Promise.allSettled([
         this.api.profile(),
         this.api.mfa(),
         this.api.privacy(),
+        this.api.sessions(),
       ]);
-      this.profile.set(profile);
-      this.name = profile.name;
-      this.timezone = profile.preferences.timezone;
-      this.mfa.set(mfa);
-      this.privacy.set(privacy.items);
-      await this.loadSessions();
+      const labels = ['perfil', 'autenticación en dos pasos', 'privacidad', 'sesiones'];
+      const failures: string[] = [];
+      if (results[0].status === 'fulfilled') {
+        const profile = results[0].value;
+        this.profile.set(profile);
+        this.name = profile.name;
+        this.timezone = profile.preferences.timezone;
+      } else failures.push(`${labels[0]}: ${errorMessage(results[0].reason)}`);
+      if (results[1].status === 'fulfilled') this.mfa.set(results[1].value);
+      else failures.push(`${labels[1]}: ${errorMessage(results[1].reason)}`);
+      if (results[2].status === 'fulfilled') this.privacy.set(results[2].value.items);
+      else failures.push(`${labels[2]}: ${errorMessage(results[2].reason)}`);
+      if (results[3].status === 'fulfilled') this.sessions.set(results[3].value.items);
+      else failures.push(`${labels[3]}: ${errorMessage(results[3].reason)}`);
+      if (failures.length) this.error.set(`Algunos datos no se pudieron cargar. ${failures.join(' · ')}`);
     });
   }
   async saveProfile(): Promise<void> {

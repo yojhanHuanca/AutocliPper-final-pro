@@ -19,5 +19,7 @@ export { isValidIanaTimezone } from '../src/app/features/settings/models/timezon
 export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
 export { sessionGuard } from '../src/app/core/guards/session.guard';
 export { workspaceGuard } from '../src/app/features/workspaces/workspace.guard';
+export { SettingsComponent } from '../src/app/features/settings/pages/settings.component';
+export { SettingsApi } from '../src/app/features/settings/data-access/settings-api.service';
 export { HttpErrorResponse } from '@angular/common/http';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';
