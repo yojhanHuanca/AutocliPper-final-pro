@@ -35,6 +35,8 @@ export class SettingsComponent {
   readonly profile = signal<Schema<"ProfileResponseDto"> | null>(null);
   readonly mfa = signal<Schema<"MfaStatusResponseDto"> | null>(null);
   readonly sessions = signal<Schema<"SessionResponseDto">[]>([]);
+  readonly sessionsLoading = signal(false);
+  readonly sessionsError = signal("");
   readonly privacy = signal<Schema<"PrivacyStatusResponseDto">[]>([]);
   readonly busy = signal(false);
   readonly error = signal("");
@@ -43,6 +45,7 @@ export class SettingsComponent {
   readonly recoveryCodes = signal<string[]>([]);
   name = "";
   timezone = "America/Lima";
+  emailNotifications = true;
   password = "";
   factor = "";
   privacyKind: "export" | "deletion" = "export";
@@ -58,6 +61,7 @@ export class SettingsComponent {
   }
   async load(): Promise<void> {
     await this.run(async () => {
+      this.sessionsLoading.set(true);
       const results = await Promise.allSettled([
         this.api.profile(),
         this.api.mfa(),
@@ -71,13 +75,15 @@ export class SettingsComponent {
         this.profile.set(profile);
         this.name = profile.name;
         this.timezone = profile.preferences.timezone;
+        this.emailNotifications = profile.preferences.emailNotifications;
       } else failures.push(`${labels[0]}: ${errorMessage(results[0].reason)}`);
       if (results[1].status === 'fulfilled') this.mfa.set(results[1].value);
       else failures.push(`${labels[1]}: ${errorMessage(results[1].reason)}`);
       if (results[2].status === 'fulfilled') this.privacy.set(results[2].value.items);
       else failures.push(`${labels[2]}: ${errorMessage(results[2].reason)}`);
       if (results[3].status === 'fulfilled') this.sessions.set(results[3].value.items);
-      else failures.push(`${labels[3]}: ${errorMessage(results[3].reason)}`);
+      else { this.sessionsError.set(errorMessage(results[3].reason)); failures.push(`${labels[3]}: ${errorMessage(results[3].reason)}`); }
+      this.sessionsLoading.set(false);
       if (failures.length) this.error.set(`Algunos datos no se pudieron cargar. ${failures.join(' · ')}`);
     });
   }
@@ -88,11 +94,12 @@ export class SettingsComponent {
       const result = await this.api.saveProfile({
         version: profile.version,
         name: this.name.trim(),
-        preferences: { timezone: this.timezone.trim() },
+        preferences: { timezone: this.timezone.trim(), emailNotifications: this.emailNotifications },
       } satisfies Schema<"UpdateProfileDto">);
       this.profile.set(result);
       this.name = result.name;
       this.timezone = result.preferences.timezone;
+      this.emailNotifications = result.preferences.emailNotifications;
       const user = this.session.user();
       if (user) this.session.user.set({ ...user, name: result.name });
       this.message.set("Perfil actualizado.");
@@ -106,6 +113,7 @@ export class SettingsComponent {
     if (!profile) return;
     this.name = profile.name;
     this.timezone = profile.preferences.timezone;
+    this.emailNotifications = profile.preferences.emailNotifications;
     this.error.set('');
     this.message.set('Cambios descartados.');
   }
@@ -125,11 +133,21 @@ export class SettingsComponent {
   }
   async loadSessions(): Promise<void> {
     if (this.design) return;
+    this.sessionsLoading.set(true);
+    this.sessionsError.set('');
     try {
       this.sessions.set((await this.api.sessions()).items);
     } catch (error) {
-      this.error.set(errorMessage(error));
+      this.sessionsError.set(errorMessage(error));
+    } finally {
+      this.sessionsLoading.set(false);
     }
+  }
+  privacyKindLabel(kind: Schema<'PrivacyStatusResponseDto'>['kind']): string {
+    return kind === 'export' ? 'Exportación de datos' : 'Eliminación de datos';
+  }
+  privacyStateLabel(state: Schema<'PrivacyStatusResponseDto'>['state']): string {
+    return ({ requested: 'Registrada · ejecución pendiente', processing: 'En proceso', completed: 'Completada', rejected: 'Rechazada' })[state];
   }
   async revoke(id: string): Promise<void> {
     await this.run(async () => {
@@ -174,8 +192,12 @@ export class SettingsComponent {
       clearInterval(this.setupTimer);
       this.setupTimer = undefined;
       this.setupSeconds.set(0);
-      this.mfa.set(await this.api.mfa());
-      this.message.set("2FA activada. Guarda los códigos de recuperación.");
+      try {
+        this.mfa.set(await this.api.mfa());
+        this.message.set("2FA activada. Guarda los códigos de recuperación.");
+      } catch {
+        this.message.set("2FA activada. Guarda los códigos de recuperación; no se pudo actualizar el estado mostrado.");
+      }
     });
   }
   async disableMfa(): Promise<void> {

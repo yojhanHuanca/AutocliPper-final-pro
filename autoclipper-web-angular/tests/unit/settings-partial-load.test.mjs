@@ -8,10 +8,10 @@ import { SettingsComponent, SettingsApi, DESIGN_MODE, SessionStore } from '../..
 
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 
-test('settings keeps successful account sections available when one endpoint fails', async () => {
-  const profile={id:'user-1',email:'qa@example.test',name:'QA',version:2,preferences:{timezone:'America/Lima'}};
+test('settings keeps successful account sections and localizes session and privacy states', async () => {
+  const profile={id:'user-1',email:'qa@example.test',name:'QA',version:2,preferences:{timezone:'America/Lima',emailNotifications:false,locale:'es',theme:'light'}};
   const mfa={enabled:false,recoveryCodesRemaining:0};
-  const api={profile:async()=>profile,mfa:async()=>mfa,privacy:async()=>{throw new Error('Privacy endpoint unavailable');},sessions:async()=>({items:[{id:'session-1',createdAt:'2026-01-01T00:00:00Z',expiresAt:'2026-01-02T00:00:00Z',revokedAt:null}]})};
+  const api={profile:async()=>profile,mfa:async()=>mfa,privacy:async()=>{throw new Error('Privacy endpoint unavailable');},sessions:async()=>{throw new Error('Session endpoint unavailable');}};
   TestBed.configureTestingModule({providers:[
     SettingsComponent,
     {provide:SettingsApi,useValue:api},{provide:DESIGN_MODE,useValue:false},
@@ -24,7 +24,11 @@ test('settings keeps successful account sections available when one endpoint fai
     await new Promise(resolve=>setImmediate(resolve));
     assert.deepEqual(state.profile(),profile);
     assert.deepEqual(state.mfa(),mfa);
-    assert.equal(state.sessions().length,1);
+    assert.equal(state.sessions().length,0);
+    assert.equal(state.emailNotifications,false);
+    assert.match(state.sessionsError(),/Session endpoint unavailable/);
+    assert.equal(state.privacyKindLabel('export'),'Exportación de datos');
+    assert.equal(state.privacyStateLabel('requested'),'Registrada · ejecución pendiente');
     assert.deepEqual(state.privacy(),[]);
     assert.match(state.error(),/privacidad/);
     assert.equal(state.busy(),false);

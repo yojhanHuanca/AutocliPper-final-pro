@@ -56,18 +56,16 @@
               placeholder="America/Lima"
           /></label>
           @if (timezone && !timezoneValid()) { <p class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
-          <p class="muted">
-            Esta primera interfaz está disponible en español. El fondo blanco se
-            conserva como decisión de diseño.
-          </p>
+          <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design" /> Recibir notificaciones por correo</label>
+          <p class="muted">Puedes cambiar esta preferencia cuando quieras.</p>
           <button
             class="button primary"
             type="submit"
-            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone)"
+            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications)"
           >
             Guardar perfil<ac-icon name="check" />
           </button>
-          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone)">Descartar cambios</button>
+          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications)">Descartar cambios</button>
         </form>
       </article>
     }
@@ -209,9 +207,11 @@
             (click)="loadSessions()"
             [disabled]="design || busy()"
           >
-            Actualizar
+            {{ sessionsLoading() ? "Actualizando…" : "Actualizar" }}
           </button>
         </div>
+        @if (sessionsLoading() && !sessions().length) { <p class="muted" role="status">Cargando sesiones…</p> }
+        @if (sessionsError()) { <div class="alert error" role="alert">{{ sessionsError() }} <button class="button small" type="button" (click)="loadSessions()" [disabled]="sessionsLoading()">Reintentar</button></div> }
         @for (item of sessions(); track item.id) {
           <div class="session-row">
             <ac-icon name="shield" />
@@ -230,6 +230,7 @@
             </button>
           </div>
         } @empty {
+          @if (!sessionsLoading() && !sessionsError()) {
           <div class="empty-inline">
             <ac-icon name="shield" />
             <p>
@@ -237,6 +238,7 @@
               identifica dispositivo ni ubicación.
             </p>
           </div>
+          }
         }
       </article>
     }
@@ -289,12 +291,12 @@
         <h2>Solicitudes registradas.</h2>
         @for (item of privacy(); track item.id) {
           <div class="history-row">
-            <strong>{{ item.kind }}</strong
-            ><span>{{ item.state }}</span
+            <strong>{{ privacyKindLabel(item.kind) }}</strong
+            ><span>{{ privacyStateLabel(item.state) }}</span
             ><small>{{ item.createdAt | date: "medium" }}</small>
           </div>
         } @empty {
-          <p class="muted">No hay solicitudes consultadas.</p>
+          <p class="muted">Aún no has registrado solicitudes.</p>
         }
       </article>
     }

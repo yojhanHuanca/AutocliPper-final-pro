@@ -52,6 +52,15 @@
 .settings-grid > .panel > form {
   max-width: 500px;
 }
+.preference-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--text);
+  font-size: 14px;
+}
+.preference-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 .session-row {
   display: flex;
   align-items: center;
@@ -71,9 +80,10 @@
   font-size: 12px;
 }
 .session-row small {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
+.sensitive-box { background: #f4f7fc; border-color: #d5e0f0; }
 .sensitive-box {
   padding: 18px;
   background: #fcf7ec;
