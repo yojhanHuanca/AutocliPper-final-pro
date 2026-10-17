@@ -8,9 +8,10 @@
 </section>
 <div class="alert">
   <ac-icon name="shield" />Esta es una exploración pública de estructura, sin
-  datos de usuarios ni controles operativos. La conexión con las APIs administrativas
-  globales está pendiente en esta interfaz; un rol owner/admin de workspace no concede acceso
-  administrativo de plataforma.
+  datos de usuarios ni controles operativos. La consulta administrativa de solo
+  lectura requiere iniciar sesión, un grant explícito, MFA y una elevación reciente.
+  Un rol owner/admin de workspace no concede acceso administrativo de plataforma.
+  <a class="text-link" routerLink="/admin">Abrir consulta protegida <ac-icon name="arrow" /></a>
 </div>
 <div class="admin-grid">
   @for (group of groups; track group.title) {

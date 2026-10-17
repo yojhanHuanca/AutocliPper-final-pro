@@ -48,3 +48,24 @@ test('late workspace loads cannot overwrite the newest workspace list', async ()
     assert.deepEqual(store.workspaces().map(item => item.id), ['current']);
   } finally { TestBed.resetTestingModule(); }
 });
+
+test('a completed team creation does not replace a workspace selected while it was pending', async () => {
+  const pendingCreate = deferred();
+  TestBed.configureTestingModule({ providers: [
+    WorkspaceStore,
+    { provide: TestComponentRenderer, useValue: renderer },
+    { provide: ApiTransport, useValue: {
+      post: () => pendingCreate.promise,
+      get: async () => ({ items: [workspace('team-existing'), workspace('team-new'), workspace('team-other')] }),
+    } },
+  ] });
+  try {
+    const store = TestBed.inject(WorkspaceStore);
+    store.workspaceId.set('team-existing');
+    const creation = store.createTeam('New team');
+    store.workspaceId.set('team-other');
+    pendingCreate.resolve({ id: 'team-new' });
+    await creation;
+    assert.equal(store.workspaceId(), 'team-other');
+  } finally { TestBed.resetTestingModule(); }
+});

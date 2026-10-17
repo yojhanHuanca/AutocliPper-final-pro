@@ -127,6 +127,9 @@ export class WorkspaceTeamComponent {
   isCurrentMember(member: Schema<"MemberDto">): boolean {
     return member.userId === this.session.user()?.id;
   }
+  private isActiveWorkspace(workspaceId: string): boolean {
+    return !!workspaceId && workspaceId === this.workspaceStore.workspaceId();
+  }
   async createTeam(): Promise<void> {
     if (this.createBusy || !this.teamName.trim()) return;
     this.createBusy = true;
@@ -150,9 +153,10 @@ export class WorkspaceTeamComponent {
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.invite(workspace.id, { email, role: this.inviteRole }, this.inviteKey);
+      if (!this.isActiveWorkspace(workspace.id)) return;
       this.inviteKey = ""; this.inviteFingerprint = ""; this.inviteEmail = "";
       this.message.set(`Invitación enviada a ${email}. La persona debe abrir el correo e iniciar sesión con esa misma dirección para aceptar.`);
-    } catch (error) { this.error.set(errorMessage(error)); }
+    } catch (error) { if (this.isActiveWorkspace(workspace.id)) this.error.set(errorMessage(error)); }
     finally { this.mutationBusy.set(false); }
   }
   async saveRole(member: Schema<"MemberDto">): Promise<void> {
@@ -162,8 +166,9 @@ export class WorkspaceTeamComponent {
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.setRole(workspaceId, member.userId, role);
+      if (!this.isActiveWorkspace(workspaceId)) return;
       await this.refreshAfterMutation(workspaceId, "Rol actualizado.");
-    } catch (error) { this.error.set(errorMessage(error)); }
+    } catch (error) { if (this.isActiveWorkspace(workspaceId)) this.error.set(errorMessage(error)); }
     finally { this.mutationBusy.set(false); }
   }
   async confirmRemove(member: Schema<"MemberDto">): Promise<void> {
@@ -172,9 +177,10 @@ export class WorkspaceTeamComponent {
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.remove(workspaceId, member.userId);
+      if (!this.isActiveWorkspace(workspaceId)) return;
       this.pendingRemoval.set("");
       await this.refreshAfterMutation(workspaceId, this.isCurrentMember(member) ? "Tu cuenta salió del espacio." : "Miembro retirado del espacio.");
-    } catch (error) { this.error.set(errorMessage(error)); }
+    } catch (error) { if (this.isActiveWorkspace(workspaceId)) this.error.set(errorMessage(error)); }
     finally { this.mutationBusy.set(false); }
   }
   async transferOwnership(): Promise<void> {
@@ -184,17 +190,19 @@ export class WorkspaceTeamComponent {
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.transfer(workspaceId, target.userId);
+      if (!this.isActiveWorkspace(workspaceId)) return;
       this.transferConfirmation.set(false);
       this.transferTarget.set("");
       await this.refreshAfterMutation(workspaceId, `La propiedad ahora pertenece a la cuenta ${target.userId.slice(0, 8)}.`);
-    } catch (error) { this.error.set(errorMessage(error)); }
+    } catch (error) { if (this.isActiveWorkspace(workspaceId)) this.error.set(errorMessage(error)); }
     finally { this.mutationBusy.set(false); }
   }
   private async refreshAfterMutation(workspaceId: string, success: string): Promise<void> {
+    if (!this.isActiveWorkspace(workspaceId)) return;
     await this.workspaceStore.loadWorkspaces();
-    if (workspaceId !== this.workspaceStore.workspaceId()) return;
+    if (!this.isActiveWorkspace(workspaceId)) return;
     this.message.set(success);
     await this.refresh();
-    if (workspaceId === this.workspaceStore.workspaceId() && !this.error()) this.message.set(success);
+    if (this.isActiveWorkspace(workspaceId) && !this.error()) this.message.set(success);
   }
 }

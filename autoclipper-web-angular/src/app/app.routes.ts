@@ -10,6 +10,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "admin",
+    canActivate: [sessionGuard],
+    loadComponent: () =>
+      import("./features/administration/pages/admin-console.component").then(
+        (m) => m.AdminConsoleComponent,
+      ),
+  },
+  {
     path: "",
     loadComponent: () =>
       import("./layouts/public/public-layout.component").then(

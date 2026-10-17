@@ -18,6 +18,7 @@ export class WorkspaceStore {
     await this.create(name, "team");
   }
   private async create(name: string, kind: "personal" | "team"): Promise<void> {
+    const selectedBeforeCreate = this.workspaceId();
     if (name !== this.creationName || kind !== this.creationKind || !this.creationKey) {
       this.creationName = name;
       this.creationKind = kind;
@@ -30,7 +31,10 @@ export class WorkspaceStore {
     );
     this.creationKey = "";
     await this.loadWorkspaces();
-    if (this.workspaces().some((workspace) => workspace.id === created.id)) {
+    if (
+      (!selectedBeforeCreate || this.workspaceId() === selectedBeforeCreate) &&
+      this.workspaces().some((workspace) => workspace.id === created.id)
+    ) {
       this.workspaceId.set(created.id);
     }
   }

@@ -10,6 +10,9 @@ export { EditorApi } from '../src/app/features/editor/data-access/editor-api.ser
 export { DESIGN_MODE } from '../src/app/core/config/design-mode.token';
 export { createAccentCycle, LANDING_ACCENTS } from '../src/app/features/landing/landing-accent';
 export { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from '../src/app/features/auth/pages/auth-story';
+export { AuthComponent } from '../src/app/features/auth/pages/auth.component';
+export { buildLoginPayload } from '../src/app/features/auth/models/login-payload';
+export { safeAuthReturnUrl } from '../src/app/features/auth/models/auth-return-url';
 export { EDITOR_DISCARD_CONFIRMATION } from '../src/app/features/editor/state/discard-confirmation.token';
 export { editorChangesGuard } from '../src/app/features/editor/editor-changes.guard';
 export { editorIdGuard } from '../src/app/features/editor/editor-id.guard';
@@ -21,6 +24,8 @@ export { WorkspaceStore } from '../src/app/features/workspaces/data-access/works
 export { WorkspaceTeamApi } from '../src/app/features/workspaces/data-access/workspace-team.api';
 export { WorkspaceTeamComponent } from '../src/app/features/workspaces/pages/workspace-team.component';
 export { canInviteAs, canManageMember, canManageWorkspace, canTransferOwnership, hasWorkspaceLevel } from '../src/app/features/workspaces/models/workspace-permissions';
+export { AdminApi } from '../src/app/features/administration/data-access/admin-api.service';
+export { AdminConsoleComponent } from '../src/app/features/administration/pages/admin-console.component';
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
 export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';

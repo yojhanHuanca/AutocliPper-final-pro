@@ -62,17 +62,17 @@
               name="password"
               [(ngModel)]="password"
               required
-              [minlength]="mode === 'login' ? 1 : 12"
+              [minlength]="mode === 'login' || mode === 'invitation' ? 1 : 12"
               maxlength="128"
               [autocomplete]="
-                mode === 'login' ? 'current-password' : 'new-password'
+                mode === 'login' || mode === 'invitation' ? 'current-password' : 'new-password'
               "
           /></label>
-          @if (mode !== "login") {
+          @if (mode !== "login" && mode !== "invitation") {
             <small class="muted">Entre 12 y 128 caracteres.</small>
           }
         }
-        @if (mode === "login") {
+        @if (mode === "login" || (mode === "invitation" && invitationReady() && !session.user())) {
           <details>
             <summary>Mi cuenta usa autenticación en dos pasos</summary>
             <label
@@ -82,6 +82,8 @@
                 autocomplete="one-time-code"
             /></label>
           </details>
+        }
+        @if (mode === "login") {
           <a routerLink="/forgot" class="text-link">Olvidé mi contraseña</a>
         }
         <button

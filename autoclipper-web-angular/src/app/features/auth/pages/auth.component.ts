@@ -7,6 +7,8 @@ import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from "./auth-story";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
+import { buildLoginPayload } from "../models/login-payload";
+import { safeAuthReturnUrl } from "../models/auth-return-url";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -115,9 +117,15 @@ export class AuthComponent {
     )[this.mode];
   }
   async changeInvitationAccount(): Promise<void> {
-    await this.session.logout();
-    this.email = "";
-    this.message.set("");
+    this.error.set("");
+    try {
+      await this.session.logout();
+      this.email = "";
+      this.factor = "";
+      this.message.set("");
+    } catch (error) {
+      this.error.set(errorMessage(error));
+    }
   }
   async submit(): Promise<void> {
     if (this.busy()) return;
@@ -128,8 +136,9 @@ export class AuthComponent {
       if (this.mode === "invitation") {
         if (!this.token) throw new Error("El enlace de invitación no contiene un token válido. Pide a quien te invitó que envíe uno nuevo.");
         if (!this.session.user()) {
-          await this.session.login({ email: this.email.trim(), password: this.password });
+          await this.session.login(buildLoginPayload(this.email, this.password, this.factor));
           this.password = "";
+          this.factor = "";
           this.message.set("Sesión iniciada. Revisa que esta sea la cuenta que recibió el correo y pulsa «Aceptar invitación» para confirmar.");
           return;
         }
@@ -138,17 +147,8 @@ export class AuthComponent {
         this.message.set("Invitación aceptada. Ya tienes acceso al espacio.");
         await this.router.navigateByUrl("/app");
       } else if (this.mode === "login") {
-        await this.session.login({
-          email: this.email.trim(),
-          password: this.password,
-          ...(this.factor.trim() ? { factor: this.factor.trim() } : {}),
-        });
-        const requested = this.route.snapshot.queryParamMap.get("returnUrl");
-        await this.router.navigateByUrl(
-          requested?.startsWith("/app") && !requested.startsWith("//")
-            ? requested
-            : "/app",
-        );
+        await this.session.login(buildLoginPayload(this.email, this.password, this.factor));
+        await this.router.navigateByUrl(safeAuthReturnUrl(this.route.snapshot.queryParamMap.get("returnUrl")));
       } else if (this.mode === "register") {
         await this.api.register({
           name: this.name.trim(),
