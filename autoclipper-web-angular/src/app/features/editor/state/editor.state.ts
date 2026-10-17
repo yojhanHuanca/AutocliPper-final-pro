@@ -1,5 +1,6 @@
 import { DESIGN_MODE } from "../../../core/config/design-mode.token";
 import { EditorApi } from "../data-access/editor-api.service";
+import { HttpErrorResponse } from "@angular/common/http";
 import { Injectable, DestroyRef, computed, inject, signal } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import type { Response } from "../../../core/contracts/api-types";
@@ -17,6 +18,7 @@ export class EditorState {
   readonly design = inject(DESIGN_MODE);
   readonly id = this.route.snapshot.paramMap.get("id") ?? "";
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
+  readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
   readonly review = signal<Schema<"ReviewStateDto"> | null>(null);
   readonly history = signal<Schema<"EditorRevisionSummaryDto">[]>([]);
   readonly nextVersion = signal<number | null>(null);
@@ -27,6 +29,7 @@ export class EditorState {
   readonly busy = signal(false);
   readonly error = signal("");
   readonly loadNotice = signal("");
+  readonly conflict = signal(false);
   readonly message = signal("");
   readonly previewUrl = signal("");
   readonly previewVersion = signal<string | number>("");
@@ -162,15 +165,20 @@ export class EditorState {
     await this.run(async () => {
       const result = await this.api.edit(this.id);
       this.accept(result.draft, result.etag);
-      const labels = ["historial", "comentarios", "exportaciones", "revisión"];
+      const labels = ["metadatos del proyecto", "historial", "comentarios", "exportaciones", "revisión"];
       const results = await Promise.allSettled([
+        this.api.project(result.draft.projectId),
         this.loadHistory(),
         this.loadComments(),
         this.loadExports(),
         this.loadReview(),
       ]);
+      if (results[0].status === "fulfilled") this.project.set(results[0].value);
       const unavailable = results.flatMap((result, index) =>
-        result.status === "rejected" ? [labels[index]] : [],
+        result.status === "rejected" ||
+        (index === 3 && result.status === "fulfilled" && result.value === false)
+          ? [labels[index]]
+          : [],
       );
       if (unavailable.length)
         this.loadNotice.set(
@@ -231,7 +239,7 @@ export class EditorState {
       this.accept(saved.draft, saved.etag);
       this.message.set(`Revisión ${saved.draft.version} guardada.`);
       this.renderKey = "";
-      await Promise.all([this.loadHistory(), this.loadReview()]);
+      await this.refreshRevisionMetadata();
     });
   }
   async loadHistory(append = false): Promise<void> {
@@ -261,8 +269,22 @@ export class EditorState {
       this.message.set(
         `Revisión ${version} recuperada como revisión ${restored.draft.version}.`,
       );
-      await Promise.all([this.loadHistory(), this.loadReview()]);
+      await this.refreshRevisionMetadata();
     });
+  }
+  private async refreshRevisionMetadata(): Promise<void> {
+    const [history, review] = await Promise.allSettled([
+      this.loadHistory(),
+      this.loadReview(),
+    ]);
+    const unavailable = [
+      ...(history.status === "rejected" ? ["historial"] : []),
+      ...(review.status === "rejected" ? ["estado de revisión"] : []),
+    ];
+    if (unavailable.length)
+      this.loadNotice.set(
+        `El borrador se actualizó, pero no se pudo actualizar ${unavailable.join(" y ")}. Reintenta la carga para sincronizarlo.`,
+      );
   }
   async loadReview(): Promise<void> {
     if (!this.design) this.review.set(await this.api.review(this.id));
@@ -322,8 +344,8 @@ export class EditorState {
       await this.loadComments();
     });
   }
-  async loadExports(): Promise<void> {
-    if (this.design) return;
+  async loadExports(): Promise<boolean> {
+    if (this.design) return true;
     clearTimeout(this.timer);
     try {
       const result = await this.api.exports(this.id);
@@ -333,10 +355,12 @@ export class EditorState {
         result.items.some((e) => ["queued", "running"].includes(e.status))
       )
         this.timer = setTimeout(() => void this.loadExports(), 4000);
+      return true;
     } catch (error) {
       this.loadNotice.set(
         `No se pudieron cargar las exportaciones: ${errorMessage(error)}`,
       );
+      return false;
     }
   }
   async render(): Promise<void> {
@@ -390,11 +414,15 @@ export class EditorState {
     this.busy.set(true);
     this.error.set("");
     this.loadNotice.set("");
+    this.conflict.set(false);
     this.message.set("");
     try {
       await action();
     } catch (error) {
       this.error.set(errorMessage(error));
+      this.conflict.set(
+        error instanceof HttpErrorResponse && error.status === 412,
+      );
     } finally {
       this.busy.set(false);
     }

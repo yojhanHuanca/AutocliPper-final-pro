@@ -65,7 +65,7 @@ npm run test:live
 
 Esta suite requiere servicios ya saludables, Mailpit local, FFmpeg en PATH y whisper.cpp configurado. Crea cuentas `example.test`, un espacio y material de prueba identificados; no envía correo externo, no arranca/detiene servicios, no modifica SQL ni cambia infraestructura. Deja el proyecto QA para revisión. Usa la grabación sintética declarada en `../autoclipper-backend-microservices/tests/fixtures/README.md`; la inferencia y los artefactos son reales. No ejecutar durante migraciones o aceptación de otro chat.
 
-Resultado observado: **build de producción y typecheck aprobados; 24 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
+Resultado observado: **build de producción y typecheck aprobados; 26 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
 
 ## Estructura y diseño
 

@@ -74,3 +74,7 @@ Si falla una consulta secundaria al abrir un borrador, el editor conserva la com
 ### Concurrencia al guardar/restaurar revisiones
 
 PATCH y restore ahora consumen las respuestas HTTP completas para conservar el `ETag` cuando el servidor lo envía, y derivan el valor entre comillas de `draft.version` según la definición del contrato cuando no hay header. Ambos envían `If-Match` en las siguientes escrituras. La prueba verifica el token enviado en dos guardados consecutivos y una restauración, además de la preferencia por el header explícito. 24 pruebas aprobadas; typecheck y build aprobados. El gateway responde 200 en readiness; no se ejecutó una escritura real sobre un proyecto persistido.
+
+### Recorrido de proyectos, editor y consumo
+
+El editor consulta el proyecto real asociado al borrador, conserva borrador y formulario cuando falla una sección auxiliar, mantiene `If-Match` al guardar/restaurar, y ofrece recarga explícita para conflictos 412. Consumo y ledger ahora cargan por separado: si falla un endpoint, se conserva el resultado disponible y se identifica la sección incompleta. Los errores distinguen credenciales de login, sesión vencida, rechazo CSRF y falta de conexión. La carga/procesamiento sigue usando IDs y estados devueltos por la API; no hay progreso numérico inventado. Estas mejoras se validaron con 26 pruebas unitarias/arquitectura, typecheck y build. No se escribieron proyectos reales ni se repitió la aceptación integral que deja recursos locales.

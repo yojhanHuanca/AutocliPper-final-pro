@@ -8,8 +8,10 @@
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
-@if (error()) {
-  <div class="alert error" role="alert">{{ error() }}</div>
+@if (overviewError()) {
+  <div class="alert error" role="alert">
+    El resumen de consumo no se pudo cargar: {{ overviewError() }}
+  </div>
 }
 @if (consumption(); as usage) {
   <div class="stats-grid">
@@ -63,7 +65,7 @@
     <ac-icon name="chart" />
     <p>
       {{
-        busy() ? "Consultando consumo…" : "No hay datos de consumo consultados."
+        busy() ? "Consultando consumo…" : overviewError() ? "No fue posible consultar el resumen del periodo." : "No hay datos de consumo consultados."
       }}
     </p>
   </div>
@@ -78,6 +80,11 @@
     <h2>Movimientos del periodo.</h2>
     <span class="muted">Hasta 50 movimientos por página</span>
   </div>
+  @if (ledgerError()) {
+    <div class="alert error" role="alert">
+      No se pudo cargar el ledger. Los movimientos ya visibles se conservan. {{ ledgerError() }}
+    </div>
+  }
   <div class="table-scroll">
     <table>
       <thead>
@@ -102,7 +109,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5">No hay movimientos consultados en este periodo.</td>
+            <td colspan="5">{{ ledgerError() ? "No fue posible consultar los movimientos." : "No hay movimientos consultados en este periodo." }}</td>
           </tr>
         }
       </tbody>
@@ -113,9 +120,9 @@
       class="button"
       type="button"
       (click)="loadMore()"
-      [disabled]="busy()"
+      [disabled]="busy() || loadingMore()"
     >
-      Más movimientos
+      {{ loadingMore() ? "Cargando movimientos…" : "Más movimientos" }}
     </button>
   }
 </section>

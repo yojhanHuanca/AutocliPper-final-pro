@@ -21,5 +21,7 @@ export { sessionGuard } from '../src/app/core/guards/session.guard';
 export { workspaceGuard } from '../src/app/features/workspaces/workspace.guard';
 export { SettingsComponent } from '../src/app/features/settings/pages/settings.component';
 export { SettingsApi } from '../src/app/features/settings/data-access/settings-api.service';
+export { ConsumptionComponent, loadConsumptionSections } from '../src/app/features/consumption/pages/consumption.component';
+export { ConsumptionApi } from '../src/app/features/consumption/data-access/consumption-api.service';
 export { HttpErrorResponse } from '@angular/common/http';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';

@@ -9,8 +9,14 @@ export function errorMessage(error: unknown): string {
     return "No pudimos conectar con el servidor. Revisa la conexión y vuelve a intentarlo.";
   if (error.status === 412)
     return "Existe una versión más reciente. Recarga antes de guardar; tus cambios siguen en el formulario.";
-  if (error.status === 401)
-    return "La sesión terminó o las credenciales no son válidas.";
+  if (error.status === 401) {
+    if (/\/auth\/login(?:\?|$)/.test(error.url ?? ""))
+      return "El correo, la contraseña o el código de verificación no son válidos.";
+    return "Tu sesión venció. Inicia sesión de nuevo para continuar.";
+  }
+  const body = error.error as Partial<Schema<"ErrorResponse">> | null;
+  if (error.status === 403 && /csrf/i.test(body?.code ?? ""))
+    return "Falló la verificación de seguridad de la solicitud. Actualiza la página y vuelve a intentarlo.";
   if (
     error.status === 403 &&
     error.error?.code === "MANUAL_PROCESSING_NOT_ADMITTED"
@@ -20,6 +26,5 @@ export function errorMessage(error: unknown): string {
     return "Tu cuenta no tiene permiso para esta operación.";
   if (error.status === 429)
     return "Demasiadas solicitudes. Espera antes de volver a intentarlo.";
-  const body = error.error as Partial<Schema<"ErrorResponse">> | null;
   return `No se pudo completar la operación (${body?.code ?? error.status}).${body?.correlationId ? ` Referencia: ${body.correlationId}` : ""}`;
 }

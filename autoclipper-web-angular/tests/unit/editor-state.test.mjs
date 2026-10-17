@@ -5,16 +5,17 @@ import assert from 'node:assert/strict';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute } from '@angular/router';
-import { EditorState, EditorApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard } from '../../.local/tests/client.mjs';
+import { EditorState, EditorApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, HttpErrorResponse } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   let resolveEdit;
   let editCalls = 0, confirmations = 0, allowDiscard = false;
   const writeEtags=[];
+  let failSave = false;
   let failHistory = true;
   const response = new Promise(resolve => { resolveEdit = resolve; });
   let currentDraft;
-  const api = { edit:()=>{ editCalls++; return response; }, save:async(_id,body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
+  const api = { edit:()=>{ editCalls++; return response; }, project:async id=>({id,name:'Proyecto QA real'}), save:async(_id,body,etag)=>{writeEtags.push(etag);if(failSave)throw new HttpErrorResponse({status:412,statusText:'Precondition Failed'});currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
   TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
@@ -23,6 +24,7 @@ test('timeline and caption validation follow async load, local corrections and c
     resolveEdit({etag:'"1"',draft:currentDraft});
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(state.draft().id,'fixture-edit','A secondary endpoint failure must not hide the loaded draft.');
+    assert.equal(state.project().name,'Proyecto QA real');
     assert.match(state.loadNotice(),/historial/);
     assert.equal(state.error(),'');
     failHistory=false;
@@ -65,6 +67,14 @@ test('timeline and caption validation follow async load, local corrections and c
     await state.restore(1);
     assert.equal(state.draft().version,4);
     assert.deepEqual(writeEtags,['"1"','"2"','"3"'],'Save and restore must send the latest concurrency token.');
+    state.spec.aspect='vertical'; state.touchForm(); failSave=true;
+    await state.save();
+    assert.equal(state.conflict(),true);
+    assert.equal(state.dirty(),true,'A rejected write must retain the local form.');
+    allowDiscard=true; failSave=false;
+    await state.reload();
+    assert.equal(state.conflict(),false);
+    assert.equal(state.dirty(),false);
     state.history.set([{id:'existing-revision',version:1}]); state.nextVersion.set(1);
     failHistory=true;
     await state.moreHistory();

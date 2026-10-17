@@ -14,6 +14,16 @@ import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../models/ledger-labels';
 
+export function loadConsumptionSections(
+  api: Pick<ConsumptionApi, "overview" | "ledger">,
+  workspaceId: string,
+) {
+  return Promise.allSettled([
+    api.overview(workspaceId),
+    api.ledger(workspaceId),
+  ]);
+}
+
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-consumption",
@@ -32,9 +42,12 @@ export class ConsumptionComponent {
   readonly consumption = signal<Schema<"ConsumptionDto"> | null>(null);
   readonly ledger = signal<Schema<"UsageLedgerEntryDto">[]>([]);
   readonly nextId = signal<string | null>(null);
-  readonly error = signal("");
+  readonly overviewError = signal("");
+  readonly ledgerError = signal("");
   readonly busy = signal(false);
+  readonly loadingMore = signal(false);
   private generation = 0;
+  private loadedWorkspaceId = "";
   constructor() {
     effect(() => {
       const id = this.workspace.workspaceId();
@@ -43,32 +56,36 @@ export class ConsumptionComponent {
   }
   async load(id = this.workspace.workspaceId()): Promise<void> {
     const generation = ++this.generation;
-    this.error.set("");
+    if (id !== this.loadedWorkspaceId) {
+      this.loadedWorkspaceId = id;
+      this.loadingMore.set(false);
+      this.consumption.set(null);
+      this.ledger.set([]);
+      this.nextId.set(null);
+    }
+    this.overviewError.set("");
+    this.ledgerError.set("");
     this.busy.set(true);
-    this.consumption.set(null);
-    this.ledger.set([]);
-    this.nextId.set(null);
     try {
-      const [usage, page] = await Promise.all([
-        this.api.overview(id),
-        this.api.ledger(id),
-      ]);
+      const [usage, page] = await loadConsumptionSections(this.api, id);
       if (generation === this.generation) {
-        this.consumption.set(usage);
-        this.ledger.set(page.items);
-        this.nextId.set(page.nextBeforeId);
+        if (usage.status === "fulfilled") this.consumption.set(usage.value);
+        else this.overviewError.set(errorMessage(usage.reason));
+        if (page.status === "fulfilled") {
+          this.ledger.set(page.value.items);
+          this.nextId.set(page.value.nextBeforeId);
+        } else this.ledgerError.set(errorMessage(page.reason));
       }
-    } catch (error) {
-      if (generation === this.generation) this.error.set(errorMessage(error));
     } finally {
       if (generation === this.generation) this.busy.set(false);
     }
   }
   async loadMore(): Promise<void> {
-    if (!this.nextId() || this.busy()) return;
+    if (!this.nextId() || this.busy() || this.loadingMore()) return;
     const generation = this.generation;
     const id = this.workspace.workspaceId();
-    this.busy.set(true);
+    this.loadingMore.set(true);
+    this.ledgerError.set("");
     try {
       const page = await this.api.ledger(id, this.nextId());
       if (generation === this.generation) {
@@ -76,9 +93,9 @@ export class ConsumptionComponent {
         this.nextId.set(page.nextBeforeId);
       }
     } catch (error) {
-      if (generation === this.generation) this.error.set(errorMessage(error));
+      if (generation === this.generation) this.ledgerError.set(errorMessage(error));
     } finally {
-      if (generation === this.generation) this.busy.set(false);
+      if (generation === this.generation) this.loadingMore.set(false);
     }
   }
 }

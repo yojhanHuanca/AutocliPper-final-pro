@@ -2,6 +2,11 @@
   <div>
     <span class="eyebrow">EL ESTUDIO / EDITOR</span>
     <h1>{{ vm.draft()?.name ?? "Cada detalle cuenta." }}</h1>
+    @if (vm.draft()) {
+      <small class="muted">
+        Proyecto: {{ vm.project()?.name ?? "Metadatos no disponibles" }}
+      </small>
+    }
     <span class="muted">{{
       vm.design
         ? "Estructura del editor · Sin contenido de cuenta"
@@ -33,7 +38,14 @@
   </div>
 </section>
 @if (vm.error()) {
-  <div class="alert error" role="alert">{{ vm.error() }}</div>
+  <div class="alert error" role="alert">
+    {{ vm.error() }}
+    @if (vm.conflict()) {
+      <button class="button small" type="button" (click)="vm.reload()" [disabled]="vm.busy()">
+        Recargar y descartar cambios
+      </button>
+    }
+  </div>
 }
 @if (vm.loadNotice()) {
   <div class="alert" role="status">

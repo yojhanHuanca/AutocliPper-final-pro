@@ -16,6 +16,11 @@ function currentEtag(
 @Injectable({ providedIn: "root" })
 export class EditorApi {
   private readonly api = inject(ApiTransport);
+  project(id: string) {
+    return this.api.get<Schema<"ProjectResponseDto">>(
+      `/projects/${encodeURIComponent(id)}`,
+    );
+  }
   async edit(id: string) {
     const result = await this.api.getResponse<Schema<"EditorDraftDto">>(
       `/edits/${encodeURIComponent(id)}`,
