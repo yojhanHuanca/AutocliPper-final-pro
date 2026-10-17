@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoClipper · Concepto de hero con profundidad</title>
+  <style>
+    :root { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #17243d; background: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .shell { max-width: 1280px; margin: auto; padding: 22px 32px 50px; }
+    header { display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-bottom: 1px solid #e7ebf2; }
+    .brand { width: 173px; height: auto; object-fit: contain; }
+    .preview-tag { font-size: 11px; font-weight: 700; color: #2354bb; background: #edf3ff; border-radius: 999px; padding: 9px 13px; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 26px; margin: 42px 0 28px; }
+    .eyebrow { margin: 0 0 14px; color: #2354bb; font-size: 11px; font-weight: 750; letter-spacing: .07em; }
+    h1 { max-width: 830px; font-size: clamp(38px, 5.3vw, 70px); line-height: 1.02; letter-spacing: -.062em; font-weight: 660; margin: 0; }
+    h1 em { color: #2354bb; font-weight: inherit; }
+    .intro > p { max-width: 276px; color: #68748a; font-size: 14px; line-height: 1.65; margin: 0 0 4px; }
+    .stage { position: relative; isolation: isolate; min-height: 446px; display: grid; grid-template-columns: 46% 54%; align-items: center; overflow: hidden; background: linear-gradient(115deg,#eef3ff 0%,#f9fbff 60%,#fef5fc 100%); border: 1px solid #dfe7f6; border-radius: 20px; padding: 40px; }
+    .stage:before { content: ""; position: absolute; width: 700px; height: 700px; border: 1px solid #d7e2f6; border-radius: 50%; right: -140px; top: -130px; z-index: -1; }
+    .source { position: relative; max-width: 485px; width: 100%; background: #fff; border: 1px solid #dce4f2; padding: 10px; border-radius: 17px; box-shadow: 0 20px 50px #203a691c; animation: source-breathe 7.5s ease-in-out infinite; }
+    .source-frame { aspect-ratio: 16/10; position: relative; overflow: hidden; border-radius: 10px; background: #202e47; }
+    .source-frame img { width: 100%; height: 100%; object-fit: cover; object-position: 45% 39%; }
+    .source-frame:after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(transparent,#08162d9e); }
+    .source-badge { position: absolute; top: 14px; left: 14px; z-index: 1; border-radius: 6px; color: #fff; background: #142b54bb; padding: 8px 10px; font-size: 10px; font-weight: 700; }
+    .source-caption { position: absolute; bottom: 17px; left: 18px; z-index: 1; color: #fff; font-size: 17px; font-weight: 650; }
+    .source-meta { display: flex; align-items: center; justify-content: space-between; gap: 14px; color: #5e6e87; padding: 12px 5px 3px; font-size: 11px; }
+    .wave { display: flex; align-items: center; gap: 3px; height: 20px; flex: 1; max-width: 150px; }
+    .wave i { display: block; width: 3px; height: var(--h); background: #2354bb; border-radius: 3px; opacity: .8; }
+    .connector { position: absolute; left: 43%; right: 44%; top: 50%; border-top: 2px dashed #9bb0d8; transform: translateY(-50%); z-index: 3; }
+    .scissors { position: absolute; top: calc(50% - 25px); left: 45%; z-index: 4; width: 50px; height: 50px; display: grid; place-items: center; color: #fff; background: #2354bb; border: 5px solid #fff; border-radius: 50%; box-shadow: 0 7px 22px #2354bb4d; animation: cut-travel 7.5s ease-in-out infinite; }
+    .scissors svg { width: 23px; height: 23px; }
+    .clips { position: relative; height: 350px; margin-left: 4%; }
+    .clip { position: absolute; top: 18px; width: 178px; height: 315px; background: #14233d; border: 5px solid #fff; border-radius: 17px; overflow: hidden; box-shadow: 0 22px 40px #1d315346; transform-origin: center 85%; }
+    .clip img { width: 100%; height: 100%; object-fit: cover; }
+    .clip:after { content: ""; position: absolute; inset: 46% 0 0; background: linear-gradient(transparent,#06132bda); }
+    .clip span { position: absolute; top: 11px; left: 11px; z-index: 1; background: #fff; color: #2354bb; border-radius: 5px; padding: 4px 6px; font-size: 10px; font-weight: 750; }
+    .clip strong { position: absolute; bottom: 37px; left: 12px; right: 12px; z-index: 1; color: #fff; font-size: 20px; line-height: 1.13; letter-spacing: -.04em; text-align: center; }
+    .clip small { position: absolute; bottom: 13px; left: 0; right: 0; z-index: 1; color: #e1e9ff; font-size: 10px; text-align: center; }
+    .clip.one { left: 8%; filter: saturate(.85); animation: fan-one 7.5s ease-in-out infinite; }
+    .clip.two { left: 32%; z-index: 2; animation: fan-two 7.5s ease-in-out infinite; }
+    .clip.three { left: 56%; filter: saturate(.85); animation: fan-three 7.5s ease-in-out infinite; }
+    .clip.one img { object-position: 38% center; }
+    .clip.two img { object-position: center; }
+    .clip.three img { object-position: 70% center; }
+    .footer { display: flex; justify-content: space-between; gap: 18px; padding: 16px 2px; color: #758096; font-size: 11px; line-height: 1.55; }
+    .legend { color: #2354bb; font-weight: 750; }
+    @keyframes source-breathe { 0%,100% { transform: scale(1); } 38%,68% { transform: scale(.985); } }
+    @keyframes cut-travel { 0%,10%,86%,100% { transform: translateX(-14px) rotate(-18deg); } 39%,61% { transform: translateX(18px) rotate(13deg); } }
+    @keyframes fan-one { 0%,9% { opacity: .22; transform: translate(-36px,25px) rotate(0); } 26%,80% { opacity: 1; transform: translate(0,0) rotate(-10deg); } 100% { opacity: .22; transform: translate(10px,-8px) rotate(-12deg); } }
+    @keyframes fan-two { 0%,15% { opacity: .18; transform: translate(-56px,22px) scale(.92); } 34%,82% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: .18; transform: translate(10px,-8px) scale(1.03); } }
+    @keyframes fan-three { 0%,21% { opacity: .14; transform: translate(-72px,24px) rotate(0); } 42%,84% { opacity: 1; transform: translate(0,0) rotate(10deg); } 100% { opacity: .14; transform: translate(10px,-8px) rotate(12deg); } }
+    @media (max-width: 900px) { .stage { grid-template-columns: 1fr; gap: 44px; padding: 28px; }.source { max-width: 570px; }.connector,.scissors { display: none; }.clips { height: 290px; margin: 0; }.clip { top: 0; left: auto; width: 160px; height: 275px; }.clip.one { left: 11%; }.clip.two { left: 36%; }.clip.three { left: 61%; } }
+    @media (max-width: 600px) { .shell { padding: 12px 18px 30px; }.brand { width: 142px; }.preview-tag { font-size: 9px; }.intro { display: block; margin: 35px 0 21px; }.intro > p { margin-top: 16px; }.stage { padding: 18px; gap: 29px; min-height: 0; }.clips { height: 205px; }.clip { width: 117px; height: 203px; border-width: 3px; border-radius: 11px; }.clip.one { left: 2%; }.clip.two { left: 33%; }.clip.three { left: 64%; }.clip strong { font-size: 13px; bottom: 26px; }.clip small { font-size: 8px; }.clip span { font-size: 8px; }.footer { display: block; }.footer .legend { display: block; margin-bottom: 5px; } }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; }.clip.one { transform: rotate(-10deg); }.clip.three { transform: rotate(10deg); } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header><img class="brand" src="/images/autoclipper-logo-v4.webp" alt="AutoClipper" /><span class="preview-tag">PROPUESTA VISUAL · TESIS</span></header>
+    <div class="intro"><div><p class="eyebrow">UN VIDEO. MÁS DE UNA HISTORIA.</p><h1>Tu directo se convierte<br />en <em>nuevas posibilidades.</em></h1></div><p>Una escena guiada por movimiento: de la grabación original a distintos encuadres verticales.</p></div>
+    <div class="stage" aria-label="Concepto animado de un video que da lugar a tres clips verticales">
+      <div class="source">
+        <div class="source-frame"><img src="/images/creator-960.webp" alt="Creadora ficticia grabando en su estudio" /><span class="source-badge">VIDEO ORIGINAL · 16:9</span><strong class="source-caption">Un directo lleno de momentos.</strong></div>
+        <div class="source-meta"><span>grabacion_creador.mp4</span><span class="wave" aria-hidden="true"><i style="--h:50%"></i><i style="--h:84%"></i><i style="--h:39%"></i><i style="--h:72%"></i><i style="--h:100%"></i><i style="--h:46%"></i><i style="--h:82%"></i><i style="--h:58%"></i><i style="--h:92%"></i><i style="--h:45%"></i><i style="--h:69%"></i><i style="--h:94%"></i><i style="--h:53%"></i><i style="--h:78%"></i></span><span>48:12</span></div>
+      </div>
+      <div class="connector" aria-hidden="true"></div>
+      <div class="scissors" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="5" cy="6" r="3" stroke="currentColor" stroke-width="2"/><circle cx="5" cy="18" r="3" stroke="currentColor" stroke-width="2"/><path d="m8 8 12 12M8 16 20 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="clips" aria-hidden="true">
+        <div class="clip one"><img src="/images/creator-portrait-v1.webp" alt="" /><span>9:16</span><strong>La frase<br />que conecta.</strong><small>00:18 – 00:42</small></div>
+        <div class="clip two"><img src="/images/creator-portrait-v1.webp" alt="" /><span>9:16</span><strong>Una idea<br />vale un clip.</strong><small>01:05 – 01:29</small></div>
+        <div class="clip three"><img src="/images/creator-portrait-v1.webp" alt="" /><span>9:16</span><strong>Cuéntalo<br />a tu manera.</strong><small>02:11 – 02:35</small></div>
+      </div>
+    </div>
+    <div class="footer"><span class="legend">Vista previa de diseño · animación ilustrativa</span><span>La selección automática de momentos sigue en desarrollo; esta escena no representa un resultado real.</span></div>
+  </div>
+</body>
+</html>
