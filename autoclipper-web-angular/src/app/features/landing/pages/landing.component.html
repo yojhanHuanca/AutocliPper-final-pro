@@ -1,5 +1,10 @@
 <main id="main">
-  <section class="hero wrap">
+  <nav class="section-rail" aria-label="Secciones de la página">
+    @for (section of sectionLinks; track section.id) {
+      <a [href]="'#' + section.id" [class.current]="activeSection() === section.id" [attr.aria-current]="activeSection() === section.id ? 'location' : null">{{ section.label }}</a>
+    }
+  </nav>
+  <section class="hero wrap" id="inicio">
     <div class="eyebrow">
       <span class="live-dot"></span> EL SIGUIENTE CAPÍTULO DE TU CONTENIDO
     </div>
@@ -13,58 +18,14 @@
         >Crear mi primer clip <ac-icon name="arrow"
       /></a>
     </div>
-    <div
-      class="hero-art"
-      aria-label="Composición ilustrativa: un video se transforma en clips"
-    >
-      <div class="hero-image">
-        <picture
-          ><source
-            srcset="
-              /images/creator-960.webp   960w,
-              /images/creator-1440.webp 1440w
-            "
-            sizes="(max-width: 700px) 100vw, 70vw"
-            type="image/webp" />
-          <img
-            src="/images/creator-1440.webp"
-            width="1440"
-            height="960"
-            alt="Creadora ficticia conversando frente a un micrófono en un estudio de grabación"
-            fetchpriority="high" /></picture
-        ><span class="image-tag"
-          ><span></span> UNA HISTORIA. MUCHAS POSIBILIDADES.</span
-        >
-      </div>
-      <div class="cut-line"></div>
-      <div class="cut-tool"><ac-icon name="scissors" /></div>
-      <div class="floating-clip">
-        <img
-          src="/images/creator-portrait-v1.webp"
-          alt=""
-          width="720"
-          height="1279"
-        /><span class="clip-format">9:16</span
-        ><strong>Una idea puede<br /><mark>cambiarlo todo.</mark></strong
-        ><span class="clip-caption">Composición ilustrativa</span>
-      </div>
-      <div class="hero-timeline">
-        <ac-icon name="play" />
-        <div class="waveform">
-          @for (bar of bars; track $index) {
-            <i [style.height.%]="bar"></i>
-          }
-        </div>
-        <span>Un fragmento elegido por ti</span>
-      </div>
-    </div>
+    <ac-hero-depth />
     <div class="hero-footnote">
       <span>Transcripción local · Edición versionada · Exportación privada</span
       ><span>DESLIZA PARA DESCUBRIR ↓</span>
     </div>
   </section>
 
-  <ac-platform-carousel [reducedMotion]="reducedMotion()" />
+  <ac-platform-carousel id="plataformas" [reducedMotion]="reducedMotion()" />
 
   <section class="story-section wrap" id="proceso">
     <div class="section-intro">

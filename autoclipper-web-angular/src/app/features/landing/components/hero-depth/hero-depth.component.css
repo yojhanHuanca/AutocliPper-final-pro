@@ -1,0 +1,62 @@
+@layer components {
+  :host { display: block; }
+  .depth-stage { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .93fr); align-items: center; height: 440px; overflow: hidden; padding: 38px 5.5%; background: linear-gradient(115deg, #edf3ff, #f9fbff 61%, #fdf3fb); border: 1px solid #dfe6f5; border-radius: 14px; }
+  .depth-stage::before { content: ""; position: absolute; z-index: -1; width: 690px; height: 690px; right: -170px; top: -145px; border: 1px solid #d8e4f6; border-radius: 50%; }
+  .source-card { position: relative; z-index: 1; width: min(100%, 510px); padding: 9px; background: #fff; border: 1px solid #dae4f3; border-radius: 15px; box-shadow: 0 20px 46px #203a6928; animation: depth-breathe 7.5s ease-in-out infinite; }
+  .source-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 10; border-radius: 9px; background: #192b49; }
+  .source-frame picture,.source-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 47% 40%; }
+  .source-frame::after { content: ""; position: absolute; inset: 44% 0 0; background: linear-gradient(transparent, #071329b3); }
+  .source-badge { position: absolute; top: 13px; left: 13px; z-index: 1; padding: 7px 9px; color: #fff; background: #142b54c9; border-radius: 5px; font-size: 9px; font-weight: 730; }
+  .source-frame strong { position: absolute; bottom: 17px; left: 17px; z-index: 1; color: #fff; font-size: clamp(15px, 1.5vw, 21px); letter-spacing: -.035em; }
+  .source-footer { display: flex; align-items: center; justify-content: space-between; gap: 13px; padding: 10px 4px 2px; color: #62708a; font-size: 10px; white-space: nowrap; }
+  .source-wave { display: flex; align-items: center; justify-content: center; gap: 3px; width: 110px; height: 17px; }
+  .source-wave i { width: 3px; border-radius: 3px; background: var(--accent); }
+  .cut-path { position: absolute; left: 46%; width: 9%; top: 50%; border-top: 2px dashed #92a9d0; z-index: 2; }
+  .cut-icon { position: absolute; left: calc(49.8% - 23px); top: calc(50% - 23px); z-index: 4; display: grid; place-items: center; width: 46px; height: 46px; color: #fff; background: var(--accent); border: 4px solid #fff; border-radius: 50%; box-shadow: 0 7px 18px #2354bb50; animation: depth-cut 7.5s ease-in-out infinite; }
+  .cut-icon ac-icon { width: 23px; height: 23px; }
+  .clip-stack { position: relative; height: 315px; min-width: 0; margin-left: 2%; }
+  .clip-card { position: absolute; top: 11px; width: 37%; max-width: 180px; height: 285px; overflow: hidden; background: #192b49; border: 5px solid #fff; border-radius: 15px; box-shadow: 0 22px 40px #162b4c3d; transform-origin: center 85%; }
+  .clip-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .clip-card::after { content: ""; position: absolute; inset: 43% 0 0; background: linear-gradient(transparent, #07142ddd); }
+  .clip-card strong { position: absolute; z-index: 1; bottom: 35px; left: 9px; right: 9px; color: #fff; font-size: clamp(13px, 1.36vw, 19px); text-align: center; line-height: 1.13; letter-spacing: -.04em; }
+  .clip-card small { position: absolute; z-index: 1; bottom: 12px; left: 0; right: 0; color: #e5edff; text-align: center; font-size: 9px; }
+  .clip-ratio { position: absolute; z-index: 1; top: 10px; left: 10px; padding: 4px 6px; color: var(--accent); background: #fff; border-radius: 4px; font-size: 9px; font-weight: 760; }
+  .clip-0 { left: 5%; animation: depth-left 7.5s ease-in-out infinite; }
+  .clip-1 { left: 32%; z-index: 2; animation: depth-center 7.5s ease-in-out infinite; }
+  .clip-2 { left: 59%; animation: depth-right 7.5s ease-in-out infinite; }
+  .stage-disclosure { position: absolute; right: 20px; bottom: 16px; color: #5e6b82; font-size: 10px; }
+  @keyframes depth-breathe { 0%, 100% { transform: scale(1); } 40%,70% { transform: scale(.985); } }
+  @keyframes depth-cut { 0%, 10%, 90%, 100% { transform: translateX(-12px) rotate(-17deg); } 42%, 65% { transform: translateX(16px) rotate(12deg); } }
+  @keyframes depth-left { 0%,9%,100% { opacity: .25; transform: translate(-24px,20px) rotate(-3deg); } 28%,84% { opacity: 1; transform: translate(0,0) rotate(-9deg); } }
+  @keyframes depth-center { 0%,15%,100% { opacity: .2; transform: translate(-34px,20px) scale(.94); } 36%,84% { opacity: 1; transform: translate(0,0) scale(1); } }
+  @keyframes depth-right { 0%,21%,100% { opacity: .16; transform: translate(-45px,20px) rotate(3deg); } 44%,84% { opacity: 1; transform: translate(0,0) rotate(9deg); } }
+  @media (max-width: 1050px) { .depth-stage { height: 400px; padding-inline: 4%; }.clip-stack { height: 275px; }.clip-card { height: 250px; } }
+  @media (max-width: 760px) {
+    .depth-stage { grid-template-columns: 1fr; align-content: start; gap: 20px; height: auto; padding: 18px 18px 32px; }
+    .source-card { width: min(100%, 510px); margin-inline: auto; }
+    .cut-path,.cut-icon { display: none; }
+    .clip-stack { width: min(100%, 510px); height: 225px; margin: 0 auto; }
+    .clip-card { top: 0; width: 31%; height: 225px; border-width: 3px; border-radius: 10px; }
+    .clip-0 { left: 2%; }.clip-1 { left: 34%; }.clip-2 { left: 66%; }
+    .clip-card strong { font-size: clamp(11px, 2.2vw, 15px); bottom: 28px; }
+    .clip-card small { font-size: 8px; bottom: 10px; }
+    .stage-disclosure { bottom: 5px; right: 12px; font-size: 9px; }
+  }
+  @media (max-width: 560px) {
+    .depth-stage { gap: 17px; padding: 13px 13px 28px; }
+    .source-frame strong { font-size: 14px; bottom: 11px; left: 10px; }
+    .source-badge { font-size: 8px; top: 9px; left: 9px; }
+    .source-footer { font-size: 8px; padding-top: 7px; }
+    .source-wave { width: 70px; gap: 2px; }
+    .clip-stack { height: 204px; }
+    .clip-card { height: 203px; }
+    .clip-card strong { font-size: 11px; }
+    .clip-ratio { font-size: 8px; top: 7px; left: 7px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .source-card,.cut-icon,.clip-card { animation: none; }
+    .clip-0 { opacity: 1; transform: rotate(-9deg); }
+    .clip-1 { opacity: 1; transform: none; }
+    .clip-2 { opacity: 1; transform: rotate(9deg); }
+  }
+}

@@ -1,6 +1,7 @@
 import { BrandComponent } from '../../../shared/ui/brand/brand.component';
 import {
   Component,
+  AfterViewInit,
   DestroyRef,
   inject,
   signal,
@@ -11,10 +12,11 @@ import { RouterLink } from "@angular/router";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { createAccentCycle, LANDING_ACCENTS } from '../landing-accent';
 import { PlatformCarouselComponent } from '../components/platform-carousel/platform-carousel.component';
+import { HeroDepthComponent } from '../components/hero-depth/hero-depth.component';
 
 @Component({
   selector: "ac-landing",
-  imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent],
+  imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent, HeroDepthComponent],
   host: {
     "[class.motion-paused]": "reducedMotion()",
     "[style.--accent]": "accent().color",
@@ -24,9 +26,17 @@ import { PlatformCarouselComponent } from '../components/platform-carousel/platf
   templateUrl: "./landing.component.html",
   styleUrl: "./landing.component.css",
 })
-export class LandingComponent {
+export class LandingComponent implements AfterViewInit {
   private readonly destroy = inject(DestroyRef);
   readonly scene = signal(0);
+  readonly activeSection = signal('inicio');
+  readonly sectionLinks = [
+    { id: 'inicio', label: 'Inicio' },
+    { id: 'plataformas', label: 'Plataformas' },
+    { id: 'proceso', label: 'Cómo funciona' },
+    { id: 'estudio', label: 'El estudio' },
+    { id: 'alcance', label: 'Disponible hoy' },
+  ];
   readonly reducedMotion = signal(false);
   private readonly accentIndex = signal(0);
   readonly accent = computed(() => LANDING_ACCENTS[this.accentIndex()]);
@@ -44,6 +54,24 @@ export class LandingComponent {
       cycle.destroy();
       preference.removeEventListener('change', onPreference);
     });
+  }
+  ngAfterViewInit(): void {
+    const updateActive = () => {
+      let current = 'inicio';
+      for (const section of this.sectionLinks) {
+        const element = document.getElementById(section.id);
+        if (element && element.getBoundingClientRect().top <= window.innerHeight * .38) current = section.id;
+      }
+      if (document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 60) current = 'alcance';
+      this.activeSection.set(current);
+    };
+    window.addEventListener('scroll', updateActive, { passive: true });
+    window.addEventListener('resize', updateActive);
+    this.destroy.onDestroy(() => {
+      window.removeEventListener('scroll', updateActive);
+      window.removeEventListener('resize', updateActive);
+    });
+    updateActive();
   }
   readonly bars = Array.from(
     { length: 64 },

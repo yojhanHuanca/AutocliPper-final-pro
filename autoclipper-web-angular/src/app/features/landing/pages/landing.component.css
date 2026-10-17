@@ -1,6 +1,19 @@
 @layer components {
 :host { display: block; }
-:host :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebrow, .chapter-number) {
+main { position: relative; }
+main #inicio, main #proceso, main #estudio, main #alcance, main #plataformas { scroll-margin-top: 86px; }
+.section-rail { display: none; }
+@media (min-width: 1250px) {
+  main { padding-left: 164px; }
+  .section-rail { position: fixed; z-index: 15; top: 50%; left: 22px; transform: translateY(-50%); display: grid; width: 139px; border-left: 2px solid #dce4f2; }
+  .section-rail a { position: relative; display: block; padding: 12px 0 12px 16px; color: #667185; font-size: 12px; line-height: 1.2; text-decoration: none; transition: color 180ms ease; }
+  .section-rail a::before { content: ""; position: absolute; left: -2px; top: 7px; bottom: 7px; width: 2px; background: transparent; }
+  .section-rail a.current { color: var(--text); font-weight: 700; }
+  .section-rail a.current::before { background: var(--accent); }
+  .section-rail a:hover { color: var(--accent); }
+  .section-rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+:host :is(.live-dot, h1 em, .button, .scene-tabs button, .eyebrow, .chapter-number) {
   transition: color 900ms ease, background-color 900ms ease, border-color 900ms ease;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -43,183 +56,6 @@
   font-size: 14px;
   margin: 0;
   line-height: 1.7;
-}
-.hero-art {
-  height: 480px;
-  position: relative;
-  isolation: isolate;
-  background: var(--surface);
-  border-radius: 13px;
-  overflow: hidden;
-  padding: 0 0 0 0;
-}
-.hero-image {
-  height: 100%;
-  width: 84%;
-  overflow: hidden;
-}
-.hero-image picture,
-.hero-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 46%;
-}
-.hero-image:after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, #0006, transparent 55%);
-  pointer-events: none;
-}
-.image-tag {
-  position: absolute;
-  top: 24px;
-  left: 25px;
-  color: white;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2;
-}
-.image-tag > span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: white;
-}
-.cut-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 26%;
-  border-left: 1px dashed #fff9;
-  z-index: 2;
-}
-.cut-tool {
-  position: absolute;
-  top: 37%;
-  right: calc(26% - 28px);
-  z-index: 4;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  display: grid;
-  place-items: center;
-  animation: crop-arrive 800ms ease-out both;
-}
-.cut-tool ac-icon {
-  width: 30px;
-  height: 30px;
-}
-.floating-clip {
-  position: absolute;
-  right: 7%;
-  top: 27px;
-  width: 214px;
-  height: 356px;
-  background: #242420;
-  border: 6px solid #fff;
-  border-radius: 15px;
-  box-shadow: 0 16px 45px #0004;
-  overflow: hidden;
-  transform: rotate(7deg);
-  z-index: 3;
-  animation: clip-arrive 900ms 150ms ease-out both;
-}
-.floating-clip > img {
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-  object-position: 48% center;
-}
-.floating-clip:after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, #0009, transparent 70%);
-}
-.clip-format {
-  position: absolute;
-  right: 12px;
-  top: 13px;
-  border: 1px solid #fff7;
-  color: #fff;
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: 10px;
-  z-index: 1;
-}
-.floating-clip strong {
-  position: absolute;
-  bottom: 45px;
-  left: 10px;
-  right: 10px;
-  color: white;
-  text-align: center;
-  font-size: 22px;
-  line-height: 1.18;
-  letter-spacing: -1px;
-  z-index: 1;
-}
-.floating-clip mark {
-  color: white;
-  background: var(--accent);
-  padding: 0 4px;
-}
-.clip-caption {
-  position: absolute;
-  bottom: 16px;
-  left: 10px;
-  right: 10px;
-  text-align: center;
-  color: #fffd;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  z-index: 1;
-}
-.hero-timeline {
-  position: absolute;
-  bottom: 18px;
-  left: 23px;
-  right: 23px;
-  z-index: 4;
-  background: #fff;
-  border: 1px solid #fff8;
-  box-shadow: 0 8px 30px #0002;
-  padding: 12px 16px;
-  display: flex;
-  gap: 22px;
-  align-items: center;
-  border-radius: 8px;
-}
-.hero-timeline > ac-icon {
-  width: 15px;
-  height: 15px;
-  color: var(--accent);
-}
-.hero-timeline > span {
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.waveform {
-  height: 24px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-}
-.waveform i {
-  width: 3px;
-  flex: 1;
-  background: var(--accent);
-  opacity: 0.65;
-  border-radius: 2px;
 }
 .hero-footnote {
   display: flex;
@@ -510,9 +346,7 @@
 }
 
 @layer responsive {
-  @media (min-width:1600px) { .hero-art { height:530px; } }
   @media (max-width:1050px) {
-    .hero-art { height:410px; }.floating-clip { width:185px;height:310px;right:5%; }
     .hero h1 { font-size:73px; }.hero-bottom p { max-width:48ch; }.story-layout { gap:30px; }
     .studio-inspector { padding:24px; }.studio-inspector h3 { font-size:30px; }.studio-media { padding:18px; }
     .caption-sheet { padding:18px; }.studio-composition { grid-template-columns:45px minmax(0,1.15fr) minmax(0,1fr); }
@@ -520,10 +354,7 @@
   @media (max-width:800px) {
     .hero { padding-top:40px; }.hero h1 { font-size:clamp(46px,8vw,69px); line-height:1.04; }
     .hero-bottom { align-items:flex-start; }.hero-bottom p { font-size:13px; }.hero-bottom .button { flex-shrink:0; padding:13px; font-size:12px; }
-    .hero-art { height:360px; }.floating-clip { width:155px;height:260px;right:5%;top:20px;border-width:4px; }
-    .floating-clip strong { font-size:18px; }.hero-timeline { left:15px;right:15px;padding:12px;gap:12px; }
-    .hero-timeline > span { font-size:11px; }.waveform { gap:2px; }.cut-tool { width:40px;height:40px;right:calc(26% - 20px); }
-    .cut-tool ac-icon { width:22px;height:22px; }.hero-footnote { flex-wrap:wrap;gap:10px;font-size:10px; }.hero-footnote > span:last-child { display:none; }
+    .hero-footnote { flex-wrap:wrap;gap:10px;font-size:10px; }.hero-footnote > span:last-child { display:none; }
     .story-section { padding-top:62px; }
     .story-layout { grid-template-columns:minmax(0,1fr);gap:20px; }.story-screen { max-width:580px;width:100%;margin-inline:auto; }
     .story-chapters { grid-template-columns:repeat(2,minmax(0,1fr));gap:0 25px; }.chapter { gap:8px 12px;padding:20px 0; }
@@ -537,11 +368,6 @@
     .hero { padding-top:30px; }.hero > .eyebrow { font-size:9px;letter-spacing:.09em; }
     .hero h1 { font-size:clamp(40px,11vw,55px);margin:22px 0; }.hero-bottom { display:block; }
     .hero-bottom p { font-size:14px;line-height:1.7;margin-bottom:22px;max-width:36ch; }.hero-bottom .button { padding:14px 18px; font-size:13px; }
-    .hero-art { height:335px; }.hero-image { width:100%; }.hero-image img { object-position:43% center; }
-    .floating-clip { width:135px;height:235px;right:6%;top:28px; }.floating-clip strong { font-size:16px;bottom:38px; }
-    .clip-caption { font-size:8px;bottom:14px;letter-spacing:0; }.clip-format { font-size:10px; }
-    .image-tag { left:14px;top:15px;font-size:8px;letter-spacing:.08em;max-width:88%; }.cut-line { right:41%;top:40px; }
-    .cut-tool { right:calc(41% - 20px);top:40%; }.hero-timeline { bottom:14px;padding:10px; }.hero-timeline > span { display:none; }
     .hero-footnote { align-items:flex-start;gap:4px; }.hero-footnote > span:first-child { font-size:11px;line-height:1.6;max-width:28ch; }
     .section-intro h2 { font-size:clamp(31px,8.5vw,42px);line-height:1.12; }.section-intro > .eyebrow { font-size:9px;letter-spacing:.1em; }
     .section-intro > p { font-size:14px;max-width:35ch; }.story-section { padding-top:48px; }.story-layout { margin-top:25px;gap:10px; }
@@ -569,7 +395,5 @@
 @keyframes scene-arrive { from { opacity:.4;transform:translateY(5px); } to { opacity:1;transform:translateY(0); } }
 @keyframes file-check { from { transform:scaleX(.12); } to { transform:scaleX(1); } }
 @keyframes audio-read { from { left:0; } to { left:100%; } }
-@keyframes clip-arrive { from { opacity:0;transform:translateX(-24px) rotate(0); } to { opacity:1;transform:translateX(0) rotate(7deg); } }
-@keyframes crop-arrive { from { opacity:0;transform:scale(.6); } to { opacity:1;transform:scale(1); } }
 :host(.motion-paused) * { animation:none !important;transition:none !important; }
 @media (prefers-reduced-motion:reduce) { :host * { animation:none !important;transition:none !important; } }
