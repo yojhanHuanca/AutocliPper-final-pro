@@ -33,6 +33,9 @@ export class EditorState {
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
   readonly sourceDuration = signal<number | null>(null);
+  readonly transcriptSegments = signal<Schema<"TranscriptSegmentDto">[]>([]);
+  readonly transcriptLoading = signal(false);
+  readonly transcriptError = signal("");
   readonly collaborationRole = computed(() => {
     const project = this.project();
     if (!project || !this.workspaceStore.loaded()) return "loading" as const;
@@ -199,6 +202,9 @@ export class EditorState {
     this.draft.set(null);
     this.project.set(null);
     this.sourceDuration.set(null);
+    this.transcriptSegments.set([]);
+    this.transcriptLoading.set(false);
+    this.transcriptError.set("");
     this.review.set(null);
     this.history.set([]);
     this.nextVersion.set(null);
@@ -322,7 +328,11 @@ export class EditorState {
       const result = await this.api.edit(this.id);
       if (!this.isCurrentEdit(generation)) return;
       this.accept(result.draft, result.etag);
-      const labels = ["metadatos del proyecto", "metadatos de la fuente", "historial", "comentarios", "exportaciones", "revisión"];
+      const analysisId = this.analysisId;
+      this.transcriptSegments.set([]);
+      this.transcriptError.set("");
+      this.transcriptLoading.set(!!analysisId);
+      const labels = ["metadatos del proyecto", "metadatos de la fuente", "historial", "comentarios", "exportaciones", "revisión", "transcripción vinculada"];
       const results = await Promise.allSettled([
         this.api.project(result.draft.projectId),
         this.projectsApi.upload(result.draft.uploadId),
@@ -330,6 +340,7 @@ export class EditorState {
         this.loadComments(),
         this.loadExports(),
         this.loadReview(),
+        analysisId ? this.api.analysis(analysisId) : Promise.resolve(null),
       ]);
       if (!this.isCurrentEdit(generation)) return;
       if (results[0].status === "fulfilled") this.project.set(results[0].value);
@@ -337,6 +348,20 @@ export class EditorState {
       if (upload.status === "fulfilled" && upload.value.projectId === result.draft.projectId && upload.value.state === "confirmed" && upload.value.inspection?.status === "succeeded") {
         const measured = upload.value.inspection.result?.durationSeconds;
         if (measured && Number.isFinite(measured) && measured > 0) this.sourceDuration.set(measured);
+      }
+      const transcript = results[6];
+      this.transcriptLoading.set(false);
+      if (analysisId && transcript.status === "fulfilled") {
+        const analysis = transcript.value;
+        if (analysis?.status === "succeeded" && analysis.transcript) {
+          this.transcriptSegments.set(analysis.transcript.segments);
+        } else {
+          this.transcriptError.set(
+            "La transcripción vinculada todavía no está disponible para esta revisión.",
+          );
+        }
+      } else if (analysisId && transcript.status === "rejected") {
+        this.transcriptError.set(errorMessage(transcript.reason));
       }
       const unavailable = results.flatMap((result, index) =>
         result.status === "rejected" ||

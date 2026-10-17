@@ -21,6 +21,11 @@ export class EditorApi {
       `/projects/${encodeURIComponent(id)}`,
     );
   }
+  analysis(id: string) {
+    return this.api.get<Schema<"AnalysisStatusDto">>(
+      `/analyses/${encodeURIComponent(id)}`,
+    );
+  }
   async edit(id: string) {
     const result = await this.api.getResponse<Schema<"EditorDraftDto">>(
       `/edits/${encodeURIComponent(id)}`,

@@ -6,4 +6,9 @@
   .cue-count { display: block; font-size: 11px; margin: -6px 0 12px; }
   .cue-error { color: #9b2424; font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
   .caption-cue [aria-invalid="true"] { border-color: #9b2424; }
+  .transcript-summary { margin: 18px 0 8px; font-size: 11px; }
+  .transcript-segments { display: grid; gap: 8px; list-style: none; margin: 0 0 20px; padding: 0; }
+  .transcript-segments li { display: grid; gap: 5px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .transcript-segments time { color: var(--accent); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .transcript-segments p { margin: 0; color: var(--text); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 }

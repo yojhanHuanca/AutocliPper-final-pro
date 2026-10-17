@@ -9,6 +9,23 @@
 >
 @if (vm.captionSource === "transcript") {
   <p>Usamos la transcripción autorizada vinculada a este borrador. El servidor conserva su procedencia y tiempos.</p>
+  @if (vm.transcriptLoading()) {
+    <p class="muted" role="status">Cargando segmentos de la transcripción…</p>
+  } @else if (vm.transcriptError()) {
+    <p class="cue-error" role="alert">{{ vm.transcriptError() }}</p>
+  } @else if (vm.transcriptSegments().length) {
+    <p class="muted transcript-summary" role="status">{{ vm.transcriptSegments().length }} segmentos · tiempos de la fuente original</p>
+    <ol class="transcript-segments" aria-label="Segmentos de la transcripción vinculada">
+      @for (segment of vm.transcriptSegments(); track $index) {
+        <li>
+          <time>{{ segment.startSeconds | number: "1.1-2" }}–{{ segment.endSeconds | number: "1.1-2" }} s</time>
+          <p>{{ segment.text }}</p>
+        </li>
+      }
+    </ol>
+  } @else if (vm.analysisId) {
+    <p class="muted">La transcripción vinculada no contiene segmentos.</p>
+  }
 }
 @if (vm.captionSource === "user") {
   <p>Los tiempos corresponden al video original. Usa texto simple, sin etiquetas.</p>
