@@ -10,8 +10,10 @@
             name="start"
             [(ngModel)]="vm.spec.startSeconds" (ngModelChange)="vm.touchForm()"
             min="0"
+            [max]="vm.sourceDuration() ?? null"
             step="0.1"
             required
+            [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1"
             [disabled]="vm.design || !vm.canEditCollaboration()" /></label
         ><label
           >Fin (s)<input
@@ -19,11 +21,21 @@
             name="end"
             [(ngModel)]="vm.spec.endSeconds" (ngModelChange)="vm.touchForm()"
             min="0.1"
+            [max]="vm.sourceDuration() ?? null"
             step="0.1"
             required
+            [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1 || vm.spec.endSeconds - vm.spec.startSeconds > 120"
             [disabled]="vm.design || !vm.canEditCollaboration()"
         /></label>
       </div>
+      @if (vm.sourceDuration(); as duration) {
+        <p class="source-duration-note">Duración medida de la fuente: {{ duration | number: "1.1-1" }} s.</p>
+      } @else {
+        <p class="source-duration-note">Sin duración medida disponible; el rango se verificará al guardar.</p>
+      }
+      @if (vm.sourceRangeInvalid()) {
+        <p class="field-error" role="alert">El final debe estar dentro de la duración medida de la fuente.</p>
+      }
       <label
         >Formato<select
           name="aspect"
@@ -63,12 +75,12 @@
       >
       @if (vm.splitEnabled) {
         <label
-          >ID de segunda carga autorizada<input
+        >ID de segunda carga autorizada<input
             name="secondary"
             [(ngModel)]="vm.secondaryUploadId" (ngModelChange)="vm.touchForm()"
             required
             [disabled]="vm.design || !vm.canEditCollaboration()"
-            placeholder="UUID de carga del mismo espacio" /></label
+            placeholder="UUID de carga del mismo espacio" /><small>Por seguridad, el editor solo permite cargar el UUID; el contrato aún no ofrece una lista de fuentes del espacio. Usa una carga confirmada e inspeccionada del mismo espacio.</small></label
         ><label
           >Distribución<select
             name="layout"
@@ -124,6 +136,7 @@
           vm.design ||
           !vm.canEditCollaboration() ||
           vm.busy() ||
+          vm.sourceRangeInvalid() ||
           specForm.invalid ||
           !vm.dirty() ||
           !vm.draft()

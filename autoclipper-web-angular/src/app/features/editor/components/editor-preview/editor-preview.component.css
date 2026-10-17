@@ -91,5 +91,11 @@ ac-editor-preview {
 .editor-stage {
   height: 100%;
 }
+@media (max-width: 560px) {
+  .editor-stage { height: auto; min-height: 0; }
+  .video-stage { min-height: clamp(220px, 68vw, 300px); }
+  .preview-label { font-size: 11px; padding: 12px; }
+  .preview-foot { font-size: 11px; }
+}
 
 }

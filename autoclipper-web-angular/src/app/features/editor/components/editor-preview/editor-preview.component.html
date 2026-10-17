@@ -1,7 +1,7 @@
 <section class="editor-stage">
   <div class="preview-label">
     <span>{{
-      vm.previewUrl() ? "Render real exportado" : "Área de reproducción"
+      vm.previewUrl() ? "Exportación renderizada" : "Sin vista previa renderizada"
     }}</span
     ><span>{{
       vm.previewVersion()
@@ -35,8 +35,8 @@
   </div>
   <div class="preview-foot">
     <ac-icon name="shield" /><span
-      >Las modificaciones del inspector se aplican al guardar y exportar. No se
-      simula un render interactivo.</span
+      >@if (vm.dirty() && vm.previewUrl()) { Hay cambios pendientes. El video mostrado corresponde a la revisión guardada, no a estos cambios. } @else if (vm.previewUrl()) { El video mostrado es el render real de una exportación terminada. } @else { Los cambios del inspector se aplican al guardar y exportar; no hay una vista previa renderizada seleccionada. }
+      No se simula un render interactivo.</span
     >
   </div>
 </section>

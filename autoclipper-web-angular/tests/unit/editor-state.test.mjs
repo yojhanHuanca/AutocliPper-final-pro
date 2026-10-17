@@ -6,7 +6,7 @@ import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { EditorState, EditorApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, EditorNavigationService, WorkspaceStore, SessionStore, HttpErrorResponse } from '../../.local/tests/client.mjs';
+import { EditorState, EditorApi, ProjectsApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, EditorNavigationService, WorkspaceStore, SessionStore, HttpErrorResponse } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   const routeParams = new BehaviorSubject(new Map([['id','fixture-edit']]));
@@ -22,7 +22,7 @@ test('timeline and caption validation follow async load, local corrections and c
   let reviewValue={version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]};
   const commentItems=[]; let commentBody;
   const collaboration={review:async()=>reviewValue,comments:async()=>({items:commentItems,nextBeforeId:null}),createComment:async(_id,body)=>{commentBody=body;const item={id:'comment-1',revisionVersion:1,authorId:'author-1',timeSeconds:body.timeSeconds,text:body.text,version:1,createdAt:'2026-01-01T00:00:00Z',deletedAt:null};commentItems.unshift(item);return item;},deleteComment:async(_id,_commentId,body)=>{const item={...commentItems[0],version:body.version+1,deletedAt:'2026-01-02T00:00:00Z'};commentItems[0]=item;return item;},requestReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'review'},returnReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'draft'},approve:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'approved',approvedRevisionVersion:1}};
-  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:workspaceRole}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:ProjectsApi,useValue:{upload:async()=>({id:'fixture-upload',projectId:'fixture-project',state:'confirmed',bytes:123,expiresAt:'2026-01-01T00:00:00Z',inspection:{status:'succeeded',result:{durationSeconds:42,format:'mp4',width:1920,height:1080,videoCodec:'h264',audioCodec:'aac'}}})}},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:workspaceRole}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     assert.equal(state.timeline().endSeconds,30);
@@ -31,15 +31,23 @@ test('timeline and caption validation follow async load, local corrections and c
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(state.draft().id,'fixture-edit','A secondary endpoint failure must not hide the loaded draft.');
     assert.equal(state.project().name,'Proyecto QA real');
+    assert.equal(state.sourceDuration(),42,'The measured duration is loaded only from the confirmed source upload.');
     assert.match(state.loadNotice(),/historial/);
     assert.equal(state.error(),'');
+    state.setTimelineStart(41.9);
+    assert.equal(state.spec.startSeconds,17.9,'Start adjustment cannot cross the selected end or leave less than 0.1 seconds.');
+    state.setTimelineEnd(99);
+    assert.equal(state.spec.endSeconds,42,'Timeline end adjustment stays inside measured source bounds.');
+    state.setTimelineEnd(132);
+    assert.equal(state.spec.endSeconds,42,'Timeline end adjustment also respects the 120 second clip limit.');
+    state.spec.startSeconds=12; state.spec.endSeconds=18; state.touchForm();
     failHistory=false;
-    assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:18,captionSource:'transcript'});
+    assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:18,captionSource:'transcript',sourceDuration:42});
     assert.equal(state.dirty(),false);
     assert.equal(editorChangesGuard({vm:state}),true);
     assert.equal(confirmations,0);
     state.spec.endSeconds=17; state.captionSource='none'; state.touchForm();
-    assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:17,captionSource:'none'});
+    assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:17,captionSource:'none',sourceDuration:42});
     assert.equal(state.dirty(),true);
     state.captionSource='user'; state.cues=[{startSeconds:12,endSeconds:18,text:''}]; state.touchForm();
     assert.equal(state.invalidCaptions(),true);
@@ -108,6 +116,7 @@ test('timeline and caption validation follow async load, local corrections and c
     routeParams.next(new Map([['id','next-edit']]));
     assert.equal(state.id,'next-edit');
     assert.equal(state.draft(),null,'The previous draft must disappear before the next response arrives.');
+    assert.equal(state.sourceDuration(),null,'The previous source metadata must clear before switching drafts.');
     assert.deepEqual(state.history(),[]);
     assert.deepEqual(state.comments(),[]);
     assert.equal(state.review(),null);
@@ -123,7 +132,7 @@ test('late responses from a previous edit cannot overwrite the reused editor', a
   const api={edit:async id=>({draft:makeDraft(id),etag:`"${id}"`}),project:async id=>({id,name:id,workspaceId:`workspace-${id}`}),history:id=>id==='edit-a'&&historyAIsLate?new Promise(resolve=>{resolveHistoryA=resolve;}):Promise.resolve({items:[{id:`history-${id}`}],nextBeforeVersion:null}),comments:async()=>({items:[],nextBeforeId:null}),exports:async()=>({items:[]})};
   const collaboration={review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]}),comments:async()=>({items:[],nextBeforeId:null})};
   let confirmDiscard=false;
-  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>confirmDiscard},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','edit-a']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:workspaceRole}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>confirmDiscard},{provide:EditorApi,useValue:api},{provide:ProjectsApi,useValue:{upload:async id=>({id,projectId:`project-${id.replace('upload-','')}`,state:'confirmed',bytes:123,expiresAt:'2026-01-01T00:00:00Z',inspection:{status:'succeeded',result:{durationSeconds:20,format:'mp4',width:1280,height:720,videoCodec:'h264',audioCodec:'aac'}}})}},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','edit-a']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:'owner'}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     for(let attempt=0;attempt<20&&state.draft()?.id!=='edit-a';attempt++) await new Promise(resolve=>setImmediate(resolve));

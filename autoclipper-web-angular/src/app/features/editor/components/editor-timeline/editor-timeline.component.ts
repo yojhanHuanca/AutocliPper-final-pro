@@ -7,7 +7,7 @@ import { EditorState } from "../../state/editor.state";
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-editor-timeline",
-  imports: [DecimalPipe, IconComponent],
+  imports: [DecimalPipe, FormsModule, IconComponent],
   templateUrl: "./editor-timeline.component.html",
   styleUrl: "./editor-timeline.component.css",
 })

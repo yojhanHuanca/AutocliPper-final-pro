@@ -48,6 +48,20 @@
 .editor-inspector p {
   font-size: 10px;
 }
+.editor-inspector .source-duration-note,
+.editor-inspector label small {
+  display: block;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.editor-inspector .field-error {
+  margin: 6px 0 10px;
+  color: #a1283c;
+  font-size: 12px;
+  line-height: 1.45;
+}
 .editor-inspector small {
   font-size: 9px;
 }

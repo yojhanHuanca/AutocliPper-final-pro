@@ -14,6 +14,7 @@ import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 import { SessionStore } from "../../../core/auth/session.store";
+import { ProjectsApi } from "../../projects/data-access/projects-api.service";
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
@@ -25,11 +26,13 @@ export class EditorState {
   private readonly editorNavigation = inject(EditorNavigationService);
   private readonly workspaceStore = inject(WorkspaceStore);
   private readonly sessionStore = inject(SessionStore);
+  private readonly projectsApi = inject(ProjectsApi);
   readonly design = inject(DESIGN_MODE);
   private readonly activeId = signal(this.route.snapshot.paramMap.get("id") ?? "");
   get id(): string { return this.activeId(); }
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
+  readonly sourceDuration = signal<number | null>(null);
   readonly collaborationRole = computed(() => {
     const project = this.project();
     if (!project || !this.workspaceStore.loaded()) return "loading" as const;
@@ -56,9 +59,65 @@ export class EditorState {
   private readonly formVersion = signal(0);
   readonly timeline = computed(() => {
     this.formVersion();
-    return { startSeconds: this.spec.startSeconds, endSeconds: this.spec.endSeconds, captionSource: this.captionSource };
+    return { startSeconds: this.spec.startSeconds, endSeconds: this.spec.endSeconds, captionSource: this.captionSource, sourceDuration: this.sourceDuration() };
+  });
+  readonly timelineCues = computed(() => {
+    this.formVersion();
+    const duration = this.sourceDuration();
+    if (!duration || this.captionSource !== 'user') return [];
+    return this.cues.map((cue, index) => ({ ...cue, index,
+      left: Math.max(0, Math.min(100, cue.startSeconds / duration * 100)),
+      width: Math.max(0.5, Math.min(100, (cue.endSeconds - cue.startSeconds) / duration * 100)),
+    }));
   });
   touchForm(): void { this.formVersion.update(version => version + 1); }
+  setTimelineStart(value: number): void {
+    if (!Number.isFinite(value)) return;
+    const duration = this.sourceDuration();
+    const lower = Math.max(0, this.spec.endSeconds - 120);
+    const upper = Math.min(this.spec.endSeconds - 0.1, duration === null ? Number.POSITIVE_INFINITY : duration - 0.1);
+    if (upper < lower && duration !== null && duration >= 0.1) {
+      this.spec.startSeconds = Math.round(Math.min(duration - 0.1, Math.max(0, value)) * 10) / 10;
+    } else if (upper >= lower) {
+      this.spec.startSeconds = Math.round(Math.min(upper, Math.max(lower, value)) * 10) / 10;
+    } else return;
+    this.touchForm();
+  }
+  setTimelineEnd(value: number): void {
+    if (!Number.isFinite(value)) return;
+    const duration = this.sourceDuration();
+    const lower = this.spec.startSeconds + 0.1;
+    const upper = Math.min(this.spec.startSeconds + 120, duration ?? Number.POSITIVE_INFINITY);
+    if (upper < lower && duration !== null && duration >= 0.1) {
+      this.spec.endSeconds = Math.round(duration * 10) / 10;
+    } else if (upper >= lower) {
+      this.spec.endSeconds = Math.round(Math.min(upper, Math.max(lower, value)) * 10) / 10;
+    } else return;
+    this.touchForm();
+  }
+  timelineStartMin(): number {
+    const duration = this.sourceDuration();
+    const minimum = Math.max(0, this.spec.endSeconds - 120);
+    return duration === null ? minimum : Math.min(minimum, Math.max(0, duration - 0.1));
+  }
+  timelineStartMax(): number {
+    const duration = this.sourceDuration();
+    const minimum = this.timelineStartMin();
+    const maximum = Math.min(this.spec.endSeconds - 0.1, duration === null ? Number.POSITIVE_INFINITY : duration - 0.1);
+    return Math.max(minimum, maximum);
+  }
+  timelineEndMin(): number {
+    const duration = this.sourceDuration();
+    return duration === null ? this.spec.startSeconds + 0.1 : Math.min(this.spec.startSeconds + 0.1, duration);
+  }
+  timelineEndMax(): number {
+    const duration = this.sourceDuration();
+    return duration === null ? this.spec.startSeconds + 120 : Math.min(this.spec.startSeconds + 120, duration);
+  }
+  sourceRangeInvalid(): boolean {
+    const duration = this.sourceDuration();
+    return duration !== null && this.spec.endSeconds > duration;
+  }
   readonly captionIssues = computed(() => {
     this.formVersion();
     return this.captionSource === 'user'
@@ -139,6 +198,7 @@ export class EditorState {
     this.activeId.set(id);
     this.draft.set(null);
     this.project.set(null);
+    this.sourceDuration.set(null);
     this.review.set(null);
     this.history.set([]);
     this.nextVersion.set(null);
@@ -262,9 +322,10 @@ export class EditorState {
       const result = await this.api.edit(this.id);
       if (!this.isCurrentEdit(generation)) return;
       this.accept(result.draft, result.etag);
-      const labels = ["metadatos del proyecto", "historial", "comentarios", "exportaciones", "revisión"];
+      const labels = ["metadatos del proyecto", "metadatos de la fuente", "historial", "comentarios", "exportaciones", "revisión"];
       const results = await Promise.allSettled([
         this.api.project(result.draft.projectId),
+        this.projectsApi.upload(result.draft.uploadId),
         this.loadHistory(),
         this.loadComments(),
         this.loadExports(),
@@ -272,9 +333,14 @@ export class EditorState {
       ]);
       if (!this.isCurrentEdit(generation)) return;
       if (results[0].status === "fulfilled") this.project.set(results[0].value);
+      const upload = results[1];
+      if (upload.status === "fulfilled" && upload.value.projectId === result.draft.projectId && upload.value.state === "confirmed" && upload.value.inspection?.status === "succeeded") {
+        const measured = upload.value.inspection.result?.durationSeconds;
+        if (measured && Number.isFinite(measured) && measured > 0) this.sourceDuration.set(measured);
+      }
       const unavailable = results.flatMap((result, index) =>
         result.status === "rejected" ||
-        (index === 3 && result.status === "fulfilled" && result.value === false)
+        (index === 4 && result.status === "fulfilled" && result.value === false)
           ? [labels[index]]
           : [],
       );
@@ -293,6 +359,7 @@ export class EditorState {
       this.spec.endSeconds - this.spec.startSeconds > 120
     )
       throw new Error("El intervalo debe durar entre 0,1 y 120 segundos.");
+    if (this.sourceRangeInvalid()) throw new Error("El final del intervalo supera la duración medida de la fuente.");
     const result: Schema<"EditorSpecDto"> = {
       ...this.spec,
       framing: { x: Number(this.cropX), y: Number(this.cropY) },
