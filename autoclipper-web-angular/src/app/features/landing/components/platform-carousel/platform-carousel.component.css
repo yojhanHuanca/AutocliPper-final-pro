@@ -1,0 +1,36 @@
+@layer components {
+  :host { display: block; }
+  .platforms { padding-top: 20px; padding-bottom: 21px; border-bottom: 1px solid var(--border); }
+  .platforms-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 13px; }
+  .platforms-label { color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .06em; margin: 0 0 7px; }
+  h2 { font-size: clamp(22px, 2.5vw, 31px); letter-spacing: -.045em; font-weight: 620; line-height: 1.15; margin: 0; }
+  .platforms-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+  button { background: #fff; border: 1px solid var(--border); color: var(--text); border-radius: 7px; min-width: 35px; height: 35px; font-size: 17px; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pause-button { min-width: 76px; padding: 0 10px; font-size: 11px; font-weight: 650; }
+  .platforms-window { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
+  .platforms-window:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .platforms-window::-webkit-scrollbar { display: none; }
+  .platforms-track { display: flex; width: max-content; }
+  .platforms-set { display: flex; gap: 12px; padding-right: 12px; }
+  .platform-card { width: 204px; min-height: 69px; display: flex; align-items: center; gap: 12px; border: 1px solid #dfe6f4; border-radius: 9px; background: #fff; padding: 10px 12px; box-sizing: border-box; }
+  .platform-icon { width: 37px; height: 37px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+  .platform-icon svg { width: 28px; height: 28px; }
+  .platform-icon.youtube,.platform-icon.shorts { color: #ed1534; background: #fff0f2; }
+  .platform-icon.twitch { color: #9146ff; background: #f4ecff; }
+  .platform-icon.kick { color: #52df31; background: #162419; font-size: 24px; font-weight: 900; }
+  .platform-icon.tiktok { color: #1d2b42; background: #effbfb; }
+  .platform-icon.instagram { color: #b842b3; background: #fcf0f9; }
+  .platform-copy { min-width: 0; display: grid; gap: 3px; }
+  .platform-copy strong { font-size: 13px; font-weight: 680; white-space: nowrap; }
+  .platform-copy small { color: var(--muted); font-size: 10px; white-space: nowrap; }
+  .platforms-note { color: var(--muted); font-size: 11px; line-height: 1.55; margin: 9px 0 0; }
+  @media (max-width: 600px) {
+    .platforms { padding-top: 24px; padding-bottom: 27px; }
+    .platforms-heading { align-items: start; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+    .platforms-actions { align-self: flex-end; }
+    .platform-card { width: 188px; }
+    .platforms-note { max-width: 46ch; }
+  }
+}

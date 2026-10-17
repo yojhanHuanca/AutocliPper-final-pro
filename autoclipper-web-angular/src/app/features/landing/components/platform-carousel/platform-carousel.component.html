@@ -1,0 +1,49 @@
+<section class="platforms wrap" aria-labelledby="platforms-heading">
+  <div class="platforms-heading">
+    <div>
+      <p class="platforms-label">Conexiones en desarrollo</p>
+      <h2 id="platforms-heading">De tus directos a tus próximos clips.</h2>
+    </div>
+    <div class="platforms-actions" aria-label="Controles del carrusel">
+      <button type="button" aria-label="Ver plataformas anteriores" (click)="move(-1)">←</button>
+      <button type="button" aria-label="Ver plataformas siguientes" (click)="move(1)">→</button>
+      <button type="button" class="pause-button" [attr.aria-pressed]="pausedByUser()" (click)="pausedByUser.set(!pausedByUser())">
+        {{ pausedByUser() ? 'Reanudar' : 'Pausar' }}
+      </button>
+    </div>
+  </div>
+  <div
+    #carousel
+    class="platforms-window"
+    role="region"
+    tabindex="0"
+    aria-label="Plataformas previstas"
+    (mouseenter)="hovered.set(true)"
+    (mouseleave)="hovered.set(false)"
+    (focusin)="focused.set(true)"
+    (focusout)="focused.set(false)"
+  >
+    <div class="platforms-track">
+      @for (copy of [0, 1]; track copy) {
+        <div class="platforms-set" [attr.aria-hidden]="copy === 1 ? 'true' : null">
+          @for (platform of platforms; track platform.key) {
+            <div class="platform-card">
+              <span class="platform-icon" [class]="'platform-icon ' + platform.key" aria-hidden="true">
+                @switch (platform.key) {
+                  @case ('youtube') { <svg viewBox="0 0 36 36"><rect x="4" y="9" width="28" height="18" rx="6" fill="currentColor"/><path d="m15 13 9 5-9 5Z" fill="#fff"/></svg> }
+                  @case ('twitch') { <svg viewBox="0 0 36 36"><path d="M6 5h25v19l-7 7h-7l-4 4v-4H6Z" fill="currentColor"/><path d="M13 11v10m9-10v10" stroke="#fff" stroke-width="3"/></svg> }
+                  @case ('kick') { <span>K</span> }
+                  @case ('tiktok') { <svg viewBox="0 0 36 36"><path d="M21 5v18a8 8 0 1 1-8-8m8-10c2 5 5 8 10 8" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg> }
+                  @case ('instagram') { <svg viewBox="0 0 36 36"><rect x="6" y="6" width="24" height="24" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="18" cy="18" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="26" cy="10" r="2" fill="currentColor"/></svg> }
+                  @case ('shorts') { <svg viewBox="0 0 36 36"><path d="M12 5c6-4 13 4 6 8l-4 3c7-4 13 4 7 9l-8 6c-7 4-13-4-6-9l4-3C4 23-1 15 7 10Z" fill="currentColor"/><path d="m15 14 9 4-9 5Z" fill="#fff"/></svg> }
+                }
+              </span>
+              <span class="platform-copy"><strong>{{ platform.name }}</strong><small>{{ platform.role }}</small></span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+  <p class="platforms-note">Hoy puedes subir tu archivo, editarlo y descargar el clip. Las conexiones con estas plataformas todavía no están disponibles.</p>
+</section>

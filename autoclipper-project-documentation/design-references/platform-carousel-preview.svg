@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="620" viewBox="0 0 1440 620" role="img" aria-labelledby="title desc">
+  <title id="title">Carrusel animado de plataformas para AutoClipper</title>
+  <desc id="desc">Las tarjetas de plataformas se desplazan de derecha a izquierda en bucle. Las conexiones sociales están en desarrollo.</desc>
+  <defs>
+    <clipPath id="viewport"><rect x="86" y="262" width="1268" height="228" rx="22"/></clipPath>
+    <linearGradient id="rule"><stop stop-color="#2354BB"/><stop offset=".5" stop-color="#7651C7"/><stop offset="1" stop-color="#D85AAF"/></linearGradient>
+    <g id="cards">
+      <g transform="translate(0)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#FF0033"/><rect x="34" y="38" width="38" height="25" rx="7" fill="#fff"/><path d="m48 42 14 9-14 9Z" fill="#FF0033"/><text x="22" y="124" class="brand">YouTube</text><text x="22" y="153" class="detail">Videos y directos</text></g>
+      <g transform="translate(266)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#9146FF"/><path d="M34 36h38v26H59l-8 8v-8H34Z" fill="#fff"/><path d="M46 42v13m12-13v13" stroke="#9146FF" stroke-width="4"/><text x="22" y="124" class="brand">Twitch</text><text x="22" y="153" class="detail">Streams</text></g>
+      <g transform="translate(532)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#142139"/><text x="34" y="63" style="font:bold 39px Arial;fill:#53FC18">K</text><text x="22" y="124" class="brand">Kick</text><text x="22" y="153" class="detail">Directos</text></g>
+      <g transform="translate(798)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#142139"/><path d="M54 35v22a12 12 0 1 1-11-11m11-11q6 7 15 7" fill="none" stroke="#58E9ED" stroke-width="5"/><text x="22" y="124" class="brand">TikTok</text><text x="22" y="153" class="detail">Clips verticales</text></g>
+      <g transform="translate(1064)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#C84BB9"/><rect x="36" y="35" width="34" height="30" rx="9" fill="none" stroke="#fff" stroke-width="4"/><circle cx="53" cy="50" r="7" fill="none" stroke="#fff" stroke-width="4"/><text x="22" y="124" class="brand">Instagram</text><text x="22" y="153" class="detail">Reels</text></g>
+      <g transform="translate(1330)"><rect width="250" height="190" rx="22" fill="#fff" stroke="#DDE5F4"/><rect x="22" y="23" width="62" height="54" rx="15" fill="#FF0033"/><path d="m40 34 28 17-28 17Z" fill="#fff"/><text x="22" y="124" class="brand">YouTube Shorts</text><text x="22" y="153" class="detail">Videos cortos</text></g>
+    </g>
+  </defs>
+  <style>
+    text{font-family:Arial,Helvetica,sans-serif;fill:#172443}.eyebrow{font-size:16px;font-weight:700;letter-spacing:1.4px;fill:#2354BB}.headline{font-size:52px;font-weight:700;letter-spacing:-2px}.sub{font-size:20px;fill:#586681}.brand{font-size:25px;font-weight:700}.detail{font-size:17px;fill:#66748D}.note{font-size:16px;fill:#53617A}.badge{font-size:15px;font-weight:700;fill:#2354BB}.moving{animation:scroll 24s linear infinite}@keyframes scroll{to{transform:translateX(-1596px)}}@media(prefers-reduced-motion:reduce){.moving{animation:none}}
+  </style>
+  <rect width="1440" height="620" fill="#fff"/><rect x="48" y="38" width="1344" height="544" rx="32" fill="#fff" stroke="#E1E8F4"/>
+  <text x="102" y="101" class="eyebrow">EL RECORRIDO DE TU CONTENIDO</text>
+  <text x="102" y="166" class="headline">De tu directo a tu próximo clip.</text>
+  <text x="102" y="205" class="sub">Conexiones previstas para creadores, streamers y YouTubers.</text>
+  <rect x="1134" y="78" width="201" height="45" rx="23" fill="#EEF3FF"/><circle cx="1157" cy="101" r="6" fill="#2354BB"/><text x="1174" y="107" class="badge">EN DESARROLLO</text>
+  <rect x="86" y="262" width="1268" height="228" rx="22" fill="#F5F8FE"/>
+  <g clip-path="url(#viewport)"><g class="moving"><use href="#cards" x="0" y="281"/><use href="#cards" x="1596" y="281"/></g></g>
+  <rect x="102" y="511" width="235" height="5" rx="2.5" fill="#E2E9F5"/><rect x="102" y="511" width="84" height="5" rx="2.5" fill="url(#rule)"/>
+  <text x="1078" y="520" class="badge">← MOVIMIENTO CONTINUO</text>
+  <text x="102" y="557" class="note">Hoy: sube un archivo, edita y descarga MP4. Las conexiones sociales todavía no están disponibles.</text>
+</svg>

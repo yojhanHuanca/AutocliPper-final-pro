@@ -10,10 +10,11 @@ import {
 import { RouterLink } from "@angular/router";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { createAccentCycle, LANDING_ACCENTS } from '../landing-accent';
+import { PlatformCarouselComponent } from '../components/platform-carousel/platform-carousel.component';
 
 @Component({
   selector: "ac-landing",
-  imports: [BrandComponent, RouterLink, IconComponent],
+  imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent],
   host: {
     "[class.motion-paused]": "motionPaused() || reducedMotion()",
     "[style.--accent]": "accent().color",
