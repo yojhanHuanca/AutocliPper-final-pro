@@ -2,9 +2,12 @@ import type { Schema } from '../../../core/contracts/api-types';
 
 export function captionCueIssues(cue: Schema<'SubtitleCueDto'>, start: number, end: number): { times: string; text: string } {
   return {
-    times: !Number.isFinite(cue.startSeconds) || !Number.isFinite(cue.endSeconds) || cue.startSeconds < start || cue.endSeconds > end || cue.endSeconds <= cue.startSeconds
+    times: !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start ||
+      !Number.isFinite(cue.startSeconds) || !Number.isFinite(cue.endSeconds) || cue.startSeconds < start || cue.endSeconds > end || cue.endSeconds <= cue.startSeconds
       ? 'Los tiempos deben quedar dentro del intervalo del clip y terminar después de empezar.' : '',
-    text: !cue.text.trim() || cue.text.length > 500 ? 'El texto debe tener entre 1 y 500 caracteres.' : '',
+    text: !cue.text.trim() || cue.text.length > 500 ? 'El texto debe tener entre 1 y 500 caracteres.'
+      : /[<>\\{}]/u.test(cue.text) || [...cue.text].some(character => character !== '\n' && character.charCodeAt(0) < 32)
+        ? 'Usa texto simple, sin etiquetas, llaves, barras invertidas ni caracteres de control.' : '',
   };
 }
 

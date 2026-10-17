@@ -1,7 +1,7 @@
 <span class="eyebrow">SUBTÍTULOS</span>
 <h2>Cada palabra importa.</h2>
 <label
-  >Origen<select [(ngModel)]="vm.captionSource" (ngModelChange)="vm.touchForm()" [disabled]="vm.design || !vm.canEditCollaboration()">
+  >Origen<select [ngModel]="vm.captionSource" (ngModelChange)="vm.setCaptionSource($event)" [disabled]="!vm.canChangeCaptions()">
     <option value="none">Sin subtítulos</option>
     <option value="user">Texto aportado</option>
     <option value="transcript" [disabled]="!vm.analysisId">Transcripción vinculada</option>
@@ -13,53 +13,32 @@
     <p class="muted" role="status">Cargando segmentos de la transcripción…</p>
   } @else if (vm.transcriptError()) {
     <p class="cue-error" role="alert">{{ vm.transcriptError() }}</p>
+    <button type="button" class="button" (click)="vm.retryTranscript()" [disabled]="vm.busy()">Reintentar transcripción</button>
   } @else if (vm.transcriptSegments().length) {
-    <p class="muted transcript-summary" role="status">{{ vm.transcriptSegments().length }} segmentos · tiempos de la fuente original</p>
-    <ol class="transcript-segments" aria-label="Segmentos de la transcripción vinculada">
-      @for (segment of vm.transcriptSegments(); track $index) {
-        <li>
-          <time>{{ segment.startSeconds | number: "1.1-2" }}–{{ segment.endSeconds | number: "1.1-2" }} s</time>
-          <p>{{ segment.text }}</p>
-        </li>
-      }
-    </ol>
+    <p class="muted transcript-summary" role="status">{{ vm.captionEntries().length }} frases cruzan el clip · {{ vm.transcriptSegments().length }} segmentos en la fuente original.</p>
+    @if (!vm.captionEntries().length) { <p>No hay frases en este intervalo. Ajusta el rango del clip para consultar otras partes de la transcripción.</p> }
   } @else if (vm.analysisId) {
     <p class="muted">La transcripción vinculada no contiene segmentos.</p>
   }
 }
 @if (vm.captionSource === "user") {
   <p>Los tiempos corresponden al video original. Usa texto simple, sin etiquetas.</p>
-  <p class="muted">Intervalo del clip: {{ vm.timeline().startSeconds }}–{{ vm.timeline().endSeconds }} s · {{ vm.cues.length }}/200 frases</p>
-  @for (cue of vm.cues; track $index) {
-    <fieldset class="caption-cue">
-      <legend>Frase {{ $index + 1 }}</legend>
-      <div class="form-grid">
-        <label>Inicio (s)<input type="number" [(ngModel)]="cue.startSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design || !vm.canEditCollaboration()" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.times" [attr.aria-describedby]="vm.captionIssues()[$index]?.times ? 'cue-times-' + $index : null"></label>
-        <label>Fin (s)<input type="number" [(ngModel)]="cue.endSeconds" (ngModelChange)="vm.touchForm()" [min]="vm.spec.startSeconds" [max]="vm.spec.endSeconds" step="0.1" [disabled]="vm.design || !vm.canEditCollaboration()" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.times" [attr.aria-describedby]="vm.captionIssues()[$index]?.times ? 'cue-times-' + $index : null"></label>
-      </div>
-      @if (vm.captionIssues()[$index]?.times) {
-        <p class="cue-error" [id]="'cue-times-' + $index">{{ vm.captionIssues()[$index].times }}</p>
-      }
-      <label>Texto<textarea [(ngModel)]="cue.text" (ngModelChange)="vm.touchForm()" maxlength="500" rows="2" [disabled]="vm.design || !vm.canEditCollaboration()" [attr.aria-invalid]="!!vm.captionIssues()[$index]?.text" [attr.aria-describedby]="vm.captionIssues()[$index]?.text ? 'cue-text-' + $index : null"></textarea></label>
-      <span class="muted cue-count">{{ cue.text.length }}/500 caracteres</span>
-      @if (vm.captionIssues()[$index]?.text) {
-        <p class="cue-error" [id]="'cue-text-' + $index">{{ vm.captionIssues()[$index].text }}</p>
-      }
-      <button class="button small" type="button" (click)="vm.removeCue($index)" [disabled]="vm.design || !vm.canEditCollaboration()">Retirar frase</button>
-    </fieldset>
-  } @empty { <p class="muted">Añade tu primera frase para comenzar.</p> }
-  <button class="button full" type="button" (click)="vm.addCue()" [disabled]="vm.design || !vm.canEditCollaboration() || vm.cues.length >= 200">Añadir frase<ac-icon name="plus"/></button>
+  <p class="muted">Intervalo del clip: {{ vm.timeline().startSeconds | number: '1.1-3' }}–{{ vm.timeline().endSeconds | number: '1.1-3' }} s · {{ vm.cues.length }}/200 frases</p>
+  @if (!vm.cues.length) { <p class="caption-empty">Todavía no hay frases. Añade la primera y escribe su texto.</p> }
+  <button class="button full" type="button" (click)="vm.addCue()" [disabled]="!vm.canChangeCaptions() || vm.cues.length >= 200">Añadir frase<ac-icon name="plus"/></button>
 }
+@if (vm.captionSource === 'none') { <p class="caption-empty">Este borrador no tiene subtítulos.</p><button class="button full" type="button" (click)="vm.startManualCaptions()" [disabled]="!vm.canChangeCaptions()">Añadir subtítulos<ac-icon name="plus" /></button> }
+@if (vm.captionSource !== 'none') { <ac-caption-cue-editor context="panel" /> }
 @if (!vm.analysisId) { <p class="muted">Para usar transcripción local, crea un borrador desde un clip con transcripción en tu proyecto, o recupera una revisión anterior que la conserve.</p> }
 @if (vm.captionSource !== "none") {
   <label
-    >Plantilla<select [(ngModel)]="vm.captionTemplate" (ngModelChange)="vm.touchForm()" [disabled]="vm.design || !vm.canEditCollaboration()">
+    >Plantilla<select [(ngModel)]="vm.captionTemplate" (ngModelChange)="vm.touchForm()" [disabled]="!vm.canChangeCaptions()">
       <option value="clean">Clean</option>
       <option value="boxed">Boxed</option>
       <option value="bold">Bold</option>
     </select></label
   ><label
-    >Posición<select [(ngModel)]="vm.captionPosition" (ngModelChange)="vm.touchForm()" [disabled]="vm.design || !vm.canEditCollaboration()">
+    >Posición<select [(ngModel)]="vm.captionPosition" (ngModelChange)="vm.touchForm()" [disabled]="!vm.canChangeCaptions()">
       <option value="bottom">Inferior</option>
       <option value="top">Superior</option>
     </select></label
@@ -69,14 +48,14 @@
       [(ngModel)]="vm.fontSize" (ngModelChange)="vm.touchForm()"
       min="12"
       max="40"
-      [disabled]="vm.design || !vm.canEditCollaboration()"
+      [disabled]="!vm.canChangeCaptions()"
   /></label>
 }
 <button
   class="button primary full"
   type="button"
   (click)="vm.save()"
-  [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || !vm.dirty() || vm.invalidCaptions()"
+  [disabled]="!vm.canChangeCaptions() || !vm.dirty() || vm.invalidCaptions() || !vm.clipRangeUsable()"
 >
-  Guardar revisión<ac-icon name="check" />
+  Guardar ajustes de subtítulos<ac-icon name="check" />
 </button>

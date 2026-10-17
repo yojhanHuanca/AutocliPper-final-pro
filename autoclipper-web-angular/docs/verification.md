@@ -1,5 +1,13 @@
 # Evidencia de la primera entrega
 
+## Edición de cues en el timeline — 2026-10-17
+
+La pista permite seleccionar frases con ratón, teclado (flechas, Inicio/Fin) o selector nativo. El editor de frase se comparte con el panel y actualiza un único formulario. Texto y tiempos se validan antes de persistir; una copia editable explícita transforma la transcripción vinculada en cues aportados por el usuario dentro del clip, conservando el análisis original.
+
+Setenta pruebas pasan, incluyendo selección sin cambios pendientes, sincronización local, rechazo de datos inválidos sin escritura, permisos reader/editor, bloqueo durante guardado, ETag, conflicto 412, restauración y respuestas tardías de transcripción. También se comprueban superposiciones, límites, copia sin mutación ni truncado, texto simple y duración fraccional de fuente. Typecheck, build y contracts:check aprobados.
+
+Una pasada visual del estado vacío en /design/editor a 1440×1000 y 390×844 confirmó que no hay desbordamiento horizontal, cues ficticios ni tiempos predeterminados en el timeline. El foco de teclado está visible. Capturas locales: C:/Users/USER/Documents/Codex/artifacts/autoclipper-editor-cues-2026-10-17/desktop-empty.jpg y mobile-empty.jpg. La API/Docker permanece apagada; la edición poblada se verificó con fixtures de DTO solo en tests, no mediante guardado real por UI. No se reinició ni modificó backend/infra ni se reabrieron las invitaciones QA.
+
 ## Comprobaciones independientes del backend
 
 Compilación Angular 22.2.3 con Node 24.21.0 y TypeScript 6.0.3: **aprobada**. Typecheck `ngc -p tsconfig.app.json --noEmit`: **aprobado**. Bundle inicial observado tras localización/Cobalto, edición por frases y ajuste de viewport del editor: 315.40 KB raw, 86.98 KB estimados de transferencia; feature editor lazy. No representa una medición de red de producción.

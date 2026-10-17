@@ -1,0 +1,71 @@
+<div class="cue-picker">
+  <label [for]="id('pick')">{{ context() === 'timeline' ? 'Seleccionar frase del timeline' : 'Frase del panel de subtítulos' }}</label>
+  <select [id]="id('pick')" [ngModel]="vm.selectedCue()?.index ?? -1" (ngModelChange)="vm.selectCue($event)" [disabled]="!vm.captionEntries().length">
+    <option [ngValue]="-1">Elige una frase</option>
+    @for (cue of vm.captionEntries(); track cue.index) { <option [ngValue]="cue.index">{{ label(cue) }}</option> }
+  </select>
+</div>
+@if (vm.selectedCue(); as cue) {
+  <section class="selected-cue" [attr.aria-labelledby]="id('title')">
+    <div class="cue-heading">
+      <h3 [id]="id('title')" tabindex="-1" data-cue-focus>Frase {{ cue.index + 1 }}</h3>
+      <span>{{ vm.captionSource === 'user' ? 'Texto aportado' : 'Transcripción vinculada' }}</span>
+    </div>
+    <div class="cue-navigation">
+      <button type="button" class="button small" (click)="vm.selectAdjacentCue(-1)" [disabled]="vm.selectedCuePosition() <= 0" [attr.aria-label]="'Frase anterior, ' + contextName()">Anterior</button>
+      <span>{{ vm.selectedCuePosition() + 1 }} de {{ vm.captionEntries().length }}</span>
+      <button type="button" class="button small" (click)="vm.selectAdjacentCue(1)" [disabled]="vm.selectedCuePosition() >= vm.captionEntries().length - 1" [attr.aria-label]="'Frase siguiente, ' + contextName()">Siguiente</button>
+    </div>
+    @if (vm.captionSource === 'user') {
+      <fieldset class="cue-fields" [disabled]="!vm.canChangeCaptions()">
+        <legend>Ajusta texto y tiempos</legend>
+        <div class="cue-timing">
+        <div class="cue-time-fields">
+          <label [for]="id('start')">Inicio de la frase (s)
+            <input [id]="id('start')" type="number" [ngModel]="cue.startSeconds" (ngModelChange)="vm.updateCue(cue.index, 'startSeconds', $event)" [min]="vm.timeline().startSeconds" [max]="vm.timeline().endSeconds" step="0.01" [attr.aria-invalid]="!!vm.selectedCueIssues().times" [attr.aria-describedby]="vm.selectedCueIssues().times ? id('times-error') : id('time-help')" />
+          </label>
+          <label [for]="id('end')">Fin de la frase (s)
+            <input [id]="id('end')" type="number" [ngModel]="cue.endSeconds" (ngModelChange)="vm.updateCue(cue.index, 'endSeconds', $event)" [min]="vm.timeline().startSeconds" [max]="vm.timeline().endSeconds" step="0.01" [attr.aria-invalid]="!!vm.selectedCueIssues().times" [attr.aria-describedby]="vm.selectedCueIssues().times ? id('times-error') : id('time-help')" />
+          </label>
+        </div>
+        <p [id]="id('time-help')" class="cue-help">@if (vm.clipRangeUsable()) { Tiempos de la fuente original. Clip: {{ vm.timeline().startSeconds | number: '1.1-3' }}–{{ vm.timeline().endSeconds | number: '1.1-3' }} s. } @else { Corrige el intervalo del clip en Composición antes de guardar. }</p>
+        @if (vm.selectedCueIssues().times) { <p class="cue-error" [id]="id('times-error')">{{ vm.selectedCueIssues().times }}</p> }
+        @if (showTimeControls(cue)) {
+          <div class="cue-sliders">
+            <label [for]="id('start-range')">Ajustar inicio en el clip <output>{{ cue.startSeconds | number: '1.1-3' }} s</output></label>
+            <input [id]="id('start-range')" type="range" [ngModel]="cue.startSeconds" (ngModelChange)="vm.updateCue(cue.index, 'startSeconds', $event)" [min]="vm.timeline().startSeconds" [max]="vm.timeline().endSeconds" step="0.01" [attr.aria-invalid]="!!vm.selectedCueIssues().times" [attr.aria-describedby]="vm.selectedCueIssues().times ? id('times-error') + ' ' + id('range-help') : id('range-help')" />
+            <label [for]="id('end-range')">Ajustar fin en el clip <output>{{ cue.endSeconds | number: '1.1-3' }} s</output></label>
+            <input [id]="id('end-range')" type="range" [ngModel]="cue.endSeconds" (ngModelChange)="vm.updateCue(cue.index, 'endSeconds', $event)" [min]="vm.timeline().startSeconds" [max]="vm.timeline().endSeconds" step="0.01" [attr.aria-invalid]="!!vm.selectedCueIssues().times" [attr.aria-describedby]="vm.selectedCueIssues().times ? id('times-error') + ' ' + id('range-help') : id('range-help')" />
+            <p [id]="id('range-help')" class="cue-help">Arrastra o usa ←/→ en pasos de 0,01 s. El final debe ser posterior al inicio.</p>
+          </div>
+        }
+        </div>
+        <div class="cue-wording">
+        <label [for]="id('text')">Texto de la frase
+          <textarea [id]="id('text')" [ngModel]="cue.text" (ngModelChange)="vm.updateCue(cue.index, 'text', $event)" rows="3" maxlength="500" [attr.aria-invalid]="!!vm.selectedCueIssues().text" [attr.aria-describedby]="vm.selectedCueIssues().text ? id('text-error') : id('text-count')"></textarea>
+        </label>
+        <p [id]="id('text-count')" class="cue-count">{{ cue.text.length }}/500 caracteres · Texto simple</p>
+        @if (vm.selectedCueIssues().text) { <p class="cue-error" [id]="id('text-error')">{{ vm.selectedCueIssues().text }}</p> }
+        <button type="button" class="button small" (click)="remove(cue.index)">Retirar esta frase</button>
+        </div>
+      </fieldset>
+      @if (vm.invalidCaptions()) { <p class="cue-error">Revisa las frases con errores antes de guardar. El selector incluye también las que están fuera del clip.</p> }
+      <div class="cue-save">
+        <p class="cue-help">Los cambios se guardan en una revisión. El video mostrado no cambia hasta exportarla.</p>
+        <button class="button primary" type="button" (click)="vm.save()" [disabled]="!vm.canChangeCaptions() || !vm.dirty() || vm.invalidCaptions() || !vm.clipRangeUsable()">Guardar revisión<ac-icon name="check" /></button>
+      </div>
+    } @else {
+      <p class="cue-source-time">{{ cue.startSeconds | number: '1.1-3' }}–{{ cue.endSeconds | number: '1.1-3' }} s · Fuente original</p>
+      <p class="cue-read-text">{{ cue.text }}</p>
+      <p class="cue-help">La transcripción original es de solo lectura. La copia toma las frases que cruzan el clip y ajusta sus extremos al intervalo, sin cambiar el análisis.</p>
+      <button type="button" class="button" (click)="vm.copyTranscriptToEditable()" [disabled]="!vm.canChangeCaptions() || vm.transcriptLoading() || !!vm.transcriptError()">Crear copia editable</button>
+    }
+    @if (vm.error()) {
+      <p class="cue-error">{{ vm.error() }}</p>
+      @if (vm.conflict()) { <button class="button" type="button" (click)="vm.reload()" [disabled]="vm.busy()">Recargar y descartar cambios</button> }
+    }
+  </section>
+} @else {
+  <p class="cue-help cue-selection-empty" tabindex="-1" data-cue-focus>Selecciona una frase en la pista o en este selector para consultar sus tiempos y texto.</p>
+}
+@if (vm.captionActionError()) { <p class="cue-error">{{ vm.captionActionError() }}</p> }

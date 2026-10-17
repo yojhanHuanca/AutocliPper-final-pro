@@ -9,6 +9,7 @@ import type { Response } from "../../../core/contracts/api-types";
 import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
 import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
+import { copyTranscriptCues, layoutCaptionCues } from '../models/caption-timeline';
 import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
@@ -36,12 +37,16 @@ export class EditorState {
   readonly transcriptSegments = signal<Schema<"TranscriptSegmentDto">[]>([]);
   readonly transcriptLoading = signal(false);
   readonly transcriptError = signal("");
+  private transcriptGeneration = 0;
+  readonly cueSelection = signal<{ source: string; index: number } | null>(null);
+  readonly captionActionError = signal("");
   readonly collaborationRole = computed(() => {
     const project = this.project();
     if (!project || !this.workspaceStore.loaded()) return "loading" as const;
     return this.workspaceStore.workspaces().find((workspace) => workspace.id === project.workspaceId)?.role ?? "unavailable" as const;
   });
   readonly canEditCollaboration = computed(() => ["owner", "admin", "editor"].includes(this.collaborationRole()));
+  readonly canChangeCaptions = computed(() => !this.design && !this.busy() && !!this.draft() && this.canEditCollaboration());
   readonly canAdminCollaboration = computed(() => ["owner", "admin"].includes(this.collaborationRole()));
   readonly exportsLoaded = signal(false);
   readonly review = signal<Schema<"ReviewHistoryDto"> | null>(null);
@@ -64,37 +69,56 @@ export class EditorState {
     this.formVersion();
     return { startSeconds: this.spec.startSeconds, endSeconds: this.spec.endSeconds, captionSource: this.captionSource, sourceDuration: this.sourceDuration() };
   });
-  readonly timelineCues = computed(() => {
-    this.formVersion();
-    const duration = this.sourceDuration();
-    if (!duration || this.captionSource !== 'user') return [];
-    return this.cues.map((cue, index) => ({ ...cue, index,
-      left: Math.max(0, Math.min(100, cue.startSeconds / duration * 100)),
-      width: Math.max(0.5, Math.min(100, (cue.endSeconds - cue.startSeconds) / duration * 100)),
-    }));
+  readonly clipRangeUsable = computed(() => {
+    const { startSeconds: start, endSeconds: end, sourceDuration: duration } = this.timeline();
+    return Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end - start >= 0.1 &&
+      end - start <= 120 && (duration === null || end <= duration);
   });
+  readonly captionEntries = computed(() => {
+    this.formVersion();
+    if (this.captionSource === 'user') return this.cues.map((cue, index) => ({ ...cue, index }));
+    if (this.captionSource === 'transcript') return this.transcriptSegments()
+      .map((cue, index) => ({ ...cue, index }))
+      .filter(cue => cue.endSeconds > this.spec.startSeconds && cue.startSeconds < this.spec.endSeconds);
+    return [];
+  });
+  readonly selectedCue = computed(() => {
+    const selection = this.cueSelection();
+    return selection?.source === this.timeline().captionSource
+      ? this.captionEntries().find(cue => cue.index === selection.index) ?? null : null;
+  });
+  readonly selectedCuePosition = computed(() => this.captionEntries().findIndex(cue => cue.index === this.selectedCue()?.index));
+  readonly selectedCueIssues = computed(() => this.selectedCue() && this.timeline().captionSource === 'user'
+    ? captionCueIssues(this.selectedCue()!, this.timeline().startSeconds, this.timeline().endSeconds) : { times: '', text: '' });
+  readonly timelineCues = computed(() => this.clipRangeUsable() ? layoutCaptionCues(this.captionEntries(), this.timeline().startSeconds, this.timeline().endSeconds) : []);
+  readonly timelineCueRows = computed(() => Math.max(1, ...this.timelineCues().map(cue => cue.row + 1)));
   touchForm(): void { this.formVersion.update(version => version + 1); }
+  setClipField(field: 'startSeconds' | 'endSeconds', value: number | null): void {
+    if (!this.canChangeCaptions()) return;
+    this.spec[field] = typeof value === 'number' ? value : Number.NaN;
+    this.touchForm();
+  }
   setTimelineStart(value: number): void {
-    if (!Number.isFinite(value)) return;
+    if (!this.canChangeCaptions() || !Number.isFinite(value)) return;
     const duration = this.sourceDuration();
     const lower = Math.max(0, this.spec.endSeconds - 120);
     const upper = Math.min(this.spec.endSeconds - 0.1, duration === null ? Number.POSITIVE_INFINITY : duration - 0.1);
     if (upper < lower && duration !== null && duration >= 0.1) {
-      this.spec.startSeconds = Math.round(Math.min(duration - 0.1, Math.max(0, value)) * 10) / 10;
+      this.spec.startSeconds = Math.min(duration - 0.1, Math.max(0, Math.round(value * 10) / 10));
     } else if (upper >= lower) {
-      this.spec.startSeconds = Math.round(Math.min(upper, Math.max(lower, value)) * 10) / 10;
+      this.spec.startSeconds = Math.min(upper, Math.max(lower, Math.round(value * 10) / 10));
     } else return;
     this.touchForm();
   }
   setTimelineEnd(value: number): void {
-    if (!Number.isFinite(value)) return;
+    if (!this.canChangeCaptions() || !Number.isFinite(value)) return;
     const duration = this.sourceDuration();
     const lower = this.spec.startSeconds + 0.1;
     const upper = Math.min(this.spec.startSeconds + 120, duration ?? Number.POSITIVE_INFINITY);
     if (upper < lower && duration !== null && duration >= 0.1) {
-      this.spec.endSeconds = Math.round(duration * 10) / 10;
+      this.spec.endSeconds = duration;
     } else if (upper >= lower) {
-      this.spec.endSeconds = Math.round(Math.min(upper, Math.max(lower, value)) * 10) / 10;
+      this.spec.endSeconds = Math.min(upper, Math.max(lower, Math.round(value * 10) / 10));
     } else return;
     this.touchForm();
   }
@@ -205,6 +229,9 @@ export class EditorState {
     this.transcriptSegments.set([]);
     this.transcriptLoading.set(false);
     this.transcriptError.set("");
+    this.transcriptGeneration++;
+    this.cueSelection.set(null);
+    this.captionActionError.set("");
     this.review.set(null);
     this.history.set([]);
     this.nextVersion.set(null);
@@ -281,19 +308,76 @@ export class EditorState {
   private isCurrentEdit(generation: number): boolean {
     return !this.disposed && generation === this.editGeneration;
   }
+  setCaptionSource(source: string): void {
+    if (!this.canChangeCaptions() || !['none', 'user', 'transcript'].includes(source) || (source === 'transcript' && !this.analysisId)) return;
+    this.captionSource = source;
+    this.cueSelection.set(null);
+    this.captionActionError.set("");
+    this.touchForm();
+  }
+  selectCue(index: number): void {
+    if (!Number.isInteger(index) || !this.captionEntries().some(cue => cue.index === index)) { this.cueSelection.set(null); return; }
+    this.cueSelection.set({ source: this.captionSource, index });
+    this.tab.set('captions');
+  }
+  selectAdjacentCue(direction: -1 | 1): void {
+    const entry = this.captionEntries()[this.selectedCuePosition() + direction];
+    if (entry) this.selectCue(entry.index);
+  }
+  updateCue(index: number, field: 'startSeconds' | 'endSeconds' | 'text', value: number | string | null): void {
+    if (!this.canChangeCaptions() || this.captionSource !== 'user' || !this.cues[index]) return;
+    const next = { ...this.cues[index] };
+    if (field === 'text') next.text = typeof value === 'string' ? value : '';
+    else next[field] = typeof value === 'number' ? value : Number.NaN;
+    this.cues = this.cues.map((cue, position) => position === index ? next : cue);
+    this.cueSelection.set({ source: 'user', index });
+    this.captionActionError.set("");
+    this.touchForm();
+  }
+  startManualCaptions(): void {
+    if (!this.canChangeCaptions()) return;
+    this.setCaptionSource('user');
+    this.tab.set('captions');
+    this.addCue();
+  }
+  copyTranscriptToEditable(): void {
+    if (!this.canChangeCaptions() || this.captionSource !== 'transcript' || this.transcriptLoading() || this.transcriptError()) return;
+    this.captionActionError.set("");
+    try {
+      if (!this.clipRangeUsable())
+        throw new Error('Corrige el intervalo del clip antes de copiar la transcripción.');
+      const selected = this.selectedCue();
+      this.cues = copyTranscriptCues(this.transcriptSegments(), this.spec.startSeconds, this.spec.endSeconds);
+      this.captionSource = 'user';
+      this.touchForm();
+      const index = selected ? this.cues.findIndex(cue => cue.text === selected.text && cue.startSeconds === Math.max(selected.startSeconds, this.spec.startSeconds)) : 0;
+      this.selectCue(Math.max(0, index));
+      this.message.set('Copia editable creada en el borrador. El análisis original se conserva; guarda una revisión para persistir estos cambios.');
+    } catch (error) { this.captionActionError.set(errorMessage(error)); }
+  }
   addCue(): void {
-    if (this.design || !this.canEditCollaboration() || this.cues.length >= 200) return;
+    if (!this.canChangeCaptions() || this.captionSource !== 'user' || this.cues.length >= 200) return;
     const startSeconds = this.cues.at(-1)?.endSeconds ?? this.spec.startSeconds;
+    if (!Number.isFinite(startSeconds) || startSeconds < this.spec.startSeconds || !this.clipRangeUsable()) {
+      this.captionActionError.set('Corrige el intervalo y los tiempos de la última frase antes de añadir otra.');
+      return;
+    }
     if (startSeconds >= this.spec.endSeconds) { this.message.set('Ajusta el final de la última frase para dejar espacio a la siguiente.'); return; }
     this.cues = [...this.cues, { startSeconds, endSeconds: Math.min(startSeconds + 3, this.spec.endSeconds), text: '' }];
     this.touchForm();
+    this.selectCue(this.cues.length - 1);
   }
   removeCue(index: number): void {
-    if (!this.design && this.canEditCollaboration()) { this.cues = this.cues.filter((_cue, i) => i !== index); this.touchForm(); }
+    if (!this.canChangeCaptions() || this.captionSource !== 'user' || !this.cues[index]) return;
+    const selected = this.selectedCue()?.index;
+    this.cues = this.cues.filter((_cue, i) => i !== index);
+    this.touchForm();
+    if (selected !== undefined) this.selectCue(Math.min(selected > index ? selected - 1 : selected, this.cues.length - 1));
   }
   private accept(
     draft: Schema<"EditorDraftDto">,
     etag: string | null = null,
+    preserveSelection = false,
   ): void {
     this.draft.set(draft);
     this.etag = etag;
@@ -313,6 +397,8 @@ export class EditorState {
     this.analysisId =
       captions?.source === "transcript" ? captions.analysisId : "";
     this.cues = captions?.source === 'user' ? structuredClone(captions.cues) : [];
+    if (!preserveSelection || this.cueSelection()?.source !== this.captionSource) this.cueSelection.set(null);
+    this.captionActionError.set("");
     const style =
       captions && captions.source !== "none" ? captions.style : undefined;
     this.captionTemplate = style?.template ?? "clean";
@@ -321,6 +407,31 @@ export class EditorState {
     this.initialForm = this.snapshot();
     this.touchForm();
   }
+  private async loadTranscript(): Promise<void> {
+    const generation = this.editGeneration;
+    const request = ++this.transcriptGeneration;
+    const analysisId = this.analysisId;
+    const current = () => this.isCurrentEdit(generation) && request === this.transcriptGeneration && analysisId === this.analysisId;
+    this.transcriptSegments.set([]);
+    this.transcriptError.set("");
+    this.transcriptLoading.set(!!analysisId);
+    if (!analysisId) return;
+    try {
+      const analysis = await this.api.analysis(analysisId);
+      if (!current()) return;
+      if (analysis.status !== 'succeeded' || !analysis.transcript)
+        throw new Error('La transcripción vinculada todavía no está disponible para esta revisión.');
+      this.transcriptSegments.set(analysis.transcript.segments);
+    } catch (error) {
+      if (!current()) return;
+      this.transcriptError.set(errorMessage(error));
+      throw error;
+    } finally { if (current()) this.transcriptLoading.set(false); }
+  }
+  async retryTranscript(): Promise<void> {
+    if (this.design || this.busy() || this.transcriptLoading() || !this.analysisId) return;
+    await this.loadTranscript().catch(() => {});
+  }
   async reload(): Promise<void> {
     if (this.busy() || !this.confirmDiscard()) return;
     const generation = this.editGeneration;
@@ -328,10 +439,6 @@ export class EditorState {
       const result = await this.api.edit(this.id);
       if (!this.isCurrentEdit(generation)) return;
       this.accept(result.draft, result.etag);
-      const analysisId = this.analysisId;
-      this.transcriptSegments.set([]);
-      this.transcriptError.set("");
-      this.transcriptLoading.set(!!analysisId);
       const labels = ["metadatos del proyecto", "metadatos de la fuente", "historial", "comentarios", "exportaciones", "revisión", "transcripción vinculada"];
       const results = await Promise.allSettled([
         this.api.project(result.draft.projectId),
@@ -340,7 +447,7 @@ export class EditorState {
         this.loadComments(),
         this.loadExports(),
         this.loadReview(),
-        analysisId ? this.api.analysis(analysisId) : Promise.resolve(null),
+        this.loadTranscript(),
       ]);
       if (!this.isCurrentEdit(generation)) return;
       if (results[0].status === "fulfilled") this.project.set(results[0].value);
@@ -349,23 +456,9 @@ export class EditorState {
         const measured = upload.value.inspection.result?.durationSeconds;
         if (measured && Number.isFinite(measured) && measured > 0) this.sourceDuration.set(measured);
       }
-      const transcript = results[6];
-      this.transcriptLoading.set(false);
-      if (analysisId && transcript.status === "fulfilled") {
-        const analysis = transcript.value;
-        if (analysis?.status === "succeeded" && analysis.transcript) {
-          this.transcriptSegments.set(analysis.transcript.segments);
-        } else {
-          this.transcriptError.set(
-            "La transcripción vinculada todavía no está disponible para esta revisión.",
-          );
-        }
-      } else if (analysisId && transcript.status === "rejected") {
-        this.transcriptError.set(errorMessage(transcript.reason));
-      }
       const unavailable = results.flatMap((result, index) =>
-        result.status === "rejected" ||
-        (index === 4 && result.status === "fulfilled" && result.value === false)
+        index !== 6 && (result.status === "rejected" ||
+        (index === 4 && result.status === "fulfilled" && result.value === false))
           ? [labels[index]]
           : [],
       );
@@ -429,7 +522,7 @@ export class EditorState {
       };
       const saved = await this.api.save(this.id, body, this.etag ?? undefined);
       if (!this.isCurrentEdit(generation)) return;
-      this.accept(saved.draft, saved.etag);
+      this.accept(saved.draft, saved.etag, true);
       this.message.set(`Revisión ${saved.draft.version} guardada.`);
       this.renderKey = "";
       await this.refreshRevisionMetadata();
@@ -474,6 +567,7 @@ export class EditorState {
     const [history, review] = await Promise.allSettled([
       this.loadHistory(),
       this.loadReview(),
+      this.loadTranscript(),
     ]);
     const unavailable = [
       ...(history.status === "rejected" ? ["historial"] : []),

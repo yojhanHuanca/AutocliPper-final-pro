@@ -1,0 +1,38 @@
+@layer components {
+  :host { display: block; min-width: 0; container: cue-editor / inline-size; }
+  .cue-picker label { font-size: 12px; margin: 16px 0 7px; }
+  .cue-picker select { font-size: 13px; min-height: 44px; }
+  .selected-cue { margin-top: 16px; min-width: 0; padding: 16px; background: #fff; border: 1px solid #c8d4ec; border-radius: 9px; }
+  .cue-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 7px 12px; }
+  .cue-heading h3 { font-size: 18px; letter-spacing: -.03em; }
+  .cue-heading > span { font-size: 11px; color: var(--muted); }
+  .cue-navigation { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 15px 0; }
+  .cue-navigation > span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .cue-navigation .button { min-height: 36px; padding: 7px 9px; font-size: 12px; }
+  .cue-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .cue-fields legend { padding: 0; margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--text); }
+  .cue-timing, .cue-wording { min-width: 0; }
+  .cue-time-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  label { font-size: 12px; line-height: 1.5; margin: 10px 0; }
+  input, textarea { font-size: 14px; }
+  textarea { resize: vertical; min-height: 85px; white-space: pre-wrap; }
+  .cue-help, .cue-count, .cue-error { font-size: 12px; line-height: 1.6; margin: 9px 0 13px; }
+  .cue-error { color: #9b2424; }
+  .cue-count { margin-top: -3px; color: var(--muted); }
+  [aria-invalid="true"] { border-color: #9b2424; }
+  .cue-sliders { border-block: 1px solid var(--border); padding: 5px 0; margin: 14px 0; }
+  .cue-sliders label { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+  output, .cue-source-time { color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+  input[type="range"] { min-height: 32px; width: 100%; padding: 0; }
+  .cue-read-text { color: var(--text); font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cue-save { border-top: 1px solid var(--border); margin-top: 17px; padding-top: 8px; }
+  .cue-save .button { min-height: 44px; width: 100%; font-size: 13px; }
+  :is(button,input,textarea,select,[tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  @container cue-editor (min-width: 650px) {
+    .cue-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 0 24px; }
+    .cue-save { display: flex; gap: 24px; align-items: center; justify-content: space-between; }
+    .cue-save .button { width: auto; flex-shrink: 0; }
+  }
+  @media (max-width: 560px) { .selected-cue { padding: 14px 12px; }.cue-navigation .button { min-height: 44px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+}

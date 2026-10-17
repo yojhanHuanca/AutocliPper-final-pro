@@ -1,54 +1,62 @@
 <section class="editor-timeline" aria-labelledby="timeline-title">
   <div class="timeline-heading">
-    <span id="timeline-title"><ac-icon name="scissors" />Rango de la fuente</span>
-    <strong>{{ vm.timeline().startSeconds | number: "1.1-1" }} s — {{ vm.timeline().endSeconds | number: "1.1-1" }} s</strong>
+    <h2 id="timeline-title"><ac-icon name="captions" />Línea de tiempo</h2>
+    @if (vm.draft() && vm.clipRangeUsable()) { <strong>{{ vm.timeline().startSeconds | number: "1.1-3" }} s — {{ vm.timeline().endSeconds | number: "1.1-3" }} s</strong> }
+    @else if (vm.draft()) { <span>Corrige el intervalo del clip</span> }
+    @else { <span>Sin revisión cargada</span> }
   </div>
 
   @if (vm.sourceDuration(); as duration) {
     <div class="source-meta">Fuente inspeccionada · {{ duration | number: "1.1-1" }} s</div>
+    @if (vm.clipRangeUsable()) {
     <div class="source-track" role="img" [attr.aria-label]="'Selección desde ' + vm.spec.startSeconds + ' hasta ' + vm.spec.endSeconds + ' segundos de una fuente de ' + duration + ' segundos'">
       <div class="selected-range" [style.left.%]="vm.spec.startSeconds / duration * 100" [style.width.%]="(vm.spec.endSeconds - vm.spec.startSeconds) / duration * 100"></div>
     </div>
     <div class="track-labels"><span>0 s</span><span>{{ duration | number: "1.1-1" }} s</span></div>
+    <details class="clip-range-controls">
+      <summary>Ajustar intervalo del clip</summary>
     <div class="range-control">
       <label for="timeline-start">Inicio <output>{{ vm.spec.startSeconds | number: "1.1-1" }} s</output></label>
-      <input id="timeline-start" type="range" [ngModel]="vm.spec.startSeconds" (ngModelChange)="vm.setTimelineStart($event)" [min]="vm.timelineStartMin()" [max]="vm.timelineStartMax()" step="0.1" [disabled]="vm.design || !vm.canEditCollaboration() || duration < 0.1" aria-describedby="range-help" />
+      <input id="timeline-start" type="range" [ngModel]="vm.spec.startSeconds" (ngModelChange)="vm.setTimelineStart($event)" [min]="vm.timelineStartMin()" [max]="vm.timelineStartMax()" step="0.1" [disabled]="!vm.canChangeCaptions() || duration < 0.1" aria-describedby="range-help" />
     </div>
     <div class="range-control">
       <label for="timeline-end">Final <output>{{ vm.spec.endSeconds | number: "1.1-1" }} s</output></label>
-      <input id="timeline-end" type="range" [ngModel]="vm.spec.endSeconds" (ngModelChange)="vm.setTimelineEnd($event)" [min]="vm.timelineEndMin()" [max]="vm.timelineEndMax()" step="0.1" [disabled]="vm.design || !vm.canEditCollaboration() || duration < 0.1" aria-describedby="range-help" />
+      <input id="timeline-end" type="range" [ngModel]="vm.spec.endSeconds" (ngModelChange)="vm.setTimelineEnd($event)" [min]="vm.timelineEndMin()" [max]="vm.timelineEndMax()" step="0.1" [disabled]="!vm.canChangeCaptions() || duration < 0.1" aria-describedby="range-help" />
     </div>
     <p id="range-help" class="timeline-help">Usa ←/→ para ajustar en pasos de 0,1 s. La duración del clip debe quedar entre 0,1 y 120 s.</p>
-    @if (vm.sourceRangeInvalid()) {
-      <p class="timeline-error" role="alert">El final supera la duración medida. Corrige el rango antes de guardar.</p>
+    </details>
+    } @else {
+      <p class="timeline-error" role="alert">El intervalo no es válido para esta fuente. Corrige sus campos numéricos antes de guardar.</p>
+      <button class="button small" type="button" (click)="vm.tab.set('composition')">Corregir intervalo en Composición</button>
     }
   } @else {
-    <p class="timeline-help">Duración de la fuente no disponible. El rango se puede precisar en los campos numéricos de Composición.</p>
+    <p class="timeline-help">{{ vm.draft() ? 'Duración medida de la fuente no disponible. El intervalo guardado sigue disponible en Composición.' : 'Carga un borrador autorizado para consultar sus tiempos y subtítulos.' }}</p>
   }
 
-  <div class="timeline-lane">
-    <span><ac-icon name="film" />VIDEO</span>
-    <div class="clip-block">Selección del borrador · {{ (vm.timeline().endSeconds - vm.timeline().startSeconds) | number: "1.1-1" }} s</div>
-  </div>
-  <div class="timeline-lane">
-    <span><ac-icon name="captions" />SUBTÍTULOS</span>
-    @if (vm.timeline().captionSource === 'none') {
-      <div class="caption-lane">Sin subtítulos</div>
-    } @else if (vm.timeline().captionSource === 'transcript') {
-      <div class="caption-lane">Transcripción vinculada al análisis {{ vm.analysisId }}. Esta revisión no incluye aquí el texto segmentado ni los tiempos de sus cues.</div>
-    } @else {
-      <div class="cue-track" aria-label="Frases de subtítulo editables">
+  <div class="caption-track-heading"><h3>Subtítulos del clip</h3><span>Tiempos de la fuente original</span></div>
+  @if (vm.timeline().captionSource === 'transcript' && vm.transcriptLoading()) { <p class="timeline-help" role="status">Cargando frases de la transcripción…</p> }
+  @else if (vm.timeline().captionSource === 'transcript' && vm.transcriptError()) {
+    <p class="timeline-error">{{ vm.transcriptError() }}</p>
+    <button class="button small" type="button" (click)="vm.retryTranscript()" [disabled]="vm.busy()">Reintentar carga de frases</button>
+  } @else if (vm.captionEntries().length) {
+    <div class="cue-scroll">
+      <div class="cue-track" aria-label="Frases en el intervalo del clip" [style.height.px]="vm.timelineCueRows() * 44 + 12">
         @for (cue of vm.timelineCues(); track cue.index) {
-          <div class="cue-marker" [style.left.%]="cue.left" [style.width.%]="cue.width" [attr.title]="cue.startSeconds + '–' + cue.endSeconds + ' s: ' + cue.text">{{ cue.text || 'Frase ' + (cue.index + 1) }}</div>
-        } @empty { <span class="empty-cues">Aún no hay frases.</span> }
+          <button type="button" class="cue-marker" [class.selected]="vm.selectedCue()?.index === cue.index" [style.left.%]="cue.left" [style.width.%]="cue.width" [style.top.px]="cue.row * 44 + 6"
+            [attr.aria-label]="'Frase ' + (cue.index + 1) + ', ' + cue.startSeconds + '–' + cue.endSeconds + ' segundos: ' + (cue.text || 'sin texto')"
+            [attr.aria-pressed]="vm.selectedCue()?.index === cue.index" [attr.data-cue-index]="cue.index" [attr.tabindex]="cueTabIndex(cue.index)"
+            aria-describedby="caption-track-help" (click)="vm.selectCue(cue.index)" (keydown)="cueKeydown($event, cue.index)">{{ cue.text || 'Frase ' + (cue.index + 1) }}</button>
+        } @empty { <span class="empty-cues">Ninguna frase tiene tiempos válidos dentro del clip. Corrígela en el selector.</span> }
       </div>
-    }
-  </div>
-  @if (vm.timeline().captionSource === 'user' && vm.cues.length) {
-    <ol class="cue-list" aria-label="Tiempos y texto de subtítulos">
-      @for (cue of vm.cues; track $index) {
-        <li><time>{{ cue.startSeconds | number: "1.1-1" }}–{{ cue.endSeconds | number: "1.1-1" }} s</time><span>{{ cue.text || 'Frase sin texto' }}</span></li>
-      }
-    </ol>
+    </div>
+    @if (vm.clipRangeUsable()) { <div class="clip-caption-labels"><span>{{ vm.timeline().startSeconds | number: '1.1-3' }} s</span><span>{{ vm.timeline().endSeconds | number: '1.1-3' }} s</span></div> }
+    <p id="caption-track-help" class="timeline-help">Selecciona una frase. Usa ←/→, Inicio y Fin para recorrer la pista, o el selector para acceder a frases cortas o fuera del intervalo. Las frases superpuestas ocupan filas separadas.</p>
+  } @else {
+    <div class="caption-lane">
+      <p>{{ vm.timeline().captionSource === 'transcript' ? 'No hay frases de la transcripción en este intervalo.' : 'Este borrador todavía no tiene frases de subtítulo.' }}</p>
+      @if (vm.timeline().captionSource === 'transcript') { <button type="button" class="button" (click)="vm.tab.set('composition')">Consultar intervalo en Composición</button> }
+      @else { <button type="button" class="button" (click)="vm.startManualCaptions()" [disabled]="!vm.canChangeCaptions()">Añadir subtítulos</button> }
+    </div>
   }
+  @if (vm.timeline().captionSource !== 'none') { <ac-caption-cue-editor context="timeline" /> }
 </section>

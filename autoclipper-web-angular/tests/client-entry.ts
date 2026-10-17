@@ -4,6 +4,7 @@ export { API_AUTHENTICATED } from '../src/app/core/http/api-auth-context';
 export { apiInterceptor } from '../src/app/core/http/api.interceptor';
 export { errorMessage } from '../src/app/core/http/api-error';
 export { validateCaptionCues } from '../src/app/features/editor/models/caption-cues';
+export { layoutCaptionCues, copyTranscriptCues } from '../src/app/features/editor/models/caption-timeline';
 export { fetchPrivateArtifact } from '../src/app/core/http/artifact-download';
 export { EditorState } from '../src/app/features/editor/state/editor.state';
 export { EditorApi } from '../src/app/features/editor/data-access/editor-api.service';

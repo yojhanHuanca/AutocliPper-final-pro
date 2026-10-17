@@ -16,7 +16,8 @@
     color: var(--text);
     font-size: 13px;
   }
-  .timeline-heading > span { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+  .timeline-heading h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; letter-spacing: -.02em; }
+  .timeline-heading > span { font-size: 12px; color: var(--muted); }
   .timeline-heading ac-icon { width: 17px; height: 17px; color: var(--accent); }
   .timeline-heading > strong { font-size: 13px; font-variant-numeric: tabular-nums; }
   .source-meta { margin: 17px 0 6px; color: var(--muted); font-size: 12px; }
@@ -34,27 +35,34 @@
   .range-control label { display: flex; justify-content: space-between; margin-bottom: 3px; color: var(--text); font-size: 12px; font-weight: 600; }
   .range-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
   .range-control input { width: 100%; min-height: 28px; accent-color: var(--accent); cursor: pointer; }
-  .range-control input:focus-visible { outline: 3px solid #8daff5; outline-offset: 2px; border-radius: 3px; }
+  .range-control input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
   .timeline-help, .timeline-error { margin: 7px 0 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
   .timeline-error { color: #a1283c; }
-  .timeline-lane { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; align-items: start; margin-top: 12px; }
-  .timeline-lane > span { display: flex; align-items: center; gap: 7px; padding-top: 10px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-  .timeline-lane ac-icon { width: 15px; height: 15px; color: var(--accent); }
-  .clip-block, .caption-lane, .cue-track { min-width: 0; padding: 10px 12px; border: 1px solid #bdcbed; border-radius: 8px; background: #edf2ff; color: #294a95; font-size: 12px; line-height: 1.5; }
-  .caption-lane { border-color: #e4c5df; background: #fff2fb; color: #743f75; }
-  .cue-track { position: relative; min-height: 42px; overflow: hidden; border-color: #a9c3f5; background: repeating-linear-gradient(90deg, #edf2ff 0, #edf2ff calc(10% - 1px), #d8e2f5 calc(10% - 1px), #d8e2f5 10%); }
-  .cue-marker { position: absolute; top: 7px; bottom: 7px; min-width: 3px; overflow: hidden; padding: 3px 5px; border-radius: 4px; background: #315cbd; color: white; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .clip-range-controls { margin-top: 10px; }
+  .clip-range-controls summary { cursor: pointer; min-height: 40px; padding: 10px 0; font-size: 12px; color: var(--accent); }
+  .caption-track-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 7px 16px; align-items: baseline; margin: 16px 0 10px; }
+  .caption-track-heading h3 { font-size: 14px; letter-spacing: -.02em; }
+  .caption-track-heading > span { font-size: 11px; color: var(--muted); }
+  .caption-lane { padding: 12px; border: 1px solid #c9d5ee; background: #edf2fc; border-radius: 7px; }
+  .caption-lane p { font-size: 13px; margin: 0 0 10px; color: var(--text); }
+  .caption-lane .button { min-height: 44px; font-size: 12px; }
+  .cue-scroll { min-width: 0; max-height: 230px; overflow: auto; overscroll-behavior: contain; border: 1px solid #c5d3ee; border-radius: 7px; padding: 4px; background: #f7f9fd; }
+  .cue-track { position: relative; min-width: 0; min-height: 56px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), #e1e7f2 calc(10% - 1px), #e1e7f2 10%); }
+  .cue-marker { position: absolute; height: 36px; min-width: 0; overflow: hidden; padding: 5px 0; border: 1px solid #b5c5e5; border-radius: 4px; background: #e0e9fc; color: #183e90; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .cue-marker.selected { background: var(--accent); color: #fff; border-color: var(--accent-hover); }
+  .cue-marker:focus-visible { outline: 3px solid #183e90; outline-offset: 2px; box-shadow: inset 0 0 0 2px #fff; }
+  .clip-caption-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
   .empty-cues { color: var(--muted); font-size: 12px; }
-  .cue-list { display: grid; gap: 6px; margin: 10px 0 0 112px; padding: 0; list-style: none; }
-  .cue-list li { display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 10px; padding: 7px 9px; border-radius: 6px; background: #fafbff; color: var(--text); font-size: 12px; overflow-wrap: anywhere; }
-  .cue-list time { color: #294a95; font-variant-numeric: tabular-nums; }
-  ac-editor-timeline { display: block; grid-column: 1 / -1; }
+  :host { display: block; grid-column: 1 / -1; min-width: 0; min-height: 0; }
+  :is(button,summary):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  @media (min-width: 1051px) and (min-height: 650px) { .editor-timeline { height: 100%; overflow: auto; overscroll-behavior: contain; } }
   @media (max-width: 600px) {
     .editor-timeline { padding: 14px 12px; }
     .timeline-heading { align-items: flex-start; font-size: 12px; }
     .timeline-heading > strong { font-size: 12px; }
-    .timeline-lane { grid-template-columns: 1fr; gap: 5px; }
-    .timeline-lane > span { padding-top: 0; }
-    .cue-list { margin-left: 0; }
+    .caption-track-heading { display: block; }
+    .caption-track-heading > span { display: block; margin-top: 6px; }
+    .cue-marker { height: 36px; }
   }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 }

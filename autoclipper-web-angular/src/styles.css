@@ -1321,7 +1321,7 @@
     .app-body:has(ac-editor) .app-footer { display: none; }
     ac-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
     .editor-heading { flex: 0 0 auto; margin-bottom: 18px; }
-    .editor-layout { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) 160px; }
+    .editor-layout { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) minmax(180px, 40%); }
     ac-editor-preview, ac-editor-inspector { min-height: 0; height: 100%; }
     .editor-rail { height: 100%; min-height: 0; overflow-y: auto; }
     .editor-stage { height: 100%; min-height: 0; }

@@ -65,6 +65,7 @@
 @if (vm.message()) {
   <div class="alert" role="status">{{ vm.message() }}</div>
 }
+@if (vm.captionActionError()) { <div class="alert error" role="alert">{{ vm.captionActionError() }}</div> }
 <div class="editor-layout">
   <ac-editor-rail />
   <ac-editor-preview />

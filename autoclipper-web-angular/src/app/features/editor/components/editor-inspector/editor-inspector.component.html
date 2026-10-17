@@ -8,7 +8,7 @@
           >Inicio (s)<input
             type="number"
             name="start"
-            [(ngModel)]="vm.spec.startSeconds" (ngModelChange)="vm.touchForm()"
+            [ngModel]="vm.draft() ? vm.spec.startSeconds : null" (ngModelChange)="vm.setClipField('startSeconds', $event)"
             min="0"
             [max]="vm.sourceDuration() ?? null"
             step="0.1"
@@ -19,7 +19,7 @@
           >Fin (s)<input
             type="number"
             name="end"
-            [(ngModel)]="vm.spec.endSeconds" (ngModelChange)="vm.touchForm()"
+            [ngModel]="vm.draft() ? vm.spec.endSeconds : null" (ngModelChange)="vm.setClipField('endSeconds', $event)"
             min="0.1"
             [max]="vm.sourceDuration() ?? null"
             step="0.1"
