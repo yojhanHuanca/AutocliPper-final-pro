@@ -31,6 +31,7 @@ export class SettingsComponent {
   private setupTimer?: ReturnType<typeof setTimeout>;
   readonly setupSeconds = signal(0);
   readonly design = inject(DESIGN_MODE);
+  readonly tabItems = ["Perfil", "Seguridad", "Privacidad"] as const;
   readonly tab = signal("Perfil");
   readonly profile = signal<Schema<"ProfileResponseDto"> | null>(null);
   readonly mfa = signal<Schema<"MfaStatusResponseDto"> | null>(null);
@@ -118,8 +119,27 @@ export class SettingsComponent {
     this.message.set('Cambios descartados.');
   }
   selectTab(tab: string): void {
+    if (!this.tabItems.includes(tab as (typeof this.tabItems)[number])) return;
     if (tab !== 'Seguridad') this.clearSensitive();
     this.tab.set(tab);
+  }
+  activeTabIndex(): number {
+    return this.tabItems.indexOf(this.tab() as (typeof this.tabItems)[number]);
+  }
+  onTabKeydown(event: KeyboardEvent, index: number): void {
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % this.tabItems.length;
+    else if (event.key === "ArrowLeft")
+      next = (index + this.tabItems.length - 1) % this.tabItems.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = this.tabItems.length - 1;
+    else return;
+
+    event.preventDefault();
+    this.selectTab(this.tabItems[next]);
+    requestAnimationFrame(() =>
+      document.getElementById(`settings-tab-${next}`)?.focus(),
+    );
   }
   hideSetup(): void { this.clearSensitive(); }
   private clearSensitive(): void {

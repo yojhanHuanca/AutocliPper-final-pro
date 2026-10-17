@@ -8,8 +8,12 @@ test('API errors distinguish unavailable service, expired session, login rejecti
   const login=new HttpErrorResponse({status:401,url:'http://localhost:3000/v1/auth/login'});
   const expired=new HttpErrorResponse({status:401,url:'http://localhost:3000/v1/projects'});
   const csrf=new HttpErrorResponse({status:403,url:'http://localhost:3000/v1/projects',error:{code:'CSRF_TOKEN_INVALID'}});
+  const forbidden=new HttpErrorResponse({status:403,url:'http://localhost:3000/v1/projects',error:{code:'WORKSPACE_FORBIDDEN'}});
+  const limited=new HttpErrorResponse({status:429,url:'http://localhost:3000/v1/consumption/workspaces/workspace-1'});
   assert.match(errorMessage(unavailable),/conectar con el servidor/);
   assert.match(errorMessage(login),/correo, la contraseña/);
   assert.match(errorMessage(expired),/sesión venció/);
   assert.match(errorMessage(csrf),/verificación de seguridad/);
+  assert.match(errorMessage(forbidden),/no tiene permiso/);
+  assert.match(errorMessage(limited),/Espera antes de volver a intentarlo/);
 });

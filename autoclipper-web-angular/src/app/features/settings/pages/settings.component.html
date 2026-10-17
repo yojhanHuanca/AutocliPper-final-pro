@@ -6,12 +6,17 @@
   </div>
   <ac-icon class="heading-icon" name="settings" />
 </section>
-<div class="tab-bar" aria-label="Secciones de configuración">
-  @for (item of ["Perfil", "Seguridad", "Privacidad"]; track item) {
+<div class="tab-bar" role="tablist" aria-label="Secciones de configuración">
+  @for (item of tabItems; track item; let index = $index) {
     <button
       type="button"
+      role="tab"
+      [id]="'settings-tab-' + index"
+      aria-controls="settings-panel"
+      [attr.aria-selected]="tab() === item"
+      [attr.tabindex]="tab() === item ? 0 : -1"
       [class.active]="tab() === item"
-      [attr.aria-pressed]="tab() === item"
+      (keydown)="onTabKeydown($event, index)"
       (click)="selectTab(item)"
     >
       {{ item }}
@@ -25,7 +30,13 @@
   <div class="alert success" role="status">{{ message() }}</div>
 }
 <div class="settings-grid">
-  <section>
+  <section
+    id="settings-panel"
+    role="tabpanel"
+    tabindex="0"
+    [attr.aria-labelledby]="'settings-tab-' + activeTabIndex()"
+    [attr.aria-label]="tab()"
+  >
     @if (tab() === "Perfil") {
       <article class="panel">
         <span class="eyebrow">PERFIL</span>

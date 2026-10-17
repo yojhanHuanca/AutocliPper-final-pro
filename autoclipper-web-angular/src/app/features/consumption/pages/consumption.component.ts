@@ -12,7 +12,14 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
-import { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../models/ledger-labels';
+import {
+  consumptionKindLabel,
+  consumptionPlanLabel,
+  consumptionQuotaProgress,
+  consumptionQuotaTotal,
+  consumptionStageLabel,
+  pipelineShortId,
+} from "../models/ledger-labels";
 
 export function loadConsumptionSections(
   api: Pick<ConsumptionApi, "overview" | "ledger">,
@@ -34,6 +41,9 @@ export function loadConsumptionSections(
 export class ConsumptionComponent {
   readonly stageLabel = consumptionStageLabel;
   readonly kindLabel = consumptionKindLabel;
+  readonly planLabel = consumptionPlanLabel;
+  readonly quotaProgress = consumptionQuotaProgress;
+  readonly quotaTotal = consumptionQuotaTotal;
   readonly shortPipelineId = pipelineShortId;
   readonly workspace = inject(WorkspaceStore);
 

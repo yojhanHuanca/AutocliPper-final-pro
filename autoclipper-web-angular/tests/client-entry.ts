@@ -28,6 +28,7 @@ export { AdminApi } from '../src/app/features/administration/data-access/admin-a
 export { AdminConsoleComponent } from '../src/app/features/administration/pages/admin-console.component';
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
+export { consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaTotal } from '../src/app/features/consumption/models/ledger-labels';
 export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
 export { sessionGuard } from '../src/app/core/guards/session.guard';
 export { workspaceGuard } from '../src/app/features/workspaces/workspace.guard';

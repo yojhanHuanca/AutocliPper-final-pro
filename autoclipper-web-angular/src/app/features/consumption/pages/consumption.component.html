@@ -50,12 +50,28 @@
     </article>
   </div>
   <article class="panel">
-    <span class="eyebrow">PLAN DE DESARROLLO</span>
-    <h2>{{ usage.plan?.label ?? "Sin plan asignado" }}</h2>
+    <span class="eyebrow">ASIGNACIÓN DEL ESPACIO</span>
+    <h2>{{ planLabel(usage.plan) }}</h2>
     <p>
       Periodo: {{ usage.periodStart | date: "mediumDate" }} —
       {{ usage.periodEnd | date: "mediumDate" }}
     </p>
+    <div class="quota-meter">
+      <div class="quota-meter-label">
+        <strong>Uso de la asignación</strong>
+        <span>{{ quotaProgress(usage) | number: "1.0-1" }} %</span>
+      </div>
+      <progress
+        max="100"
+        [value]="quotaProgress(usage)"
+        [attr.aria-label]="'Uso de la asignación: ' + (quotaProgress(usage) | number: '1.0-1') + ' por ciento'"
+      ></progress>
+      <p>
+        {{ usage.consumedSeconds + usage.reservedSeconds | number: "1.0-2" }}
+        s usados o reservados de {{ quotaTotal(usage) | number: "1.0-2" }} s
+        en este periodo.
+      </p>
+    </div>
     <p class="resource-id">
       Versión del plan: {{ usage.plan?.version ?? "—" }}
     </p>
@@ -71,9 +87,10 @@
   </div>
 }
 <p class="alert">
-  Consumo de desarrollo, sin precios, cobros ni créditos comerciales. Los nuevos
-  pipelines concilian por etapa; las APIs manuales y trabajos anteriores tienen
-  un alcance distinto. No representa una cuota comercial global.
+      Asignación local de desarrollo: no tiene precios, cobros ni créditos
+  comerciales. El uso suma el material procesado en cada etapa; las APIs manuales
+  y trabajos anteriores pueden seguir otra regla. El saldo mostrado pertenece a
+  este espacio y periodo, no a una cuota comercial global.
 </p>
 <section class="panel">
   <div class="panel-heading">
