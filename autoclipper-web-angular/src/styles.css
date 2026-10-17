@@ -1511,7 +1511,7 @@
       font-size: 37px;
     }
     .auth-visual {
-      display: none;
+      display: grid;
     }
     .app-main {
       padding: 22px 17px;

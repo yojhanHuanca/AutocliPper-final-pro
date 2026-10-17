@@ -1,5 +1,5 @@
 import { AuthApi } from "../data-access/auth-api.service";
-import { ViewEncapsulation, Component, inject, signal } from "@angular/core";
+import { ViewEncapsulation, Component, DestroyRef, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { SessionStore } from "../../../core/auth/session.store";
@@ -10,10 +10,12 @@ import { IconComponent } from "../../../shared/ui/icon/icon.component";
   encapsulation: ViewEncapsulation.None,
   selector: "ac-auth",
   imports: [FormsModule, RouterLink, IconComponent],
+  host: { "[class.motion-paused]": "motionPaused() || reducedMotion()" },
   templateUrl: "./auth.component.html",
   styleUrl: "./auth.component.css",
 })
 export class AuthComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly api = inject(AuthApi);
   private readonly session = inject(SessionStore);
   private readonly route = inject(ActivatedRoute);
@@ -21,12 +23,25 @@ export class AuthComponent {
   readonly busy = signal(false);
   readonly error = signal("");
   readonly message = signal("");
+  readonly motionPaused = signal(false);
+  readonly reducedMotion = signal(false);
+  readonly waveformBars = Array.from(
+    { length: 38 },
+    (_, index) => 20 + (Math.sin(index * 1.55) + 1) * 36,
+  );
   name = "";
   email = "";
   password = "";
   factor = "";
   token = "";
   constructor() {
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    this.reducedMotion.set(motionPreference.matches);
+    const updateMotionPreference = () => this.reducedMotion.set(motionPreference.matches);
+    motionPreference.addEventListener("change", updateMotionPreference);
+    this.destroyRef.onDestroy(() =>
+      motionPreference.removeEventListener("change", updateMotionPreference),
+    );
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
     if (this.token) void this.router.navigate([], { relativeTo: this.route, queryParams: { token: null }, queryParamsHandling: 'merge', replaceUrl: true });
     if (this.route.snapshot.queryParamMap.get('connection') === 'unavailable') this.error.set('No pudimos consultar tu espacio. Revisa la conexión con el servidor y vuelve a entrar.');
