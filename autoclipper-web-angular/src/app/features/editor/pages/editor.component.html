@@ -31,12 +31,19 @@
       class="button primary"
       type="button"
       (click)="vm.render()"
-      [disabled]="vm.design || vm.busy() || vm.dirty() || !vm.draft()"
+      [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || vm.dirty() || !vm.draft()"
     >
       Exportar revisión<ac-icon name="download" />
     </button>
   </div>
 </section>
+@if (vm.collaborationRole() === "loading") {
+  <div class="alert" role="status">Comprobando el rol del espacio antes de habilitar cambios…</div>
+} @else if (vm.collaborationRole() === "unavailable") {
+  <div class="alert" role="status">No se pudo confirmar tu rol en el proyecto. Las acciones de edición permanecen deshabilitadas.</div>
+} @else if (vm.collaborationRole() === "reader") {
+  <div class="alert" role="status">Tienes acceso de lectura. Puedes consultar comentarios y exportaciones; editar requiere el rol de editor.</div>
+}
 @if (vm.error()) {
   <div class="alert error" role="alert">
     {{ vm.error() }}

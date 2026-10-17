@@ -13,6 +13,7 @@ import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
+import { SessionStore } from "../../../core/auth/session.store";
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
@@ -23,6 +24,7 @@ export class EditorState {
   private readonly discardConfirmation = inject(EDITOR_DISCARD_CONFIRMATION);
   private readonly editorNavigation = inject(EditorNavigationService);
   private readonly workspaceStore = inject(WorkspaceStore);
+  private readonly sessionStore = inject(SessionStore);
   readonly design = inject(DESIGN_MODE);
   private readonly activeId = signal(this.route.snapshot.paramMap.get("id") ?? "");
   get id(): string { return this.activeId(); }
@@ -35,12 +37,14 @@ export class EditorState {
   });
   readonly canEditCollaboration = computed(() => ["owner", "admin", "editor"].includes(this.collaborationRole()));
   readonly canAdminCollaboration = computed(() => ["owner", "admin"].includes(this.collaborationRole()));
+  readonly exportsLoaded = signal(false);
   readonly review = signal<Schema<"ReviewHistoryDto"> | null>(null);
   readonly history = signal<Schema<"EditorRevisionSummaryDto">[]>([]);
   readonly nextVersion = signal<number | null>(null);
   readonly comments = signal<Schema<"EditorCommentDto">[]>([]);
   readonly nextComment = signal<string | null>(null);
   readonly exports = signal<Schema<"EditorExportDto">[]>([]);
+  readonly exportsError = signal("");
   readonly tab = signal("composition");
   readonly busy = signal(false);
   readonly error = signal("");
@@ -141,6 +145,8 @@ export class EditorState {
     this.comments.set([]);
     this.nextComment.set(null);
     this.exports.set([]);
+    this.exportsLoaded.set(false);
+    this.exportsError.set("");
     this.tab.set("composition");
     this.busy.set(false);
     this.error.set("");
@@ -210,14 +216,14 @@ export class EditorState {
     return !this.disposed && generation === this.editGeneration;
   }
   addCue(): void {
-    if (this.design || this.cues.length >= 200) return;
+    if (this.design || !this.canEditCollaboration() || this.cues.length >= 200) return;
     const startSeconds = this.cues.at(-1)?.endSeconds ?? this.spec.startSeconds;
     if (startSeconds >= this.spec.endSeconds) { this.message.set('Ajusta el final de la última frase para dejar espacio a la siguiente.'); return; }
     this.cues = [...this.cues, { startSeconds, endSeconds: Math.min(startSeconds + 3, this.spec.endSeconds), text: '' }];
     this.touchForm();
   }
   removeCue(index: number): void {
-    if (!this.design) { this.cues = this.cues.filter((_cue, i) => i !== index); this.touchForm(); }
+    if (!this.design && this.canEditCollaboration()) { this.cues = this.cues.filter((_cue, i) => i !== index); this.touchForm(); }
   }
   private accept(
     draft: Schema<"EditorDraftDto">,
@@ -320,6 +326,7 @@ export class EditorState {
     return result;
   }
   async save(): Promise<void> {
+    if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
@@ -353,6 +360,7 @@ export class EditorState {
     await this.run(() => this.loadHistory(true));
   }
   async restore(version: number): Promise<void> {
+    if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
@@ -400,6 +408,7 @@ export class EditorState {
     await this.reviewAction("approvals");
   }
   private async reviewAction(path: "review" | "return" | "approvals"): Promise<void> {
+    if (!this.canEditCollaboration() || (path !== "review" && !this.canAdminCollaboration())) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const review = this.review();
@@ -442,6 +451,7 @@ export class EditorState {
     await this.run(() => this.loadComments(true));
   }
   async comment(): Promise<void> {
+    if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
@@ -470,6 +480,10 @@ export class EditorState {
   }
   async deleteComment(item: Schema<"EditorCommentDto">): Promise<void> {
     if (item.deletedAt) return;
+    const role = this.collaborationRole();
+    const isOwnerOrAdmin = role === "owner" || role === "admin";
+    const isOwnEditorComment = role === "editor" && item.authorId === this.sessionStore.user()?.id;
+    if (!isOwnerOrAdmin && !isOwnEditorComment) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const deleted = await this.collaboration.deleteComment(this.id, item.id, { version: item.version });
@@ -488,6 +502,8 @@ export class EditorState {
       const result = await this.api.exports(this.id);
       if (!this.isCurrentEdit(generation)) return false;
       this.exports.set(result.items);
+      this.exportsLoaded.set(true);
+      this.exportsError.set("");
       if (
         !this.disposed &&
         result.items.some((e) => ["queued", "running"].includes(e.status))
@@ -496,13 +512,15 @@ export class EditorState {
       return true;
     } catch (error) {
       if (!this.isCurrentEdit(generation)) return false;
-      this.loadNotice.set(
-        `No se pudieron cargar las exportaciones: ${errorMessage(error)}`,
-      );
+      this.exportsError.set(`No se pudieron cargar las exportaciones: ${errorMessage(error)}`);
       return false;
     }
   }
+  exportStatusLabel(status: Schema<"EditorExportDto">["status"]): string {
+    return { queued: "En cola", running: "Procesando", succeeded: "Lista", failed: "Fallida", cancelled: "Cancelada" }[status];
+  }
   async render(): Promise<void> {
+    if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
@@ -517,6 +535,7 @@ export class EditorState {
     });
   }
   async cancelRender(id: string): Promise<void> {
+    if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       await this.api.cancelRender(id);

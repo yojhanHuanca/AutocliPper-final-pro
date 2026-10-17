@@ -52,6 +52,7 @@ export class ProjectCollectionComponent {
     });
   }
   canEdit(): boolean {
+    if (!this.workspace.loaded()) return false;
     return ["owner", "admin", "editor"].includes(
       this.workspace
         .workspaces()
@@ -59,12 +60,18 @@ export class ProjectCollectionComponent {
     );
   }
   roleLabel(): string {
-    return this.design
-      ? "Tu rol aparecerá aquí"
-      : (this.workspace
-          .workspaces()
-          .find((w) => w.id === this.workspace.workspaceId())?.role ??
-          "Sin espacio");
+    if (this.design) return "Tu rol aparecerá aquí";
+    if (!this.workspace.loaded()) return "Comprobando acceso…";
+    const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
+    return role ? ({ owner: "Propietario", admin: "Administrador", editor: "Editor", reader: "Lector" } as const)[role] : "Sin acceso confirmado";
+  }
+  roleNotice(): string {
+    if (this.design) return "";
+    if (!this.workspace.loaded()) return "Comprobando el rol del espacio antes de habilitar cambios…";
+    const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
+    if (!role) return "No se encontró un rol para este espacio. La creación de proyectos permanece deshabilitada.";
+    if (role === "reader") return "Tienes acceso de lectura. Para crear proyectos necesitas un rol de editor o superior.";
+    return "";
   }
   async load(id = this.workspace.workspaceId()): Promise<void> {
     if (this.design || !id) return;
@@ -88,11 +95,12 @@ export class ProjectCollectionComponent {
     }
   }
   async create(): Promise<void> {
-    if (this.design || !this.projectName.trim() || this.busy()) return;
+    if (this.design || !this.projectName.trim() || this.busy() || !this.canEdit()) return;
     this.busy.set(true);
     this.error.set("");
+    const workspaceId = this.workspace.workspaceId();
     const serialized = JSON.stringify([
-      this.workspace.workspaceId(),
+      workspaceId,
       this.projectName.trim(),
     ]);
     if (serialized !== this.creationBody) {
@@ -102,17 +110,22 @@ export class ProjectCollectionComponent {
     try {
       const result = await this.api.create(
         {
-          workspaceId: this.workspace.workspaceId(),
+          workspaceId,
           name: this.projectName.trim(),
         },
         this.creationKey,
       );
       this.creationKey = "";
+      if (workspaceId !== this.workspace.workspaceId()) return;
       await this.router.navigate(["/app/projects", result.id]);
     } catch (error) {
       this.error.set(errorMessage(error));
     } finally {
       this.busy.set(false);
     }
+  }
+  clearSearch(): void {
+    this.search = "";
+    void this.load();
   }
 }

@@ -42,11 +42,12 @@
         [(ngModel)]="projectName"
         required
         maxlength="150"
+        [disabled]="busy() || !canEdit()"
         placeholder="El nombre de tu próxima historia" /></label
     ><button
       class="button primary"
       type="submit"
-      [disabled]="busy() || createForm.invalid"
+      [disabled]="busy() || createForm.invalid || !canEdit()"
     >
       Crear proyecto</button
     ><button class="button" type="button" (click)="newProject.set(false)">
@@ -59,7 +60,7 @@
   <div class="panel-heading">
     <div>
       <span class="eyebrow">EL PUNTO DE PARTIDA</span>
-      <h2>{{ compact() ? "Proyectos recientes" : "Todos los proyectos" }}</h2>
+      <h2>{{ compact() ? "Proyectos recientes" : "Tus proyectos" }}</h2>
     </div>
     <button
       class="button small"
@@ -79,6 +80,12 @@
       /><button type="submit" [disabled]="design || busy()">Buscar</button>
     </form>
   </div>
+  @if (roleNotice()) {
+    <div class="alert" role="status">{{ roleNotice() }}</div>
+  }
+  @if (!design) {
+    <p class="muted">La lista muestra hasta 100 proyectos por consulta. Usa el buscador para encontrar uno por nombre.</p>
+  }
   @if (busy()) {
     <div class="loading-state" role="status">
       <span class="spinner"></span>Consultando tus proyectos…
@@ -113,6 +120,10 @@
           {{
             design
               ? "Imagina tu próxima historia aquí."
+              : error()
+                ? "No pudimos cargar la lista."
+                : search && loaded()
+                  ? "No encontramos ese proyecto."
               : loaded()
                 ? "Tu próximo proyecto empieza aquí."
                 : "Tus proyectos aparecerán al conectar."
@@ -120,7 +131,9 @@
         </h3>
         <p>
           {{
-            search
+            error()
+              ? "Revisa la conexión e inténtalo de nuevo."
+              : search && loaded()
               ? "No encontramos proyectos con ese nombre."
               : "Reúne tu material, dale un nombre y crea un espacio para cada idea. Cada archivo será privado y se comprobará antes de procesarlo."
           }}
@@ -129,6 +142,10 @@
           <a class="button" routerLink="/login"
             >Conectar mi cuenta<ac-icon name="arrow"
           /></a>
+        } @else if (error()) {
+          <button class="button" type="button" (click)="load()">Reintentar</button>
+        } @else if (search && loaded()) {
+          <button class="button" type="button" (click)="clearSearch()">Limpiar búsqueda</button>
         } @else {
           <button
             class="button"

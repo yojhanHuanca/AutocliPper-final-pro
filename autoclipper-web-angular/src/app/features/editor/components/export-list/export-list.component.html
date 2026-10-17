@@ -9,12 +9,18 @@
 >
   Actualizar exportaciones
 </button>
+@if (vm.exportsError()) {
+  <div class="alert error" role="alert">
+    {{ vm.exportsError() }}
+    <button class="button small" type="button" (click)="vm.loadExports()">Reintentar consulta</button>
+  </div>
+}
 @for (item of vm.exports(); track item.id) {
   <article class="export-item">
-    <strong>{{ item.status }}</strong
+    <strong>{{ vm.exportStatusLabel(item.status) }}</strong
     ><small>Revisión: {{ vm.revisionLabel(item.editorRevisionId) }}</small>
     @if (item.errorCode) {
-      <p>{{ item.errorCode }}</p>
+      <p class="muted">Código de error: {{ item.errorCode }}</p>
     }
     @if (item.status === "succeeded") {
       <button class="button small" type="button" (click)="vm.preview(item)">
@@ -36,6 +42,7 @@
         class="button small"
         type="button"
         (click)="vm.cancelRender(item.id)"
+        [disabled]="!vm.canEditCollaboration() || vm.busy()"
       >
         Solicitar cancelación
       </button>
@@ -44,6 +51,12 @@
 } @empty {
   <div class="empty-inline">
     <ac-icon name="download" />
-    <p>Aún no hay exportaciones consultadas.</p>
+    @if (vm.design) {
+      <p>Las exportaciones reales aparecerán al abrir una edición guardada.</p>
+    } @else if (vm.exportsLoaded()) {
+      <p>Esta edición todavía no tiene exportaciones.</p>
+    } @else if (!vm.exportsError()) {
+      <p>Aún no se consultó la lista de exportaciones.</p>
+    }
   </div>
 }

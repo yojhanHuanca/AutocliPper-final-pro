@@ -12,7 +12,7 @@
             min="0"
             step="0.1"
             required
-            [disabled]="vm.design" /></label
+            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
         ><label
           >Fin (s)<input
             type="number"
@@ -21,14 +21,14 @@
             min="0.1"
             step="0.1"
             required
-            [disabled]="vm.design"
+            [disabled]="vm.design || !vm.canEditCollaboration()"
         /></label>
       </div>
       <label
         >Formato<select
           name="aspect"
           [(ngModel)]="vm.spec.aspect" (ngModelChange)="vm.touchForm()"
-          [disabled]="vm.design"
+          [disabled]="vm.design || !vm.canEditCollaboration()"
         >
           <option value="vertical">Vertical · 9:16</option>
           <option value="square">Cuadrado · 1:1</option>
@@ -43,7 +43,7 @@
           min="0"
           max="1"
           step="0.01"
-          [disabled]="vm.design" /></label
+          [disabled]="vm.design || !vm.canEditCollaboration()" /></label
       ><label
         >Encuadre vertical<input
           type="range"
@@ -52,13 +52,13 @@
           min="0"
           max="1"
           step="0.01"
-          [disabled]="vm.design" /></label
+          [disabled]="vm.design || !vm.canEditCollaboration()" /></label
       ><label class="checkbox"
         ><input
           type="checkbox"
           name="split"
           [(ngModel)]="vm.splitEnabled" (ngModelChange)="vm.touchForm()"
-          [disabled]="vm.design"
+          [disabled]="vm.design || !vm.canEditCollaboration()"
         />Pantalla dividida</label
       >
       @if (vm.splitEnabled) {
@@ -67,13 +67,13 @@
             name="secondary"
             [(ngModel)]="vm.secondaryUploadId" (ngModelChange)="vm.touchForm()"
             required
-            [disabled]="vm.design"
+            [disabled]="vm.design || !vm.canEditCollaboration()"
             placeholder="UUID de carga del mismo espacio" /></label
         ><label
           >Distribución<select
             name="layout"
             [(ngModel)]="vm.splitLayout" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design"
+            [disabled]="vm.design || !vm.canEditCollaboration()"
           >
             <option value="stacked">Arriba / abajo</option>
             <option value="side_by_side">Lado a lado</option>
@@ -87,7 +87,7 @@
             min="0.2"
             max="0.8"
             step="0.01"
-            [disabled]="vm.design" /></label
+            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
         ><label
           >Inicio del secundario (s)<input
             type="number"
@@ -95,12 +95,12 @@
             [(ngModel)]="vm.secondaryStart" (ngModelChange)="vm.touchForm()"
             min="0"
             max="14400"
-            [disabled]="vm.design" /></label
+            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
         ><label
           >Al terminar el secundario<select
             name="shortInput"
             [(ngModel)]="vm.shortInput" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design"
+            [disabled]="vm.design || !vm.canEditCollaboration()"
           >
             <option value="freeze">Congelar último frame</option>
             <option value="reject">Rechazar si es más corto</option>
@@ -109,7 +109,7 @@
           >Fuente de audio<select
             name="audio"
             [(ngModel)]="vm.splitAudio" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design"
+            [disabled]="vm.design || !vm.canEditCollaboration()"
           >
             <option value="primary">Principal</option>
             <option value="secondary">Secundario</option>
@@ -122,6 +122,7 @@
         type="submit"
         [disabled]="
           vm.design ||
+          !vm.canEditCollaboration() ||
           vm.busy() ||
           specForm.invalid ||
           !vm.dirty() ||

@@ -11,11 +11,17 @@
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
+@if (!project() && busy()) {
+  <div class="loading-state" role="status"><span class="spinner"></span>Consultando el proyecto y sus permisos…</div>
+}
 @if (error()) {
   <div class="alert error" role="alert">{{ error() }}</div>
 }
 @if (loadNotice()) {
   <div class="alert" role="status">{{ loadNotice() }}</div>
+}
+@if (roleNotice()) {
+  <div class="alert" role="status">{{ roleNotice() }}</div>
 }
 @if (message()) {
   <div class="alert" role="status">{{ message() }}</div>
@@ -24,9 +30,7 @@
   <section class="panel">
     <span class="eyebrow">01 / MATERIAL DE ORIGEN</span>
     <h2>Trae tu video.</h2>
-    <p>
-      Hasta 100 MiB. El archivo se valida antes de habilitar el procesamiento.
-    </p>
+    <p>Video privado de hasta 100 MiB. La fuente local se limita a 300 segundos y se inspecciona antes de procesarla.</p>
     <label class="upload-drop"
       ><ac-icon name="upload" /><strong>{{
         file?.name ?? "Selecciona tu archivo de video"
@@ -46,6 +50,9 @@
       {{ uploading() ? "Cargando…" : "Cargar archivo privado"
       }}<ac-icon name="upload" />
     </button>
+    @if (uploadError()) {
+      <div class="alert error" role="alert">No se pudo consultar esta carga: {{ uploadError() }} <button type="button" (click)="inspect()" [disabled]="inspecting()">Reintentar</button></div>
+    }
     <details class="resume-details">
       <summary>Consultar una carga existente</summary>
       <p>
@@ -69,20 +76,26 @@
     @if (uploadStatus(); as status) {
       <div class="resource-status">
         <div>
-          <strong>Archivo: {{ status.state }}</strong
+          <strong>Archivo: {{ uploadStateLabel(status.state) }}</strong
           ><span>{{ status.bytes / 1024 / 1024 | number: "1.1-1" }} MiB</span>
         </div>
         <p>
-          Inspección:
-          <span class="badge">{{
-            status.inspection?.status ?? "Pendiente de inspección"
-          }}</span>
+          Inspección: <span class="badge">{{ inspectionLabel(status.inspection?.status) }}</span>
         </p>
         @if (status.inspection?.result; as metadata) {
           <p>
             {{ metadata.width }} × {{ metadata.height }} ·
             {{ metadata.durationSeconds }} s
           </p>
+        }
+        @if (status.inspection?.errorCode) {
+          <p class="alert error">La inspección rechazó el archivo. Código: {{ status.inspection.errorCode }}. Prueba con un video compatible de hasta 300 segundos.</p>
+        }
+        @if (status.state === "pending") {
+          <p class="muted">La transferencia todavía no se confirmó. Si el enlace temporal venció, vuelve a seleccionar el archivo o cancela esta carga pendiente.</p>
+        }
+        @if (status.state === "confirmed" && status.inspection?.status !== "succeeded" && status.inspection?.status !== "failed") {
+          <p class="muted" role="status">{{ inspecting() ? "Consultando la inspección…" : "La inspección sigue en curso; el estado se actualiza automáticamente." }}</p>
         }
         <small class="resource-id">ID: {{ status.id }}</small>
         @if (status.state === "pending") {
@@ -101,10 +114,7 @@
   <section class="panel">
     <span class="eyebrow">02 / TU MOMENTO</span>
     <h2>Elige dónde empieza.</h2>
-    <p>
-      El intervalo es manual. El servidor encadena extracción de audio,
-      transcripción local y render.
-    </p>
+    <p>El intervalo se elige manualmente dentro de la duración inspeccionada. El servidor prepara audio, transcripción local y render del clip.</p>
     <form
       #pipelineForm="ngForm"
       (ngSubmit)="pipelineForm.valid && startPipeline()"
@@ -116,27 +126,27 @@
             name="start"
             [(ngModel)]="startSeconds"
             min="0"
-            max="300"
+            [max]="sourceDurationSeconds()"
             step="0.1"
-            required /></label
+            required [disabled]="busy() || !canEdit()" /></label
         ><label
           >Fin (segundos)<input
             type="number"
             name="end"
             [(ngModel)]="endSeconds"
             min="0.1"
-            max="300"
+            [max]="sourceDurationSeconds()"
             step="0.1"
-            required /></label
+            required [disabled]="busy() || !canEdit()" /></label
         ><label
-          >Formato<select name="aspect" [(ngModel)]="aspect">
+          >Formato<select name="aspect" [(ngModel)]="aspect" [disabled]="busy() || !canEdit()">
             <option value="vertical">Vertical · 9:16</option>
             <option value="square">Cuadrado · 1:1</option>
             <option value="horizontal">Horizontal · 16:9</option>
             <option value="source">Original</option>
           </select></label
         ><label
-          >Idioma<select name="language" [(ngModel)]="language">
+          >Idioma<select name="language" [(ngModel)]="language" [disabled]="busy() || !canEdit()">
             <option value="auto">Detectar</option>
             <option value="es">Español</option>
             <option value="en">Inglés</option>
@@ -144,8 +154,7 @@
         >
       </div>
       <p class="muted">
-        Clip de 0,1 a 120 segundos; fuente de hasta 300 segundos para el
-        proveedor local actual.
+        Clip de 0,1 a 120 segundos. Esta fuente dura {{ sourceDurationSeconds() }} segundos (máximo local: 300).
       </p>
       <button
         class="button primary"
@@ -154,27 +163,39 @@
           busy() || pipelineForm.invalid || !inspected() || !canEdit()
         "
       >
-        Crear clip con transcripción<ac-icon name="scissors" />
+        {{ hasLinkedTranscript() ? "Crear clip con transcripción" : "Crear borrador sin subtítulos" }}<ac-icon name="scissors" />
       </button>
     </form>
+    @if (pipelineError()) {
+      <div class="alert error" role="alert">No se pudo consultar el pipeline: {{ pipelineError() }} <button type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">Reintentar</button></div>
+    }
+    @if (pollingPipeline() && !pipeline()) {
+      <p class="muted" role="status">Consultando el pipeline guardado…</p>
+    }
     @if (pipeline(); as task) {
       <div class="pipeline-card">
         <div class="panel-heading">
-          <h3>Estado: {{ task.status }}</h3>
-          <span class="badge">{{ task.usageState }}</span>
+          <h3>Estado: {{ pipelineStateLabel(task.status) }}</h3>
+          <span class="badge">{{ usageStateLabel(task.usageState) }}</span>
         </div>
+        @if (pollingPipeline()) { <p class="muted" role="status">Consultando el estado actualizado…</p> }
+        @if (hasKnownPipelineUpload() && !pipelineMatchesSelectedUpload()) {
+          <p class="alert">Este procesamiento pertenece a otra carga guardada. Sus archivos se pueden descargar, pero su transcripción no se vinculará al archivo seleccionado.</p>
+        } @else if (!hasKnownPipelineUpload()) {
+          <p class="alert">Este pipeline se consultó por ID y no está vinculado a la carga seleccionada; su transcripción no se asociará al borrador.</p>
+        }
         <ol class="pipeline-events">
           @for (event of task.events; track $index) {
             <li>
               <ac-icon name="clock" /><span
-                >{{ event.status
+                >{{ eventStateLabel(event.status)
                 }}<small>{{ event.at | date: "medium" }}</small></span
               >
             </li>
           }
         </ol>
         @if (task.errorCode) {
-          <p class="alert error">{{ task.errorCode }}</p>
+          <p class="alert error">El pipeline no se completó. Código del servidor: {{ task.errorCode }}. Puedes consultar el estado o revisar el intervalo antes de crear otro procesamiento.</p>
         }
         @if (task.status === "succeeded") {
           <div class="button-row">
@@ -209,6 +230,7 @@
           </button>
         }
         <small class="resource-id">Pipeline: {{ task.id }}</small>
+        <button class="button small" type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">{{ pollingPipeline() ? "Consultando…" : "Actualizar estado" }}</button>
       </div>
     }
     <details>

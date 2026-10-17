@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { ProjectComponent, ProjectsApi, WorkspaceStore, SessionStore, uploadContentType } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 
@@ -23,6 +24,7 @@ test('changing upload or pipeline ignores stale requests and only links transcri
   const storage = new Map();
   Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)}});
   let resolveUpload, resolvePipeline, creates=0, failPipeline=false;
+  const params = new BehaviorSubject(new Map([['id','project']]));
   const pipelineKeys=[];
   const upload = {id:'upload-b',projectId:'project',state:'confirmed',bytes:100,inspection:{status:'succeeded'}};
   const pipeline = {id:'pipeline-b',status:'succeeded',analysisId:'analysis-b',events:[]};
@@ -34,9 +36,9 @@ test('changing upload or pipeline ignores stale requests and only links transcri
     createEdit:async()=>{creates++;return {id:'edit'};},
   };
   TestBed.configureTestingModule({providers:[
-    {provide:ProjectsApi,useValue:api},{provide:WorkspaceStore,useValue:{workspaces:()=>[{id:'workspace',role:'owner'}]}},
+    {provide:ProjectsApi,useValue:api},{provide:WorkspaceStore,useValue:{workspaces:()=>[{id:'workspace',role:'owner'}],loaded:()=>true}},
     {provide:SessionStore,useValue:{user:()=>({id:'qa'})}},
-    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','project']])}}},
+    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','project']])},paramMap:params}},
     {provide:Router,useValue:{navigate:async()=>true}},
     {provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}},
   ]});
@@ -67,6 +69,81 @@ test('changing upload or pipeline ignores stale requests and only links transcri
     const previousKey=pipelineKeys.at(-1);
     state.selectUpload('upload-c'); await state.inspect(); await state.startPipeline();
     assert.notEqual(pipelineKeys.at(-1),previousKey,'A different upload must start a distinct intent.');
+  } finally {
+    TestBed.resetTestingModule();
+    if(originalStorage) Object.defineProperty(globalThis,'sessionStorage',originalStorage);
+    else delete globalThis.sessionStorage;
+  }
+});
+
+test('reused project detail resets its ID and ignores responses from the previous project', async () => {
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: { getItem:()=>null, setItem(){} } });
+  const params = new BehaviorSubject(new Map([['id','project-a']]));
+  let resolveOldProject, resolveOldEdits;
+  const api = {
+    get:id=>id==='project-a'?new Promise(resolve=>resolveOldProject=resolve):Promise.resolve({id,workspaceId:'workspace'}),
+    edits:id=>id==='project-a'?new Promise(resolve=>resolveOldEdits=resolve):Promise.resolve({items:[{id:'edit-b'}]}),
+  };
+  TestBed.configureTestingModule({providers:[
+    {provide:ProjectsApi,useValue:api},
+    {provide:WorkspaceStore,useValue:{workspaces:()=>[{id:'workspace',role:'owner'}],loaded:()=>true}},
+    {provide:SessionStore,useValue:{user:()=>({id:'qa'})}},
+    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','project-a']])},paramMap:params}},
+    {provide:Router,useValue:{navigate:async()=>true}},
+    {provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}},
+  ]});
+  try {
+    const state=TestBed.runInInjectionContext(()=>new ProjectComponent());
+    params.next(new Map([['id','project-b']]));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(state.id,'project-b');
+    assert.equal(state.project()?.id,'project-b');
+    assert.deepEqual(state.edits().map(edit=>edit.id),['edit-b']);
+    state.selectUpload('upload-b');
+    resolveOldProject({id:'project-a',workspaceId:'workspace'});
+    resolveOldEdits({items:[{id:'edit-a'}]});
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(state.id,'project-b');
+    assert.equal(state.project()?.id,'project-b');
+    assert.deepEqual(state.edits().map(edit=>edit.id),['edit-b']);
+    assert.equal(state.uploadId,'upload-b');
+  } finally {
+    TestBed.resetTestingModule();
+    if(originalStorage) Object.defineProperty(globalThis,'sessionStorage',originalStorage);
+    else delete globalThis.sessionStorage;
+  }
+});
+
+test('manual pipeline interval is constrained to the inspected source duration', async () => {
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:{getItem:()=>null,setItem(){}}});
+  const params=new BehaviorSubject(new Map([['id','project']]));
+  let submitted=0;
+  const api={
+    get:async()=>({id:'project',workspaceId:'workspace'}),edits:async()=>({items:[]}),
+    upload:async id=>({id,projectId:'project',state:'confirmed',bytes:100,inspection:{status:'succeeded',result:{durationSeconds:14}}}),
+    createPipeline:async()=>{submitted++;return{id:'pipeline',status:'queued'};},
+  };
+  TestBed.configureTestingModule({providers:[
+    {provide:ProjectsApi,useValue:api},
+    {provide:WorkspaceStore,useValue:{workspaces:()=>[{id:'workspace',role:'owner'}],loaded:()=>true}},
+    {provide:SessionStore,useValue:{user:()=>({id:'qa'})}},
+    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','project']])},paramMap:params}},
+    {provide:Router,useValue:{navigate:async()=>true}},
+    {provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}},
+  ]});
+  try {
+    const state=TestBed.runInInjectionContext(()=>new ProjectComponent());
+    await new Promise(resolve=>setImmediate(resolve));
+    state.selectUpload('upload-short');
+    await state.inspect();
+    assert.equal(state.sourceDurationSeconds(),14);
+    assert.equal(state.endSeconds,14);
+    state.endSeconds=14.1;
+    await state.startPipeline();
+    assert.equal(submitted,0);
+    assert.match(state.error(),/dentro de la fuente/);
   } finally {
     TestBed.resetTestingModule();
     if(originalStorage) Object.defineProperty(globalThis,'sessionStorage',originalStorage);
