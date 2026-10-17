@@ -1,5 +1,6 @@
 import { DESIGN_MODE } from "../../../core/config/design-mode.token";
 import { EditorApi } from "../data-access/editor-api.service";
+import { CollaborationApi } from "../../collaboration/data-access/collaboration-api.service";
 import { HttpErrorResponse } from "@angular/common/http";
 import { Injectable, DestroyRef, computed, inject, signal } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
@@ -12,6 +13,7 @@ import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
+  private readonly collaboration = inject(CollaborationApi);
   private readonly route = inject(ActivatedRoute);
   private readonly destroy = inject(DestroyRef);
   private readonly discardConfirmation = inject(EDITOR_DISCARD_CONFIRMATION);
@@ -19,7 +21,7 @@ export class EditorState {
   readonly id = this.route.snapshot.paramMap.get("id") ?? "";
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
-  readonly review = signal<Schema<"ReviewStateDto"> | null>(null);
+  readonly review = signal<Schema<"ReviewHistoryDto"> | null>(null);
   readonly history = signal<Schema<"EditorRevisionSummaryDto">[]>([]);
   readonly nextVersion = signal<number | null>(null);
   readonly comments = signal<Schema<"EditorCommentDto">[]>([]);
@@ -79,6 +81,7 @@ export class EditorState {
   fontSize = 24;
   commentText = "";
   commentTime = 0;
+  readonly replyTarget = signal<Schema<"EditorCommentDto"> | null>(null);
   private etag: string | null = null;
   private initialForm = "";
   private renderKey = "";
@@ -287,34 +290,47 @@ export class EditorState {
       );
   }
   async loadReview(): Promise<void> {
-    if (!this.design) this.review.set(await this.api.review(this.id));
+    if (!this.design) this.review.set(await this.collaboration.review(this.id));
   }
   async requestReview(): Promise<void> {
     await this.reviewAction("review");
   }
+  async returnReview(): Promise<void> {
+    await this.reviewAction("return");
+  }
   async approve(): Promise<void> {
     await this.reviewAction("approvals");
   }
-  private async reviewAction(path: "review" | "approvals"): Promise<void> {
+  private async reviewAction(path: "review" | "return" | "approvals"): Promise<void> {
     await this.run(async () => {
       const review = this.review();
       const draft = this.draft();
       if (!review || !draft || this.dirty()) return;
-      this.review.set(
-        await this.api.changeReview(this.id, path, {
-          version: draft.version,
-          reviewVersion: review.reviewVersion,
-        }),
-      );
-      this.message.set("Estado de revisión actualizado.");
+      const body = { version: draft.version, reviewVersion: review.reviewVersion };
+      const next = path === "return"
+        ? await this.collaboration.returnReview(this.id, body)
+        : path === "approvals"
+          ? await this.collaboration.approve(this.id, body)
+          : await this.collaboration.requestReview(this.id, body);
+      this.review.update((current) => current ? { ...current, ...next } : null);
+      this.message.set(path === "return" ? "La revisión volvió al editor." : path === "approvals" ? "Revisión aprobada." : "Solicitud de revisión enviada.");
+      const refreshed = await Promise.allSettled([this.loadReview()]);
+      if (refreshed[0].status === "rejected")
+        this.loadNotice.set("El cambio se realizó, pero no se pudo actualizar el historial de aprobaciones.");
     });
   }
+  replyTo(item: Schema<"EditorCommentDto">): void {
+    if (item.deletedAt) return;
+    this.replyTarget.set(item);
+    this.commentTime = item.timeSeconds;
+    this.message.set("Responde con una nueva observación en la misma marca temporal.");
+  }
+  clearReply(): void { this.replyTarget.set(null); }
   async loadComments(append = false): Promise<void> {
     if (this.design) return;
-    const result = await this.api.comments(
-      this.id,
-      append ? this.nextComment() : null,
-    );
+    const result = await this.collaboration.comments(this.id, {
+      beforeId: append ? this.nextComment() : null,
+    });
     this.comments.set(
       append ? [...this.comments(), ...result.items] : result.items,
     );
@@ -337,11 +353,25 @@ export class EditorState {
         this.commentBody = serialized;
         this.commentKey = crypto.randomUUID();
       }
-      await this.api.comment(this.id, body, this.commentKey);
+      const created = await this.collaboration.createComment(this.id, body, this.commentKey);
+      this.comments.update((items) => [created, ...items.filter((item) => item.id !== created.id)]);
       this.commentText = "";
       this.commentKey = "";
       this.commentBody = "";
-      await this.loadComments();
+      this.replyTarget.set(null);
+      this.message.set("Comentario añadido a esta revisión.");
+      try { await this.loadComments(); }
+      catch { this.loadNotice.set("El comentario se guardó, pero no se pudo actualizar la lista. Vuelve a cargar comentarios."); }
+    });
+  }
+  async deleteComment(item: Schema<"EditorCommentDto">): Promise<void> {
+    if (item.deletedAt) return;
+    await this.run(async () => {
+      const deleted = await this.collaboration.deleteComment(this.id, item.id, { version: item.version });
+      this.comments.update((items) => items.map((comment) => comment.id === deleted.id ? deleted : comment));
+      this.message.set("Comentario retirado.");
+      try { await this.loadComments(); }
+      catch { this.loadNotice.set("El comentario se retiró, pero no se pudo actualizar la lista."); }
     });
   }
   async loadExports(): Promise<boolean> {

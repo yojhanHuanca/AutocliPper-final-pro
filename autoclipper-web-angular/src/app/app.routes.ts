@@ -3,6 +3,13 @@ import { workspaceGuard } from "./features/workspaces/workspace.guard";
 import { sessionGuard } from "./core/guards/session.guard";
 export const routes: Routes = [
   {
+    path: "review/:token",
+    loadComponent: () =>
+      import("./features/collaboration/pages/public-review.component").then(
+        (m) => m.PublicReviewComponent,
+      ),
+  },
+  {
     path: "",
     loadComponent: () =>
       import("./layouts/public/public-layout.component").then(

@@ -1,56 +1,141 @@
-<span class="eyebrow">REVISIÓN DEL EQUIPO</span>
-<h2>Otra mirada ayuda.</h2>
-<p>
-  Estado: <span class="badge">{{ vm.review()?.status ?? "Sin datos" }}</span>
-</p>
-<button
-  class="button full"
-  type="button"
-  (click)="vm.approve()"
-  [disabled]="
-    vm.design || vm.busy() || vm.dirty() || vm.review()?.status !== 'review'
-  "
->
-  Aprobar revisión actual</button
-><small class="muted"
-  >Solo owner/admin del espacio; el servidor valida el permiso.</small
->
-<form #commentForm="ngForm" (ngSubmit)="commentForm.valid && vm.comment()">
-  <label
-    >Comentario<textarea
-      name="comment"
-      [(ngModel)]="vm.commentText"
-      maxlength="2000"
-      required
-      [disabled]="vm.design"
-    ></textarea></label
-  ><label
-    >Segundo relativo al clip<input
-      type="number"
-      name="time"
-      [(ngModel)]="vm.commentTime"
-      min="0"
-      [max]="vm.spec.endSeconds - vm.spec.startSeconds"
-      step="0.1"
-      required
-      [disabled]="vm.design" /></label
-  ><button
-    class="button primary full"
-    type="submit"
-    [disabled]="vm.design || vm.busy() || commentForm.invalid"
-  >
-    Añadir comentario
-  </button>
-</form>
-@for (item of vm.comments(); track item.id) {
-  <article class="comment">
-    <span>{{ item.timeSeconds }}s · R{{ item.revisionVersion }}</span>
-    <p>{{ item.text ?? "Comentario retirado" }}</p>
-    <small>{{ item.createdAt | date: "short" }}</small>
-  </article>
-}
-@if (vm.nextComment()) {
-  <button class="button small" type="button" (click)="vm.moreComments()" [disabled]="vm.design || vm.busy()">
-    Más comentarios
-  </button>
+<span class="eyebrow">COLABORACIÓN</span>
+<h2>Revisión del clip.</h2>
+<nav class="collaboration-tabs" aria-label="Secciones de colaboración">
+  <button type="button" [attr.aria-pressed]="view() === 'team'" (click)="selectView('team')">Equipo</button>
+  <button type="button" [attr.aria-pressed]="view() === 'links'" (click)="selectView('links')">Enlace externo</button>
+  <button type="button" [attr.aria-pressed]="view() === 'activity'" (click)="selectView('activity')">Actividad</button>
+</nav>
+@if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
+@if (message()) { <div class="alert" role="status">{{ message() }}</div> }
+
+@switch (view()) {
+  @case ('team') {
+    <section class="collaboration-section">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">ESTADO DEL SERVIDOR</span>
+          <p>Estado: <span class="badge">{{ vm.review() ? reviewStatus(vm.review()!.status) : "Cargando" }}</span></p>
+        </div>
+        <button class="button small" type="button" (click)="vm.loadReview()" [disabled]="vm.busy()">Actualizar</button>
+      </div>
+      @if (vm.review(); as review) {
+        <p>Revisión de contenido {{ review.version }} · estado {{ review.reviewVersion }}</p>
+        @if (review.approvedRevisionVersion) {
+          <p>Aprobada: revisión {{ review.approvedRevisionVersion }}</p>
+        }
+        <div class="button-row">
+          @if (review.status !== 'review') {
+            <button class="button primary" type="button" (click)="vm.requestReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Solicitar revisión</button>
+          }
+          @if (review.status === 'review') {
+            <button class="button" type="button" (click)="vm.returnReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Devolver al editor</button>
+            <button class="button primary" type="button" (click)="vm.approve()" [disabled]="vm.design || vm.busy() || vm.dirty()">Aprobar</button>
+          }
+        </div>
+        <small class="muted">El servidor valida permisos, versión y transición permitida.</small>
+        <h3>Aprobaciones registradas</h3>
+        @for (approval of review.approvals; track approval.id) {
+          <article class="collaboration-row">
+            <strong>Revisión {{ approval.revisionVersion }}</strong>
+            <span>{{ approval.createdAt | date: "medium" }}</span>
+            <small>Estado {{ approval.reviewVersion }} · aprobador {{ approval.approverId }}</small>
+          </article>
+        } @empty {
+          <p class="empty-inline">Todavía no hay aprobaciones para esta revisión.</p>
+        }
+      }
+    </section>
+
+    <section class="collaboration-section">
+      <h3>Observaciones del equipo</h3>
+      @if (vm.replyTarget(); as target) {
+        <div class="alert" role="status">
+          Nueva observación en respuesta a la marca de {{ target.timeSeconds }} s.
+          <button class="button small" type="button" (click)="vm.clearReply()">Cancelar respuesta</button>
+        </div>
+        <small class="muted">El contrato guarda comentarios independientes; no crea hilos enlazados.</small>
+      }
+      <form #commentForm="ngForm" (ngSubmit)="commentForm.valid && vm.comment()">
+        <label>Comentario<textarea name="comment" [(ngModel)]="vm.commentText" maxlength="2000" required [disabled]="vm.design || vm.busy() || !vm.draft()"></textarea></label>
+        <label>Segundo relativo al clip<input type="number" name="time" [(ngModel)]="vm.commentTime" min="0" [max]="vm.spec.endSeconds - vm.spec.startSeconds" step="0.1" required [disabled]="vm.design || vm.busy() || !vm.draft()" /></label>
+        <button class="button primary full" type="submit" [disabled]="vm.design || vm.busy() || !vm.draft() || commentForm.invalid">Añadir observación</button>
+      </form>
+      @for (item of vm.comments(); track item.id) {
+        <article class="comment">
+          <span>{{ item.timeSeconds }} s · revisión {{ item.revisionVersion }}</span>
+          <p>{{ item.deletedAt ? "Comentario retirado" : (item.text ?? "Comentario retirado") }}</p>
+          <small>{{ item.createdAt | date: "short" }}</small>
+          @if (!item.deletedAt) {
+            <div class="button-row">
+              <button class="button small" type="button" (click)="vm.replyTo(item)" [disabled]="vm.design || vm.busy()">Responder en esta marca</button>
+              <button class="button small" type="button" (click)="vm.deleteComment(item)" [disabled]="vm.design || vm.busy()">Retirar comentario</button>
+            </div>
+          }
+        </article>
+      } @empty {
+        <p class="empty-inline">No hay observaciones en esta revisión.</p>
+      }
+      @if (vm.nextComment()) {
+        <button class="button small" type="button" (click)="vm.moreComments()" [disabled]="vm.design || vm.busy()">Más comentarios</button>
+      }
+    </section>
+  }
+  @case ('links') {
+    <section class="collaboration-section">
+      <h3>Compartir una revisión</h3>
+      <p>El acceso se limita a una revisión. El token se presenta una sola vez y no se puede recuperar de la lista.</p>
+      @if (!vm.draft() || vm.dirty()) {
+        <p class="alert">Guarda tus cambios antes de crear un enlace.</p>
+      }
+      <form #linkForm="ngForm" (ngSubmit)="linkForm.valid && createLink()">
+        <label>Caducidad en segundos<input type="number" name="expiry" [(ngModel)]="expiresInSeconds" min="60" max="604800" step="60" required /></label>
+        <label class="checkbox"><input type="checkbox" name="video" [(ngModel)]="includeVideo" />Incluir un video de exportación</label>
+        @if (includeVideo) {
+          <label>Exportación terminada<select name="processingId" [(ngModel)]="processingId" required>
+            <option value="">Selecciona una exportación</option>
+            @for (item of videoExports(); track item.id) { <option [value]="item.id">Revisión {{ vm.revisionLabel(item.editorRevisionId) }} · {{ item.id }}</option> }
+          </select></label>
+          @if (videoExports().length === 0) { <small class="muted">No hay exportaciones de video completadas para compartir.</small> }
+        }
+        <button class="button primary full" type="submit" [disabled]="vm.design || busy() || !vm.draft() || vm.dirty() || linkForm.invalid">Crear enlace de revisión</button>
+      </form>
+      @if (createdLink(); as created) {
+        <div class="created-review-link" role="status">
+          <strong>Token visible una sola vez</strong>
+          <input aria-label="Enlace externo de revisión, token de una sola lectura" [value]="publicUrl()" readonly (focus)="$any($event.target).select()" />
+          <small>Vence {{ created.expiresAt | date: "medium" }}. El enlace da acceso solo a la revisión {{ created.revisionVersion }}.</small>
+          <div class="button-row"><button class="button small" type="button" (click)="copyLink()">Copiar enlace</button><button class="button small" type="button" (click)="dismissCreatedLink()">Ocultar token</button></div>
+        </div>
+      }
+      <div class="panel-heading"><h3>Enlaces emitidos</h3><button class="button small" type="button" (click)="loadLinks()" [disabled]="vm.design || busy() || loadingLinks()">{{ loadingLinks() ? "Actualizando…" : "Actualizar" }}</button></div>
+      @if (loadingLinks() && !linksLoaded()) { <p role="status">Consultando enlaces emitidos…</p> }
+      @for (link of links(); track link.id) {
+        <article class="collaboration-row">
+          <strong>Revisión {{ link.revisionVersion }} · {{ linkStatus(link) }}</strong>
+          <span>Creado {{ link.createdAt | date: "medium" }} · vence {{ link.expiresAt | date: "medium" }}</span>
+          @if (link.processingId) { <small>Incluye exportación {{ link.processingId }}</small> } @else { <small>Solo vista y comentarios existentes</small> }
+          @if (!link.revokedAt && linkStatus(link) === 'Activo') { <button class="button small" type="button" (click)="revoke(link)" [disabled]="busy()">Revocar acceso</button> }
+        </article>
+      } @empty {
+        <p class="empty-inline">Todavía no hay enlaces externos.</p>
+      }
+    </section>
+  }
+  @case ('activity') {
+    <section class="collaboration-section">
+      <div class="panel-heading"><h3>Actividad de la edición</h3><button class="button small" type="button" (click)="loadAudit()" [disabled]="vm.design || loadingAudit()">{{ loadingAudit() ? "Consultando…" : "Actualizar" }}</button></div>
+      @if (loadingAudit() && !auditLoaded()) { <p role="status">Consultando actividad…</p> }
+      @for (event of audit(); track event.id) {
+        <article class="collaboration-row">
+          <strong>{{ actionLabel(event.action) }}</strong>
+          <span>{{ event.createdAt | date: "medium" }}</span>
+          @if (auditDetails(event)) { <small>{{ auditDetails(event) }}</small> }
+          <small class="resource-id">Actor {{ event.actorId }} · ref. {{ event.correlationId }}</small>
+        </article>
+      } @empty {
+        <p class="empty-inline">No hay actividad registrada para esta edición.</p>
+      }
+      @if (auditCursor()) { <button class="button small" type="button" (click)="loadAudit(true)" [disabled]="vm.design || loadingAudit()">{{ loadingAudit() ? "Cargando…" : "Más actividad" }}</button> }
+    </section>
+  }
 }

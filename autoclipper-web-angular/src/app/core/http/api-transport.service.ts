@@ -1,13 +1,22 @@
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpContext } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
 import { API_BASE_URL } from "../config/api-config.token";
+import { API_AUTHENTICATED } from "./api-auth-context";
 @Injectable({ providedIn: "root" })
 export class ApiTransport {
   private readonly http = inject(HttpClient);
   readonly base = inject(API_BASE_URL);
   get<T>(path: string): Promise<T> {
     return firstValueFrom(this.http.get<T>(`${this.base}${path}`));
+  }
+  getPublic<T>(path: string): Promise<T> {
+    return firstValueFrom(
+      this.http.get<T>(`${this.base}${path}`, {
+        withCredentials: false,
+        context: new HttpContext().set(API_AUTHENTICATED, false),
+      }),
+    );
   }
   post<T>(path: string, body: unknown, key?: string): Promise<T> {
     return firstValueFrom(
@@ -41,6 +50,9 @@ export class ApiTransport {
   }
   delete<T>(path: string): Promise<T> {
     return firstValueFrom(this.http.delete<T>(`${this.base}${path}`));
+  }
+  deleteWithBody<T>(path: string, body: unknown): Promise<T> {
+    return firstValueFrom(this.http.delete<T>(`${this.base}${path}`, { body }));
   }
   getResponse<T>(path: string) {
     return firstValueFrom(

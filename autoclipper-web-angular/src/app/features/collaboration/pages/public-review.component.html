@@ -1,0 +1,78 @@
+<main class="public-review wrap">
+  <header class="public-review-header">
+    <a class="public-review-brand" routerLink="/">AutoClipper</a>
+    <span class="eyebrow">REVISIÓN COMPARTIDA</span>
+  </header>
+  @if (busy() && !review()) {
+    <section class="public-review-card" role="status">Abriendo la revisión autorizada…</section>
+  }
+  @if (error() && !review()) {
+    <section class="public-review-card public-review-error" role="alert">
+      <h1>Este enlace no está disponible</h1>
+      <p>{{ error() }}</p>
+      <button class="button" type="button" (click)="load()" [disabled]="busy()">Reintentar</button>
+    </section>
+  }
+  @if (review(); as item) {
+    <section class="public-review-card">
+      <div class="public-review-heading">
+        <div>
+          <span class="eyebrow">REVISIÓN {{ item.revisionVersion }}</span>
+          <h1>{{ item.name }}</h1>
+        </div>
+        <span class="badge">{{ statusLabel(item.status) }}</span>
+      </div>
+      <p>Clip de {{ item.spec.startSeconds }} a {{ item.spec.endSeconds }} s · {{ item.spec.aspect }} · Enlace válido hasta {{ item.expiresAt | date: "medium" }}</p>
+      @if (item.spec.subtitles?.cues?.length) {
+        <section class="public-review-captions" aria-labelledby="public-captions-title">
+          <h2 id="public-captions-title">Subtítulos del clip</h2>
+          @for (cue of item.spec.subtitles.cues; track $index) {
+            <article class="public-review-comment">
+              <strong>{{ cue.startSeconds | number: "1.1-1" }}–{{ cue.endSeconds | number: "1.1-1" }} s</strong>
+              <p>{{ cue.text }}</p>
+            </article>
+          }
+        </section>
+      }
+      @if (isExpired()) {
+        <div class="alert error" role="alert">Este enlace de revisión venció.</div>
+      } @else if (item.videoEnabled) {
+        @if (videoUrl()) {
+          <div class="review-video-frame">
+            <video controls playsinline [src]="videoUrl()" [attr.crossorigin]="'anonymous'">
+              Tu navegador no puede reproducir este video.
+            </video>
+          </div>
+          <small class="muted">Permiso temporal de reproducción: {{ videoExpiresIn() }} s. Si vence, solicita otro.</small>
+          <button class="button small" type="button" (click)="loadVideo()" [disabled]="loadingVideo()">{{ loadingVideo() ? "Renovando permiso…" : "Renovar permiso de reproducción" }}</button>
+        } @else {
+          <button class="button primary" type="button" (click)="loadVideo()" [disabled]="loadingVideo() || !canLoadVideo()">
+            {{ loadingVideo() ? "Preparando video…" : "Reproducir video autorizado" }}
+          </button>
+        }
+        @if (videoError()) { <div class="alert error" role="alert">{{ videoError() }}</div> }
+      } @else {
+        <div class="alert">Este enlace permite revisar texto y observaciones; no incluye permiso para reproducir video.</div>
+      }
+      <section class="public-review-comments" aria-labelledby="public-comments-title">
+        <div class="panel-heading"><h2 id="public-comments-title">Observaciones disponibles</h2></div>
+        @for (comment of item.comments.items; track comment.id) {
+          <article class="public-review-comment">
+            <strong>{{ comment.timeSeconds }} s · revisión {{ comment.revisionVersion }}</strong>
+            <p>{{ comment.deletedAt ? "Comentario retirado" : (comment.text ?? "Comentario retirado") }}</p>
+            <small>{{ comment.createdAt | date: "medium" }}</small>
+          </article>
+        } @empty {
+          <p class="empty-inline">Esta revisión no tiene observaciones disponibles.</p>
+        }
+        @if (nextBeforeId()) {
+          <button class="button" type="button" (click)="load(nextBeforeId())" [disabled]="busy()">
+            {{ busy() ? "Cargando…" : "Más observaciones" }}
+          </button>
+        }
+        @if (error() && review()) { <div class="alert error" role="alert">{{ error() }}</div> }
+      </section>
+      <p class="public-review-limit">Vista de solo lectura. Este permiso no concede acceso a la cuenta, al proyecto ni a otros clips.</p>
+    </section>
+  }
+</main>

@@ -33,6 +33,7 @@ Abrir [localhost:4200](http://localhost:4200). `public/config.json` contiene sol
 | `/app/projects` | Lista/búsqueda y creación; máximo actual 100 proyectos |
 | `/app/projects/:id` | PUT firmado hasta 100 MiB, inspección, intervalo manual, pipeline, descargas y creación de borrador |
 | `/app/edits/:id` | Formato/encuadre, subtítulos, split screen, CAS/ETag, historial/restore, comentarios, revisión/aprobación y exportación |
+| `/review/:token` | Vista pública de solo lectura limitada a la revisión autorizada, con subtítulos/comentarios y video solo si el grant lo permite |
 | `/app/consumption` | Plan de desarrollo y ledger paginado real; segundos de material por etapa |
 | `/app/settings` | Perfil y zona horaria, sesiones, 2FA/códigos y registro de solicitudes de privacidad |
 | `/design`, `/design/projects`, `/design/editor`, `/design/settings` | Estructuras públicas sin datos de cuenta, mutaciones ni llamadas de negocio |
@@ -65,7 +66,7 @@ npm run test:live
 
 Esta suite requiere servicios ya saludables, Mailpit local, FFmpeg en PATH y whisper.cpp configurado. Crea cuentas `example.test`, un espacio y material de prueba identificados; no envía correo externo, no arranca/detiene servicios, no modifica SQL ni cambia infraestructura. Deja el proyecto QA para revisión. Usa la grabación sintética declarada en `../autoclipper-backend-microservices/tests/fixtures/README.md`; la inferencia y los artefactos son reales. No ejecutar durante migraciones o aceptación de otro chat.
 
-Resultado observado: **build de producción y typecheck aprobados; 26 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
+Resultado observado: **build de producción y typecheck aprobados; 29 unitarias/arquitectura y 7 de aceptación local aprobadas** (estas últimas incluyen el padre; 6 subcasos). Evidencia, límites y revisión responsive en [docs/verification.md](docs/verification.md).
 
 ## Estructura y diseño
 
@@ -84,3 +85,5 @@ Si al entrar en una ruta protegida el servidor responde que la sesión venció, 
 La ruta solicitada también se conserva si falla la carga del selector de espacios luego de restaurar la sesión.
 
 Los ajustes cargan perfil, 2FA, privacidad y sesiones por separado; si uno falla, se conservan los demás datos y se indica qué consulta no respondió.
+
+La colaboración del editor incluye solicitud/devolución/aprobación según estado del servidor, observaciones temporales, retiro versionado, enlaces limitados de revisión, revocación y auditoría paginada. Los tokens de enlace solo se muestran en memoria al recibir la creación; no se guardan en almacenamiento del navegador. El contrato no enlaza respuestas a comentarios: «Responder en esta marca» crea una observación independiente. La ruta pública es de solo lectura, presenta únicamente datos del grant y sus comentarios; la API no ofrece envío público de comentarios. El enlace puede autorizar únicamente texto o una exportación de video específica.

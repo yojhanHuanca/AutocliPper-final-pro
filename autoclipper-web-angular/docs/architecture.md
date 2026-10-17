@@ -19,6 +19,7 @@ src/app/
     dashboard/             composición de inicio y datos del usuario
     projects/              cliente, colección reutilizable y detalle/cargas
     editor/                cliente, estado local, página y componentes
+    collaboration/         cliente de revisión, enlaces limitados y vista pública
     consumption/           cliente de lectura, ledger y página
     settings/              cliente de cuenta/seguridad y página
     workspaces/            estado de selección, guard y alta inicial
@@ -29,11 +30,11 @@ src/app/
 
 Cada feature expone sus propias rutas lazy. El router raíz compone layouts y guards, sin importar páginas de forma ansiosa. Los clientes de dominio exponen operaciones con nombre y DTO generados; solo ellos conocen las rutas HTTP. `ApiTransport` concentra GET/POST/PATCH/DELETE y respuestas con cabeceras, sin conceptos de proyecto/editor/consumo.
 
-`core` y `shared` no importan features ni layouts: existe una prueba de ese límite. `shared/ui` no almacena negocio. Los layouts pueden usar infraestructura y el selector de espacios. Una feature no importa páginas o estado interno de otra; dashboard compone deliberadamente la colección pública de proyectos y el alta de espacios. Los contratos públicos son tipos, no entidades compartidas con el backend.
+`core` y `shared` no importan features ni layouts: existe una prueba de ese límite. `shared/ui` no almacena negocio. Los layouts pueden usar infraestructura y el selector de espacios. Una feature no importa páginas o estado interno de otra; editor consume el cliente público de colaboración para sus acciones de revisión, y la vista externa reutiliza ese cliente sin acoplarse al editor autenticado. Dashboard compone deliberadamente la colección pública de proyectos y el alta de espacios. Los contratos públicos son tipos, no entidades compartidas con el backend.
 
 `SessionStore` contiene identidad de sesión; `WorkspaceStore` conserva únicamente los espacios autorizados y selección del estudio. El estado del editor se provee **en la página**, se destruye al salir y se comparte solo con sus componentes: rail, preview, timeline, inspector de composición, subtítulos, historial, revisión y exportaciones. No hay un store global con todo el producto. La colección de proyectos conserva su estado por instancia; las consultas de proyecto/consumo descartan resultados de una selección anterior.
 
-Las credenciales viven en cookies HttpOnly. CSRF y la coordinación de renovación viven en memoria. Dos mutaciones concurrentes comparten adquisición de CSRF; dos respuestas 401 comparten refresh. Las solicitudes de autenticación fallidas no se repiten automáticamente, para evitar reenviar contraseñas o consumir códigos de recuperación. El retry conserva cuerpo y clave de idempotencia. El interceptor compara la base absoluta y su frontera de path; las URLs firmadas usan `fetch` con `credentials: omit`, sin interceptor ni token CSRF.
+Las credenciales viven en cookies HttpOnly. CSRF y la coordinación de renovación viven en memoria. Dos mutaciones concurrentes comparten adquisición de CSRF; dos respuestas 401 comparten refresh. Las solicitudes de autenticación fallidas no se repiten automáticamente, para evitar reenviar contraseñas o consumir códigos de recuperación. El retry conserva cuerpo y clave de idempotencia. El interceptor compara la base absoluta y su frontera de path; las URLs firmadas usan `fetch` con `credentials: omit`, sin interceptor ni token CSRF. Los grants públicos de revisión usan un contexto anónimo de lectura, sin cookies ni refresh.
 
 Las descargas también se obtienen con `credentials: omit`, se convierten temporalmente en Blob y se descargan localmente; no se abre la URL de almacenamiento en una navegación que pueda llevar cookies del mismo hostname en desarrollo. El reproductor lleva `crossorigin="anonymous"`. Un grant vencido requiere solicitar otro enlace; no existe un fallback con credenciales.
 

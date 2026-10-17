@@ -1,5 +1,6 @@
 export { API_BASE_URL } from '../src/app/core/config/api-config.token';
 export { ApiTransport } from '../src/app/core/http/api-transport.service';
+export { API_AUTHENTICATED } from '../src/app/core/http/api-auth-context';
 export { apiInterceptor } from '../src/app/core/http/api.interceptor';
 export { errorMessage } from '../src/app/core/http/api-error';
 export { validateCaptionCues } from '../src/app/features/editor/models/caption-cues';
@@ -23,5 +24,6 @@ export { SettingsComponent } from '../src/app/features/settings/pages/settings.c
 export { SettingsApi } from '../src/app/features/settings/data-access/settings-api.service';
 export { ConsumptionComponent, loadConsumptionSections } from '../src/app/features/consumption/pages/consumption.component';
 export { ConsumptionApi } from '../src/app/features/consumption/data-access/consumption-api.service';
+export { CollaborationApi } from '../src/app/features/collaboration/data-access/collaboration-api.service';
 export { HttpErrorResponse } from '@angular/common/http';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute } from '@angular/router';
-import { EditorState, EditorApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, HttpErrorResponse } from '../../.local/tests/client.mjs';
+import { EditorState, EditorApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, HttpErrorResponse } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   let resolveEdit;
@@ -16,7 +16,10 @@ test('timeline and caption validation follow async load, local corrections and c
   const response = new Promise(resolve => { resolveEdit = resolve; });
   let currentDraft;
   const api = { edit:()=>{ editCalls++; return response; }, project:async id=>({id,name:'Proyecto QA real'}), save:async(_id,body,etag)=>{writeEtags.push(etag);if(failSave)throw new HttpErrorResponse({status:412,statusText:'Precondition Failed'});currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
-  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  let reviewValue={version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]};
+  const commentItems=[]; let commentBody;
+  const collaboration={review:async()=>reviewValue,comments:async()=>({items:commentItems,nextBeforeId:null}),createComment:async(_id,body)=>{commentBody=body;const item={id:'comment-1',revisionVersion:1,authorId:'author-1',timeSeconds:body.timeSeconds,text:body.text,version:1,createdAt:'2026-01-01T00:00:00Z',deletedAt:null};commentItems.unshift(item);return item;},deleteComment:async(_id,_commentId,body)=>{const item={...commentItems[0],version:body.version+1,deletedAt:'2026-01-02T00:00:00Z'};commentItems[0]=item;return item;},requestReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'review'},returnReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'draft'},approve:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'approved',approvedRevisionVersion:1}};
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     assert.equal(state.timeline().endSeconds,30);
@@ -82,5 +85,16 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.equal(state.nextVersion(),1);
     assert.equal(state.busy(),false);
     assert.match(state.error(),/siguiente página/);
+    failHistory=false;
+    await state.requestReview(); assert.equal(state.review().status,'review');
+    await state.approve(); assert.equal(state.review().approvedRevisionVersion,1);
+    await state.returnReview(); assert.equal(state.review().status,'draft');
+    const observation={id:'comment-1',revisionVersion:1,authorId:'author-1',timeSeconds:4,text:'Ajustar el inicio',version:1,createdAt:'2026-01-01T00:00:00Z',deletedAt:null};
+    state.replyTo(observation); state.commentText='¿Así funciona mejor para el clip?';
+    assert.equal(state.commentTime,4);
+    await state.comment();
+    assert.deepEqual(commentBody,{revisionVersion:1,timeSeconds:4,text:'¿Así funciona mejor para el clip?'});
+    await state.deleteComment(commentItems[0]);
+    assert.ok(state.comments()[0].deletedAt);
   } finally { TestBed.resetTestingModule(); }
 });

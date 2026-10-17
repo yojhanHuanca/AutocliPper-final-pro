@@ -54,33 +54,6 @@ export class EditorApi {
     if (!result.body) throw new Error("El servidor no devolvió la revisión.");
     return { draft: result.body, etag: currentEtag(result) };
   }
-  review(id: string) {
-    return this.api.get<Schema<"ReviewHistoryDto">>(
-      `/edits/${encodeURIComponent(id)}/review`,
-    );
-  }
-  changeReview(
-    id: string,
-    action: "review" | "approvals",
-    body: Schema<"ReviewVersionDto">,
-  ) {
-    return this.api.post<Schema<"ReviewStateDto">>(
-      `/edits/${encodeURIComponent(id)}/${action}`,
-      body,
-    );
-  }
-  comments(id: string, before?: string | null) {
-    return this.api.get<Schema<"EditorCommentPageDto">>(
-      `/edits/${encodeURIComponent(id)}/comments${before ? "?beforeId=" + encodeURIComponent(before) : ""}`,
-    );
-  }
-  comment(id: string, body: Schema<"CreateCommentDto">, key: string) {
-    return this.api.post(
-      `/edits/${encodeURIComponent(id)}/comments`,
-      body,
-      key,
-    );
-  }
   exports(id: string) {
     return this.api.get<Response<"/v1/edits/{id}/exports">>(
       `/edits/${encodeURIComponent(id)}/exports`,

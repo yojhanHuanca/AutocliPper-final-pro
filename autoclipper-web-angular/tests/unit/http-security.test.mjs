@@ -8,7 +8,7 @@ import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-
 import { HttpClient, provideHttpClient, withInterceptors, HttpErrorResponse } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { API_BASE_URL, ApiSecurity, apiInterceptor, errorMessage } from '../../.local/tests/client.mjs';
+import { API_BASE_URL, ApiTransport, ApiSecurity, apiInterceptor, errorMessage } from '../../.local/tests/client.mjs';
 
 const base = 'http://localhost:3000/v1';
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -35,6 +35,29 @@ test('signed storage URLs and lookalike API prefixes do not receive cookies or C
     const promise = firstValueFrom(http.put(url, 'test bytes'));
     const req = controller.expectOne(url); assert.equal(req.request.withCredentials, false); assert.equal(req.request.headers.has('X-CSRF-Token'), false); req.flush({ ok: true }); await promise;
   }
+});
+
+test('public review bearer grants omit account cookies and never trigger session refresh', async () => {
+  const api=TestBed.inject(ApiTransport);
+  const promise=api.getPublic('/review-links/one-time-token');
+  const request=controller.expectOne(base+'/review-links/one-time-token');
+  assert.equal(request.request.withCredentials,false);
+  request.flush({}, {status:401,statusText:'Unauthorized'});
+  assert.equal((await promise.catch(error=>error)).status,401);
+  controller.expectNone(base+'/auth/refresh');
+});
+
+test('body-versioned comment deletion keeps CSRF protection on the DELETE request', async () => {
+  const api=TestBed.inject(ApiTransport);
+  const promise=api.deleteWithBody('/edits/edit-1/comments/comment-1',{version:2});
+  controller.expectOne(base+'/auth/csrf').flush({csrfToken:'test-only-csrf'});
+  await tick();
+  const request=controller.expectOne(base+'/edits/edit-1/comments/comment-1');
+  assert.equal(request.request.method,'DELETE');
+  assert.deepEqual(request.request.body,{version:2});
+  assert.equal(request.request.headers.get('X-CSRF-Token'),'test-only-csrf');
+  request.flush({id:'comment-1',version:3});
+  await promise;
 });
 
 test('concurrent 401 responses share one refresh and preserve the original idempotency key', async () => {
