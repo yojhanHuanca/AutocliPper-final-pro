@@ -102,11 +102,11 @@
           @for (n of [1, 2, 3, 4, 5, 6]; track n) {
             <span
               ><img
-                src="/images/creator-480.webp"
+                [src]="n === 6 ? '/images/creator-portrait-v1.webp' : '/images/creator-480.webp'"
                 alt=""
                 loading="lazy"
-                width="480"
-                height="320"
+                [attr.width]="n === 6 ? 720 : 480"
+                [attr.height]="n === 6 ? 1279 : 320"
             /></span>
           }
           <ac-icon name="scissors" />

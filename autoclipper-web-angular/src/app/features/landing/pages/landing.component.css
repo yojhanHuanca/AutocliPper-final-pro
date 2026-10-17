@@ -77,7 +77,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   top: 24px;
   left: 25px;
   color: white;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   display: flex;
   align-items: center;
@@ -178,7 +178,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   right: 10px;
   text-align: center;
   color: #fffd;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   z-index: 1;
 }
@@ -203,7 +203,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   color: var(--accent);
 }
 .hero-timeline > span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -233,7 +233,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   letter-spacing: 0.02em;
 }
 .hero-footnote > span:last-child {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 .motion-toggle {
@@ -241,7 +241,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   background: none;
   color: var(--muted);
   padding: 8px;
-  font-size: 10px;
+  font-size: 12px;
   text-decoration: underline;
 }
 .section-intro h2 {
@@ -281,7 +281,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   justify-content: space-between;
   gap: 16px;
   padding: 0 0 14px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .screen-top > span:first-child {
@@ -323,7 +323,7 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
 }
 .story-overlay span {
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.16em;
 }
 .story-overlay strong {
@@ -353,6 +353,10 @@ ac-landing :is(.live-dot, h1 em, .button, .cut-tool, .scene-tabs button, .eyebro
   aspect-ratio: 1.35;
   object-fit: cover;
   width: 100%;
+}
+.film-strip > span:last-of-type img {
+  object-fit: contain;
+  background: #1b2b49;
 }
 .film-strip > ac-icon {
   position: absolute;

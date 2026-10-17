@@ -51,7 +51,7 @@
   flex: 1;
 }
 .workspace-select label {
-  font-size: 7px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--muted);
   margin: 0 0 5px;
@@ -64,7 +64,7 @@
   background: #fff;
 }
 .nav-caption {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.15em;
   color: var(--muted);
   padding: 0 13px;
@@ -110,7 +110,7 @@
   height: 18px;
 }
 .sidebar nav small {
-  font-size: 8px;
+  font-size: 10px;
   margin-left: auto;
   color: #757b72;
 }
@@ -118,7 +118,7 @@
   color: #787e76;
 }
 .nav-disabled small {
-  font-size: 7px;
+  font-size: 10px;
   margin-left: auto;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -138,12 +138,12 @@
   margin-top: 14px;
 }
 .sidebar-note p {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.6;
   margin: 8px 0 14px;
 }
 .sidebar-note .text-link {
-  font-size: 10px;
+  font-size: 12px;
 }
 .sidebar-bottom {
   margin-top: auto;
@@ -170,7 +170,7 @@
   white-space: nowrap;
 }
 .sidebar-user div > span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .app-body {
@@ -202,7 +202,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .connection:before {
@@ -219,10 +219,10 @@
   display: none;
 }
 .design-banner {
-  background: #fcfaf5;
-  border-bottom: 1px solid #eee4d0;
-  color: #756b53;
-  font-size: 10px;
+  background: #f4f7fc;
+  border-bottom: 1px solid #dce5f3;
+  color: #405475;
+  font-size: 12px;
   line-height: 1.7;
   display: flex;
   align-items: center;
@@ -253,7 +253,7 @@
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  font-size: 9px;
+  font-size: 11px;
   color: #747a71;
   margin: 20px 35px 0;
   padding: 18px 0 70px;

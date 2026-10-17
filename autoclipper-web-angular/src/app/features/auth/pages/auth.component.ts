@@ -5,13 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
-import { BrandComponent } from "../../../shared/ui/brand/brand.component";
 import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from "./auth-story";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-auth",
-  imports: [FormsModule, RouterLink, IconComponent, BrandComponent],
+  imports: [FormsModule, RouterLink, IconComponent],
   host: {
     "[class.motion-paused]": "motionPaused() || reducedMotion()",
     "[style.--auth-accent]": "accent()",

@@ -1137,25 +1137,6 @@
     .landing-footer > span {
       font-size: 9px;
     }
-    .auth-content {
-      padding: 28px;
-    }
-    .auth-form {
-      margin-top: 60px;
-    }
-    .auth-form h1 {
-      font-size: 32px;
-    }
-    .auth-visual > div {
-      left: 28px;
-      bottom: 65px;
-    }
-    .auth-visual h2 {
-      font-size: 44px;
-    }
-    .auth-visual .eyebrow {
-      font-size: 8px;
-    }
     .app-shell {
       display: block;
     }
@@ -1927,6 +1908,55 @@
     .timeline-ruler { margin-top: 14px; }
   }
   @media (max-width: 560px) { ac-editor-timeline { grid-row: 3; } }
+}
+
+@layer responsive {
+  @media (min-width: 561px) and (max-width: 700px) {
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stats-grid .stat-card:nth-child(3) { grid-column: 1 / -1; }
+    .stats-grid .stat-card > div > span,
+    .stats-grid .stat-card small { font-size: 11px; }
+    .stat-card strong.stat-text { font-size: 15px; }
+    .editor-layout { grid-template-columns: minmax(0, 1fr); }
+    .editor-rail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      overflow: visible;
+      gap: 5px;
+    }
+    .editor-rail > .eyebrow { grid-column: 1 / -1; margin: 0 0 4px; }
+    .editor-rail > button { min-width: 0; justify-content: flex-start; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+    .editor-inspector { max-height: none; }
+    .editor-stage { min-height: 390px; }
+    .editor-heading > .button-row { flex-wrap: wrap; justify-content: flex-start; }
+    .getting-started li p { font-size: 12px; }
+  }
+  @media (max-width: 560px) {
+    .editor-layout { grid-template-columns: minmax(0, 1fr); }
+    .editor-rail {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      overflow: visible;
+      gap: 5px;
+    }
+    .editor-rail > .eyebrow { grid-column: 1 / -1; margin: 0 0 4px; }
+    .editor-rail > button { min-width: 0; justify-content: flex-start; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+    .editor-inspector { max-height: none; }
+    .editor-stage { min-height: 340px; }
+    .editor-heading > .button-row { flex-wrap: wrap; justify-content: flex-start; }
+  }
+  @media (max-width: 800px) {
+    .hero-bottom p { font-size: 13px; }
+    .hero-timeline > span { font-size: 11px; }
+    .hero-footnote { font-size: 10px; }
+    .hero-footnote .motion-toggle { font-size: 11px; }
+    .screen-top { font-size: 11px; }
+    .story-controls button { font-size: 10px; }
+    .chapter-detail { font-size: 10px; }
+    .design-banner { font-size: 11px; }
+  }
 }
 
 @layer responsive {
