@@ -100,10 +100,10 @@
       </p>
     </main>
   </div>
-  <aside class="auth-visual" aria-label="Así AutoClipper convierte una grabación en un clip">
+  <aside class="auth-visual" [attr.data-scene]="stepIndex()" aria-label="Recorrido ilustrativo del trabajo con un clip">
     <div class="auth-visual-content">
       <div class="auth-visual-topline">
-        <span class="auth-visual-brand">AUTOCLIPPER <i>/</i> ESTUDIO</span>
+        <ac-brand variant="full" />
         <button
           class="auth-motion-toggle"
           type="button"
@@ -112,69 +112,80 @@
           (click)="motionPaused.set(!motionPaused())"
         >
           <span class="auth-motion-dot"></span>
-          {{ reducedMotion() ? "Movimiento reducido" : motionPaused() ? "Reanudar animación" : "Pausar animación" }}
+          <span class="auth-motion-icon">{{ motionPaused() || reducedMotion() ? "▶" : "Ⅱ" }}</span>
+          {{ reducedMotion() ? "Movimiento reducido" : motionPaused() ? "Reanudar" : "Pausar" }}
         </button>
       </div>
 
       <section class="auth-demo" aria-hidden="true">
         <div class="auth-demo-header">
-          <span class="auth-demo-label"><i></i> RECORRIDO ILUSTRATIVO</span>
-          <span class="auth-demo-counter">01 <b>/</b> 03</span>
+          <span class="auth-demo-label"><i></i> {{ activeScene().micro }}</span>
+          <span class="auth-demo-counter">0{{ stepIndex() + 1 }} <b>/</b> 05</span>
         </div>
 
-        <div class="auth-preview">
+        <div class="auth-preview" [style.--auth-progress.%]="timelineProgress()">
           <img src="/images/creator-960.webp" alt="" width="960" height="640" />
           <div class="auth-preview-wash"></div>
-          <div class="auth-focus-frame"><i></i><i></i><i></i><i></i></div>
+          <div class="auth-preview-chrome">
+            <span class="auth-file-icon"><ac-icon name="film" /></span>
+            <span class="auth-file-name">{{ activeScene().file }}</span>
+            <span class="auth-file-clock">{{ activeScene().time }}</span>
+          </div>
+          <div class="auth-transcript-scene">
+            <span class="auth-transcript-tag">TRANSCRIPCIÓN</span>
+            <p>Hay ideas que aparecen <b>cuando menos las esperas.</b></p>
+            <p>Lo importante es encontrar <mark>el momento exacto.</mark></p>
+            <p>Y darle espacio para que <b>la historia se entienda.</b></p>
+          </div>
+          <div class="auth-source-badge">FUENTE ORIGINAL · 16:9</div>
+          <div class="auth-focus-frame"><i></i><i></i><i></i><i></i><span>INICIO</span><b>FINAL</b></div>
           <div class="auth-scanline"></div>
-          <div class="auth-preview-top">
-            <span class="auth-ai-spark">✦</span>
-            <span>ANÁLISIS CON IA</span>
-            <span class="auth-preview-time">00:18 <b>·</b> 00:42</span>
+          <div class="auth-moment-chip"><span>✂</span><div><small>SELECCIÓN MANUAL · 02:05–02:29</small><strong>La idea que quieres conservar</strong></div></div>
+          <div class="auth-crop-preview">
+            <img src="/images/creator-480.webp" alt="" width="480" height="320" />
+            <span>9:16</span><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="auth-finished-clip">
+            <img src="/images/creator-480.webp" alt="" width="480" height="320" />
+            <span class="auth-finished-badge">VISTA DEL CLIP</span>
+            <strong>Aquí está<br />la idea.</strong>
+            <small>Subtítulos</small>
           </div>
           <div class="auth-play-mark"><span></span></div>
-          <div class="auth-highlight">
-            <span class="auth-highlight-wave">〰</span>
-            <div><small>MOMENTO DESTACADO</small><strong>“Esto cambió mi forma de verlo”</strong></div>
-            <span class="auth-highlight-time">00:18</span>
-          </div>
+          <div class="auth-duration-pill"><span></span> VIDEO DE EJEMPLO <b>·</b> 04:16</div>
+          <div class="auth-export-stamp"><ac-icon name="check" /><span><b>Exportación preparada</b><small>Video y subtítulos · Ejemplo visual</small></span></div>
           <div class="auth-playhead"></div>
+          <div class="auth-timeline">
+            <div class="auth-timeline-axis"><span>00:00</span><span>{{ activeScene().playhead }}</span><span>04:16</span></div>
+            <div class="auth-timeline-track">
+              <div class="auth-timeline-fill" [style.width.%]="timelineProgress()"></div>
+              <span class="auth-selection-range"></span>
+              <i class="auth-timeline-playhead" [style.left.%]="timelineProgress()"></i>
+              <div class="auth-timeline-wave">
+                @for (bar of waveformBars; track $index) { <i [style.height.%]="bar"></i> }
+              </div>
+              <span class="auth-cut-marker auth-cut-start"></span><span class="auth-cut-marker auth-cut-end"></span>
+            </div>
+          </div>
         </div>
 
-        <div class="auth-analysis-card">
-          <div class="auth-analysis-heading">
-            <span class="auth-analysis-icon">✦</span>
-            <div><strong>IA trabajando</strong><small>Ejemplo del recorrido, no una tarea en curso</small></div>
-            <span class="auth-analysis-check">✓</span>
-          </div>
-          <div class="auth-metrics">
-            <div class="auth-metric">
-              <div class="auth-metric-label"><span>Transcripción</span><strong>86%</strong></div>
-              <div class="auth-progress auth-progress-transcript"><i></i></div>
-            </div>
-            <div class="auth-metric">
-              <div class="auth-metric-label"><span>Momentos del video</span><strong>64%</strong></div>
-              <div class="auth-progress auth-progress-moments"><i></i></div>
-            </div>
-          </div>
-          <div class="auth-waveform" aria-label="Forma de onda de audio">
-            @for (bar of waveformBars; track $index) {
-              <i [style.height.%]="bar"></i>
-            }
-          </div>
-          <div class="auth-analysis-footer"><span>TRANSCRIPCIÓN LOCAL</span><span>VISTA DE DEMOSTRACIÓN</span></div>
+        <div class="auth-scene-caption">
+          <span class="auth-scene-glyph">{{ stepIndex() < 2 ? "▤" : stepIndex() === 2 ? "✦" : stepIndex() === 3 ? "◫" : "✓" }}</span>
+          <span><strong>{{ activeScene().label }}</strong><small>{{ activeScene().cue }}</small></span>
+          <span class="auth-caption-arrow">›</span>
         </div>
       </section>
 
       <div class="auth-visual-copy">
-        <span class="eyebrow">TU HISTORIA SIGUE AQUÍ</span>
-        <h2>De una grabación<br />al momento que<br /><em>quieres compartir.</em></h2>
-        <p>Transcribe, encuentra el ritmo y prepara un corte con tu propio material.</p>
+        <div><span class="eyebrow">DEL VIDEO LARGO AL CLIP</span><span class="auth-illustration-note">DEMOSTRACIÓN ILUSTRATIVA</span></div>
+        <h2>Tu historia,<br /><em>en su mejor momento.</em></h2>
+        <p>Un recorrido visual por las herramientas del estudio. El control creativo sigue en tus manos.</p>
       </div>
-      <div class="auth-visual-steps" aria-hidden="true">
-        <span class="active">01 <b>TRANSCRIBE</b></span><i></i>
-        <span>02 <b>ENCUENTRA</b></span><i></i>
-        <span>03 <b>DALE FORMA</b></span>
+      <div class="auth-visual-steps" role="group" aria-label="Pasos del recorrido ilustrativo">
+        @for (scene of scenes; track $index) {
+          <button type="button" [class.active]="stepIndex() === $index" [attr.aria-label]="'Ver paso ' + ($index + 1) + ': ' + scene.label" [attr.aria-current]="stepIndex() === $index ? 'step' : null" (click)="stepIndex.set($index)"><span>0{{ $index + 1 }}</span></button>
+        }
+        <span class="auth-step-name">{{ activeScene().label }}</span>
       </div>
     </div>
   </aside>

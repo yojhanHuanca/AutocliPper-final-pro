@@ -1,16 +1,22 @@
 import { AuthApi } from "../data-access/auth-api.service";
-import { ViewEncapsulation, Component, DestroyRef, inject, signal } from "@angular/core";
+import { ViewEncapsulation, Component, DestroyRef, computed, effect, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
+import { BrandComponent } from "../../../shared/ui/brand/brand.component";
+import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from "./auth-story";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-auth",
-  imports: [FormsModule, RouterLink, IconComponent],
-  host: { "[class.motion-paused]": "motionPaused() || reducedMotion()" },
+  imports: [FormsModule, RouterLink, IconComponent, BrandComponent],
+  host: {
+    "[class.motion-paused]": "motionPaused() || reducedMotion()",
+    "[style.--auth-accent]": "accent()",
+    "[style.--auth-accent-soft]": "accentSoft()",
+  },
   templateUrl: "./auth.component.html",
   styleUrl: "./auth.component.css",
 })
@@ -25,9 +31,15 @@ export class AuthComponent {
   readonly message = signal("");
   readonly motionPaused = signal(false);
   readonly reducedMotion = signal(false);
+  readonly stepIndex = signal(0);
+  readonly accent = computed(() => AUTH_STORY_ACCENTS[this.stepIndex() % AUTH_STORY_ACCENTS.length]);
+  readonly accentSoft = computed(() => `${this.accent()}24`);
+  readonly activeScene = computed(() => this.scenes[this.stepIndex()]);
+  readonly timelineProgress = computed(() => [9, 28, 49, 72, 96][this.stepIndex()]);
+  readonly scenes = AUTH_STORY_SCENES;
   readonly waveformBars = Array.from(
-    { length: 38 },
-    (_, index) => 20 + (Math.sin(index * 1.55) + 1) * 36,
+    { length: 52 },
+    (_, index) => 18 + (Math.sin(index * 1.55) + 1) * 34,
   );
   name = "";
   email = "";
@@ -37,11 +49,20 @@ export class AuthComponent {
   constructor() {
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.reducedMotion.set(motionPreference.matches);
-    const updateMotionPreference = () => this.reducedMotion.set(motionPreference.matches);
+    const updateMotionPreference = () => {
+      this.reducedMotion.set(motionPreference.matches);
+      if (motionPreference.matches) this.stepIndex.set(0);
+    };
     motionPreference.addEventListener("change", updateMotionPreference);
-    this.destroyRef.onDestroy(() =>
-      motionPreference.removeEventListener("change", updateMotionPreference),
-    );
+    const cycle = createAuthStoryCycle(() => this.stepIndex(), (index) => this.stepIndex.set(index), (tick, milliseconds) => {
+      const timer = window.setInterval(tick, milliseconds);
+      return () => window.clearInterval(timer);
+    });
+    effect(() => cycle.configure(this.motionPaused(), this.reducedMotion()));
+    this.destroyRef.onDestroy(() => {
+      motionPreference.removeEventListener("change", updateMotionPreference);
+      cycle.destroy();
+    });
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
     if (this.token) void this.router.navigate([], { relativeTo: this.route, queryParams: { token: null }, queryParamsHandling: 'merge', replaceUrl: true });
     if (this.route.snapshot.queryParamMap.get('connection') === 'unavailable') this.error.set('No pudimos consultar tu espacio. Revisa la conexión con el servidor y vuelve a entrar.');

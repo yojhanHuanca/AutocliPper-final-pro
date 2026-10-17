@@ -4,10 +4,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ActivatedRoute } from '@angular/router';
-import { EditorState, EditorApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, HttpErrorResponse } from '../../.local/tests/client.mjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
+import { EditorState, EditorApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, editorChangesGuard, EditorNavigationService, WorkspaceStore, HttpErrorResponse } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
+  const routeParams = new BehaviorSubject(new Map([['id','fixture-edit']]));
   let resolveEdit;
   let editCalls = 0, confirmations = 0, allowDiscard = false;
   const writeEtags=[];
@@ -19,7 +21,7 @@ test('timeline and caption validation follow async load, local corrections and c
   let reviewValue={version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]};
   const commentItems=[]; let commentBody;
   const collaboration={review:async()=>reviewValue,comments:async()=>({items:commentItems,nextBeforeId:null}),createComment:async(_id,body)=>{commentBody=body;const item={id:'comment-1',revisionVersion:1,authorId:'author-1',timeSeconds:body.timeSeconds,text:body.text,version:1,createdAt:'2026-01-01T00:00:00Z',deletedAt:null};commentItems.unshift(item);return item;},deleteComment:async(_id,_commentId,body)=>{const item={...commentItems[0],version:body.version+1,deletedAt:'2026-01-02T00:00:00Z'};commentItems[0]=item;return item;},requestReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'review'},returnReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'draft'},approve:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'approved',approvedRevisionVersion:1}};
-  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[]}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     assert.equal(state.timeline().endSeconds,30);
@@ -96,5 +98,48 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.deepEqual(commentBody,{revisionVersion:1,timeSeconds:4,text:'¿Así funciona mejor para el clip?'});
     await state.deleteComment(commentItems[0]);
     assert.ok(state.comments()[0].deletedAt);
+    state.spec.endSeconds=19; state.touchForm(); allowDiscard=false;
+    const navigation=TestBed.inject(EditorNavigationService);
+    assert.equal(navigation.allowEdit('blocked-edit'),false,'Unsaved changes prevent navigation to another edit.');
+    assert.equal(navigation.allowEdit('fixture-edit'),true,'The current editor remains active.');
+    allowDiscard=true;
+    assert.equal(navigation.allowEdit('next-edit'),true,'Discard is explicit before changing the edit ID.');
+    routeParams.next(new Map([['id','next-edit']]));
+    assert.equal(state.id,'next-edit');
+    assert.equal(state.draft(),null,'The previous draft must disappear before the next response arrives.');
+    assert.deepEqual(state.history(),[]);
+    assert.deepEqual(state.comments(),[]);
+    assert.equal(state.review(),null);
+    assert.equal(state.dirty(),false,'The new editor starts with a clean form.');
+  } finally { TestBed.resetTestingModule(); }
+});
+
+test('late responses from a previous edit cannot overwrite the reused editor', async () => {
+  const routeParams = new BehaviorSubject(new Map([['id','edit-a']]));
+  let resolveHistoryA;
+  let historyAIsLate=false;
+  const makeDraft=id=>({id,uploadId:`upload-${id}`,projectId:`project-${id}`,name:id,version:1,revision:{id:`revision-${id}`,version:1,spec:{version:1,kind:'clip',startSeconds:0,endSeconds:10,aspect:'vertical'}}});
+  const api={edit:async id=>({draft:makeDraft(id),etag:`"${id}"`}),project:async id=>({id,name:id,workspaceId:`workspace-${id}`}),history:id=>id==='edit-a'&&historyAIsLate?new Promise(resolve=>{resolveHistoryA=resolve;}):Promise.resolve({items:[{id:`history-${id}`}],nextBeforeVersion:null}),comments:async()=>({items:[],nextBeforeId:null}),exports:async()=>({items:[]})};
+  const collaboration={review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]}),comments:async()=>({items:[],nextBeforeId:null})};
+  let confirmDiscard=false;
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>confirmDiscard},{provide:EditorApi,useValue:api},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','edit-a']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[]}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  try {
+    const state=TestBed.inject(EditorState);
+    for(let attempt=0;attempt<20&&state.draft()?.id!=='edit-a';attempt++) await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(state.draft().id,'edit-a');
+    historyAIsLate=true;
+    const stale=state.loadHistory();
+    for(let attempt=0;attempt<20&&!resolveHistoryA;attempt++) await new Promise(resolve=>setImmediate(resolve));
+    state.spec.aspect='square'; state.touchForm();
+    const navigation=TestBed.inject(EditorNavigationService);
+    assert.equal(navigation.allowEdit('edit-b'),false,'The route guard blocks an edit change when its form is dirty and discard is refused.');
+    confirmDiscard=true;
+    assert.equal(navigation.allowEdit('edit-b'),true);
+    routeParams.next(new Map([['id','edit-b']]));
+    for(let attempt=0;attempt<20&&state.draft()?.id!=='edit-b';attempt++) await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(state.draft().id,'edit-b');
+    resolveHistoryA({items:[{id:'stale-history-a'}],nextBeforeVersion:null});
+    await stale;
+    assert.deepEqual(state.history(),[{id:'history-edit-b'}]);
   } finally { TestBed.resetTestingModule(); }
 });

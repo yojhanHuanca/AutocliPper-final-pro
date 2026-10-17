@@ -3,24 +3,38 @@ import { EditorApi } from "../data-access/editor-api.service";
 import { CollaborationApi } from "../../collaboration/data-access/collaboration-api.service";
 import { HttpErrorResponse } from "@angular/common/http";
 import { Injectable, DestroyRef, computed, inject, signal } from "@angular/core";
-import { ActivatedRoute } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import type { Response } from "../../../core/contracts/api-types";
 import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
 import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
 import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
+import { EditorNavigationService } from "./editor-navigation.service";
+import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
   private readonly collaboration = inject(CollaborationApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroy = inject(DestroyRef);
   private readonly discardConfirmation = inject(EDITOR_DISCARD_CONFIRMATION);
+  private readonly editorNavigation = inject(EditorNavigationService);
+  private readonly workspaceStore = inject(WorkspaceStore);
   readonly design = inject(DESIGN_MODE);
-  readonly id = this.route.snapshot.paramMap.get("id") ?? "";
+  private readonly activeId = signal(this.route.snapshot.paramMap.get("id") ?? "");
+  get id(): string { return this.activeId(); }
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
+  readonly collaborationRole = computed(() => {
+    const project = this.project();
+    if (!project || !this.workspaceStore.loaded()) return "loading" as const;
+    return this.workspaceStore.workspaces().find((workspace) => workspace.id === project.workspaceId)?.role ?? "unavailable" as const;
+  });
+  readonly canEditCollaboration = computed(() => ["owner", "admin", "editor"].includes(this.collaborationRole()));
+  readonly canAdminCollaboration = computed(() => ["owner", "admin"].includes(this.collaborationRole()));
   readonly review = signal<Schema<"ReviewHistoryDto"> | null>(null);
   readonly history = signal<Schema<"EditorRevisionSummaryDto">[]>([]);
   readonly nextVersion = signal<number | null>(null);
@@ -89,12 +103,78 @@ export class EditorState {
   private commentBody = "";
   private timer?: ReturnType<typeof setTimeout>;
   private disposed = false;
+  private editGeneration = 0;
+  private unregisterNavigation: () => void = () => {};
   constructor() {
+    this.unregisterNavigation = this.editorNavigation.register(this.id, () => this.confirmDiscard());
     this.destroy.onDestroy(() => {
       this.disposed = true;
+      this.unregisterNavigation();
+      this.editGeneration++;
       clearTimeout(this.timer);
     });
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
+      const nextId = params.get("id") ?? "";
+      if (nextId === this.id) return;
+      const previousId = this.id;
+      if (!this.editorNavigation.consumeApproval(nextId) && !this.confirmDiscard()) {
+        void this.router.navigateByUrl(previousId ? `/app/edits/${encodeURIComponent(previousId)}` : "/app/edits");
+        return;
+      }
+      this.resetForEdit(nextId);
+      this.unregisterNavigation();
+      this.unregisterNavigation = this.editorNavigation.register(nextId, () => this.confirmDiscard());
+      if (!this.design && nextId) void this.reload();
+    });
     if (!this.design) void this.reload();
+  }
+  private resetForEdit(id: string): void {
+    this.editGeneration++;
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.activeId.set(id);
+    this.draft.set(null);
+    this.project.set(null);
+    this.review.set(null);
+    this.history.set([]);
+    this.nextVersion.set(null);
+    this.comments.set([]);
+    this.nextComment.set(null);
+    this.exports.set([]);
+    this.tab.set("composition");
+    this.busy.set(false);
+    this.error.set("");
+    this.loadNotice.set("");
+    this.conflict.set(false);
+    this.message.set("");
+    this.previewUrl.set("");
+    this.previewVersion.set("");
+    this.formVersion.set(0);
+    this.spec = { version: 1, kind: "clip", startSeconds: 0, endSeconds: 30, aspect: "vertical" };
+    this.cropX = 0.5;
+    this.cropY = 0.5;
+    this.splitEnabled = false;
+    this.secondaryUploadId = "";
+    this.primaryRatio = 0.5;
+    this.secondaryStart = 0;
+    this.splitLayout = "stacked";
+    this.shortInput = "freeze";
+    this.splitAudio = "primary";
+    this.captionSource = "none";
+    this.analysisId = "";
+    this.cues = [];
+    this.captionTemplate = "clean";
+    this.captionPosition = "bottom";
+    this.fontSize = 24;
+    this.commentText = "";
+    this.commentTime = 0;
+    this.replyTarget.set(null);
+    this.etag = null;
+    this.initialForm = "";
+    this.renderKey = "";
+    this.commentKey = "";
+    this.commentBody = "";
+    this.touchForm();
   }
   private snapshot(): string {
     return JSON.stringify([
@@ -121,7 +201,13 @@ export class EditorState {
     return !!this.initialForm && this.snapshot() !== this.initialForm;
   }
   confirmDiscard(): boolean {
-    return !this.dirty() || this.discardConfirmation();
+    return !this.busy() && (!this.dirty() || this.discardConfirmation());
+  }
+  canRequestReview(): boolean {
+    return this.canEditCollaboration() && this.review()?.status === "draft";
+  }
+  private isCurrentEdit(generation: number): boolean {
+    return !this.disposed && generation === this.editGeneration;
   }
   addCue(): void {
     if (this.design || this.cues.length >= 200) return;
@@ -165,8 +251,10 @@ export class EditorState {
   }
   async reload(): Promise<void> {
     if (this.busy() || !this.confirmDiscard()) return;
+    const generation = this.editGeneration;
     await this.run(async () => {
       const result = await this.api.edit(this.id);
+      if (!this.isCurrentEdit(generation)) return;
       this.accept(result.draft, result.etag);
       const labels = ["metadatos del proyecto", "historial", "comentarios", "exportaciones", "revisión"];
       const results = await Promise.allSettled([
@@ -176,6 +264,7 @@ export class EditorState {
         this.loadExports(),
         this.loadReview(),
       ]);
+      if (!this.isCurrentEdit(generation)) return;
       if (results[0].status === "fulfilled") this.project.set(results[0].value);
       const unavailable = results.flatMap((result, index) =>
         result.status === "rejected" ||
@@ -231,6 +320,7 @@ export class EditorState {
     return result;
   }
   async save(): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
       if (!draft) return;
@@ -239,6 +329,7 @@ export class EditorState {
         spec: this.buildSpec(),
       };
       const saved = await this.api.save(this.id, body, this.etag ?? undefined);
+      if (!this.isCurrentEdit(generation)) return;
       this.accept(saved.draft, saved.etag);
       this.message.set(`Revisión ${saved.draft.version} guardada.`);
       this.renderKey = "";
@@ -247,10 +338,12 @@ export class EditorState {
   }
   async loadHistory(append = false): Promise<void> {
     if (this.design) return;
+    const generation = this.editGeneration;
     const result = await this.api.history(
       this.id,
       append ? this.nextVersion() : null,
     );
+    if (!this.isCurrentEdit(generation)) return;
     this.history.set(
       append ? [...this.history(), ...result.items] : result.items,
     );
@@ -260,6 +353,7 @@ export class EditorState {
     await this.run(() => this.loadHistory(true));
   }
   async restore(version: number): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
       if (!draft || this.dirty()) return;
@@ -268,6 +362,7 @@ export class EditorState {
         { version: draft.version, revisionVersion: version },
         this.etag ?? undefined,
       );
+      if (!this.isCurrentEdit(generation)) return;
       this.accept(restored.draft, restored.etag);
       this.message.set(
         `Revisión ${version} recuperada como revisión ${restored.draft.version}.`,
@@ -290,7 +385,10 @@ export class EditorState {
       );
   }
   async loadReview(): Promise<void> {
-    if (!this.design) this.review.set(await this.collaboration.review(this.id));
+    if (this.design) return;
+    const generation = this.editGeneration;
+    const result = await this.collaboration.review(this.id);
+    if (this.isCurrentEdit(generation)) this.review.set(result);
   }
   async requestReview(): Promise<void> {
     await this.reviewAction("review");
@@ -302,6 +400,7 @@ export class EditorState {
     await this.reviewAction("approvals");
   }
   private async reviewAction(path: "review" | "return" | "approvals"): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const review = this.review();
       const draft = this.draft();
@@ -312,6 +411,7 @@ export class EditorState {
         : path === "approvals"
           ? await this.collaboration.approve(this.id, body)
           : await this.collaboration.requestReview(this.id, body);
+      if (!this.isCurrentEdit(generation)) return;
       this.review.update((current) => current ? { ...current, ...next } : null);
       this.message.set(path === "return" ? "La revisión volvió al editor." : path === "approvals" ? "Revisión aprobada." : "Solicitud de revisión enviada.");
       const refreshed = await Promise.allSettled([this.loadReview()]);
@@ -328,9 +428,11 @@ export class EditorState {
   clearReply(): void { this.replyTarget.set(null); }
   async loadComments(append = false): Promise<void> {
     if (this.design) return;
+    const generation = this.editGeneration;
     const result = await this.collaboration.comments(this.id, {
       beforeId: append ? this.nextComment() : null,
     });
+    if (!this.isCurrentEdit(generation)) return;
     this.comments.set(
       append ? [...this.comments(), ...result.items] : result.items,
     );
@@ -340,6 +442,7 @@ export class EditorState {
     await this.run(() => this.loadComments(true));
   }
   async comment(): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
       if (!draft) return;
@@ -354,6 +457,7 @@ export class EditorState {
         this.commentKey = crypto.randomUUID();
       }
       const created = await this.collaboration.createComment(this.id, body, this.commentKey);
+      if (!this.isCurrentEdit(generation)) return;
       this.comments.update((items) => [created, ...items.filter((item) => item.id !== created.id)]);
       this.commentText = "";
       this.commentKey = "";
@@ -366,8 +470,10 @@ export class EditorState {
   }
   async deleteComment(item: Schema<"EditorCommentDto">): Promise<void> {
     if (item.deletedAt) return;
+    const generation = this.editGeneration;
     await this.run(async () => {
       const deleted = await this.collaboration.deleteComment(this.id, item.id, { version: item.version });
+      if (!this.isCurrentEdit(generation)) return;
       this.comments.update((items) => items.map((comment) => comment.id === deleted.id ? deleted : comment));
       this.message.set("Comentario retirado.");
       try { await this.loadComments(); }
@@ -376,9 +482,11 @@ export class EditorState {
   }
   async loadExports(): Promise<boolean> {
     if (this.design) return true;
+    const generation = this.editGeneration;
     clearTimeout(this.timer);
     try {
       const result = await this.api.exports(this.id);
+      if (!this.isCurrentEdit(generation)) return false;
       this.exports.set(result.items);
       if (
         !this.disposed &&
@@ -387,6 +495,7 @@ export class EditorState {
         this.timer = setTimeout(() => void this.loadExports(), 4000);
       return true;
     } catch (error) {
+      if (!this.isCurrentEdit(generation)) return false;
       this.loadNotice.set(
         `No se pudieron cargar las exportaciones: ${errorMessage(error)}`,
       );
@@ -394,11 +503,13 @@ export class EditorState {
     }
   }
   async render(): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const draft = this.draft();
       if (!draft || this.dirty()) return;
       this.renderKey ||= crypto.randomUUID();
       await this.api.render(this.id, draft.version, this.renderKey);
+      if (!this.isCurrentEdit(generation)) return;
       this.renderKey = "";
       this.tab.set("exports");
       await this.loadExports();
@@ -406,8 +517,10 @@ export class EditorState {
     });
   }
   async cancelRender(id: string): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       await this.api.cancelRender(id);
+      if (!this.isCurrentEdit(generation)) return;
       await this.loadExports();
     });
   }
@@ -417,8 +530,10 @@ export class EditorState {
       : "No informada";
   }
   async preview(item: Schema<"EditorExportDto">): Promise<void> {
+    const generation = this.editGeneration;
     await this.run(async () => {
       const result = await this.api.download(item.id, "video");
+      if (!this.isCurrentEdit(generation)) return;
       this.safeUrl(result.url);
       this.previewUrl.set(result.url);
       this.previewVersion.set(this.revisionLabel(item.editorRevisionId));
@@ -441,6 +556,7 @@ export class EditorState {
   }
   private async run(action: () => Promise<void>): Promise<void> {
     if (this.design || this.busy()) return;
+    const generation = this.editGeneration;
     this.busy.set(true);
     this.error.set("");
     this.loadNotice.set("");
@@ -449,12 +565,13 @@ export class EditorState {
     try {
       await action();
     } catch (error) {
+      if (!this.isCurrentEdit(generation)) return;
       this.error.set(errorMessage(error));
       this.conflict.set(
         error instanceof HttpErrorResponse && error.status === 412,
       );
     } finally {
-      this.busy.set(false);
+      if (this.isCurrentEdit(generation)) this.busy.set(false);
     }
   }
 }

@@ -59,8 +59,10 @@ export class PublicReviewComponent {
         this.review.set(result);
       }
       this.nextBeforeId.set(result.comments.nextBeforeId);
-      this.videoUrl.set("");
-      this.videoExpiresIn.set(null);
+      if (!beforeId) {
+        this.videoUrl.set("");
+        this.videoExpiresIn.set(null);
+      }
     } catch (error) {
       if (generation !== this.generation) return;
       this.error.set(this.publicError(error));

@@ -20,14 +20,14 @@
   <div class="button-row">
     <button class="button" type="button" (click)="vm.tab.set('history')">
       <ac-icon name="clock" />Historial</button
-    ><button
+    >@if (vm.canRequestReview()) { <button
       class="button"
       type="button"
       (click)="vm.requestReview()"
-      [disabled]="vm.design || vm.busy() || vm.dirty() || !vm.review()"
+      [disabled]="vm.design || vm.busy() || vm.dirty()"
     >
-      Enviar a revisión</button
-    ><button
+      Enviar a revisión</button> }
+    <button
       class="button primary"
       type="button"
       (click)="vm.render()"

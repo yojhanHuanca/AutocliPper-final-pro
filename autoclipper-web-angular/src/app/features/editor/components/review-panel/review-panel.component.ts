@@ -4,6 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { EditorState } from "../../state/editor.state";
 import { CollaborationApi } from "../../../collaboration/data-access/collaboration-api.service";
 import type { Schema } from "../../../../core/contracts/api-types";
+import { SessionStore } from "../../../../core/auth/session.store";
 
 type CollaborationView = "team" | "links" | "activity";
 
@@ -15,6 +16,7 @@ type CollaborationView = "team" | "links" | "activity";
 })
 export class ReviewPanelComponent {
   readonly vm = inject(EditorState);
+  private readonly session = inject(SessionStore);
   private readonly api = inject(CollaborationApi);
   readonly view = signal<CollaborationView>("team");
   readonly links = signal<Schema<"ReviewLinkDto">[]>([]);
@@ -33,13 +35,15 @@ export class ReviewPanelComponent {
   processingId = "";
 
   selectView(view: CollaborationView): void {
+    if (view === "links" && !this.vm.canEditCollaboration()) return;
+    if (view === "activity" && !this.vm.canAdminCollaboration()) return;
     this.view.set(view);
     if (this.vm.design) return;
     if (view === "links" && !this.linksLoaded()) void this.loadLinks();
     if (view === "activity" && !this.auditLoaded()) void this.loadAudit();
   }
   async loadLinks(): Promise<void> {
-    if (this.vm.design || this.loadingLinks()) return;
+    if (this.vm.design || !this.vm.canEditCollaboration() || this.loadingLinks()) return;
     this.loadingLinks.set(true);
     this.error.set("");
     try {
@@ -50,7 +54,11 @@ export class ReviewPanelComponent {
   }
   async createLink(): Promise<void> {
     const draft = this.vm.draft();
-    if (!draft || this.vm.dirty() || this.busy()) return;
+    if (!this.vm.canEditCollaboration() || !draft || this.vm.dirty() || this.busy()) return;
+    if (this.includeVideo && !this.videoExports().some((item) => item.id === this.processingId)) {
+      this.error.set("Elige una exportación de video completada para la revisión guardada actual.");
+      return;
+    }
     this.busy.set(true); this.error.set(""); this.message.set("");
     try {
       const result = await this.api.createLink(this.vm.id, {
@@ -79,7 +87,7 @@ export class ReviewPanelComponent {
     } catch { this.error.set("No se pudo copiar automáticamente. Selecciona y copia el enlace mostrado."); }
   }
   async revoke(link: Schema<"ReviewLinkDto">): Promise<void> {
-    if (this.vm.design || link.revokedAt || this.busy()) return;
+    if (this.vm.design || !this.vm.canEditCollaboration() || link.revokedAt || this.busy()) return;
     this.busy.set(true); this.error.set("");
     try {
       await this.api.revokeLink(this.vm.id, link.id);
@@ -96,12 +104,28 @@ export class ReviewPanelComponent {
     return { draft: "Borrador", review: "En revisión", approved: "Aprobada" }[status];
   }
   videoExports(): Schema<"EditorExportDto">[] {
+    const revisionId = this.vm.draft()?.revision.id;
+    if (!revisionId) return [];
     return this.vm.exports().filter((item) =>
-      item.status === "succeeded" && item.artifacts.some((artifact) => artifact.kind === "video"),
+      item.editorRevisionId === revisionId && item.status === "succeeded" &&
+      item.artifacts.some((artifact) => artifact.kind === "video"),
     );
   }
+  roleMessage(): string {
+    const role = this.vm.collaborationRole();
+    if (role === "loading") return "Cargando tu rol en el espacio de este proyecto…";
+    if (role === "unavailable") return "No pudimos determinar tu rol para este proyecto. Las acciones restringidas no están disponibles.";
+    if (role === "reader") return "Acceso de lectura: puedes consultar la revisión y sus observaciones. Solicitar cambios requiere el rol editor.";
+    if (role === "editor") return "Como editor puedes solicitar revisión, comentar y compartir enlaces. Aprobar y consultar actividad requiere administración.";
+    return "Tu rol de administración permite revisar, aprobar y consultar la actividad.";
+  }
+  canDeleteComment(item: Schema<"EditorCommentDto">): boolean {
+    const role = this.vm.collaborationRole();
+    return role === "owner" || role === "admin" ||
+      (role === "editor" && item.authorId === this.session.user()?.id);
+  }
   async loadAudit(append = false): Promise<void> {
-    if (this.vm.design || this.loadingAudit()) return;
+    if (this.vm.design || !this.vm.canAdminCollaboration() || this.loadingAudit()) return;
     this.loadingAudit.set(true);
     this.error.set("");
     try {

@@ -6,6 +6,7 @@ export class WorkspaceStore {
   private readonly api = inject(ApiTransport);
   readonly workspaces = signal<Schema<"WorkspaceSummaryDto">[]>([]);
   readonly workspaceId = signal("");
+  readonly loaded = signal(false);
   private creationKey = "";
   private creationName = "";
   async createPersonal(name: string): Promise<void> {
@@ -25,6 +26,7 @@ export class WorkspaceStore {
     const result =
       await this.api.get<Schema<"WorkspaceListDto">>("/workspaces");
     this.workspaces.set(result.items);
+    this.loaded.set(true);
     if (!result.items.some((w) => w.id === this.workspaceId()))
       this.workspaceId.set(result.items[0]?.id ?? "");
   }
@@ -32,5 +34,6 @@ export class WorkspaceStore {
   clear(): void {
     this.workspaces.set([]);
     this.workspaceId.set("");
+    this.loaded.set(false);
   }
 }

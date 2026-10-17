@@ -1928,3 +1928,64 @@
   }
   @media (max-width: 560px) { ac-editor-timeline { grid-row: 3; } }
 }
+
+@layer responsive {
+  /* Keep everyday controls and supporting copy readable across compact screens. */
+  .sidebar .workspace-select label,
+  .sidebar .nav-caption,
+  .sidebar nav small,
+  .sidebar .nav-disabled small { font-size: 10px; }
+  .sidebar .workspace-select select,
+  .sidebar .sidebar-user strong { font-size: 12px; }
+  .sidebar .sidebar-user div > span,
+  .connection,
+  .app-footer { font-size: 11px; }
+  .getting-started > .eyebrow,
+  .getting-started li > span,
+  .project-panel .empty-state > .eyebrow,
+  .project-workflow .panel > .eyebrow { font-size: 10px; }
+  .getting-started li strong,
+  .getting-started li p,
+  .upload-drop > span,
+  .resource-status > div > span,
+  .pipeline-events small,
+  .edit-card p,
+  .edit-card .text-link,
+  .project-row p { font-size: 12px; }
+  .search-form input { font-size: 12px; }
+  .search-form button { min-width: 40px; min-height: 40px; font-size: 11px; }
+  .editor-rail > .eyebrow,
+  .editor-source small,
+  .editor-source .text-link,
+  .editor-inspector > .eyebrow,
+  .editor-inspector small,
+  .history-row small,
+  .history-row span,
+  .comment > span,
+  .export-item > small,
+  .timeline-ruler,
+  .timeline-lane { font-size: 10px; }
+  .editor-rail > button,
+  .editor-inspector label,
+  .editor-inspector input,
+  .editor-inspector select,
+  .editor-inspector textarea,
+  .editor-inspector .button,
+  .history-row .button,
+  .export-item .button,
+  .timeline-lane > div { font-size: 12px; }
+  .editor-inspector .button,
+  .history-row .button,
+  .export-item .button { min-height: 40px; }
+
+  @media (max-width: 800px) {
+    .sidebar .workspace-select label,
+    .sidebar .nav-caption,
+    .sidebar nav small,
+    .sidebar .nav-disabled small { font-size: 10px; }
+    .editor-rail > button { min-height: 44px; }
+    .timeline-heading,
+    .timeline-heading > strong { font-size: 12px; }
+    .timeline-lane { grid-template-columns: 74px minmax(0, 1fr); }
+  }
+}

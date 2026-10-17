@@ -2,11 +2,12 @@
 <h2>Revisión del clip.</h2>
 <nav class="collaboration-tabs" aria-label="Secciones de colaboración">
   <button type="button" [attr.aria-pressed]="view() === 'team'" (click)="selectView('team')">Equipo</button>
-  <button type="button" [attr.aria-pressed]="view() === 'links'" (click)="selectView('links')">Enlace externo</button>
-  <button type="button" [attr.aria-pressed]="view() === 'activity'" (click)="selectView('activity')">Actividad</button>
+  @if (vm.canEditCollaboration()) { <button type="button" [attr.aria-pressed]="view() === 'links'" (click)="selectView('links')">Enlace externo</button> }
+  @if (vm.canAdminCollaboration()) { <button type="button" [attr.aria-pressed]="view() === 'activity'" (click)="selectView('activity')">Actividad</button> }
 </nav>
 @if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
 @if (message()) { <div class="alert" role="status">{{ message() }}</div> }
+<p class="collaboration-role-note" role="status">{{ roleMessage() }}</p>
 
 @switch (view()) {
   @case ('team') {
@@ -24,10 +25,10 @@
           <p>Aprobada: revisión {{ review.approvedRevisionVersion }}</p>
         }
         <div class="button-row">
-          @if (review.status !== 'review') {
+          @if (review.status === 'draft' && vm.canEditCollaboration()) {
             <button class="button primary" type="button" (click)="vm.requestReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Solicitar revisión</button>
           }
-          @if (review.status === 'review') {
+          @if (review.status === 'review' && vm.canAdminCollaboration()) {
             <button class="button" type="button" (click)="vm.returnReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Devolver al editor</button>
             <button class="button primary" type="button" (click)="vm.approve()" [disabled]="vm.design || vm.busy() || vm.dirty()">Aprobar</button>
           }
@@ -55,11 +56,15 @@
         </div>
         <small class="muted">El contrato guarda comentarios independientes; no crea hilos enlazados.</small>
       }
+      @if (vm.canEditCollaboration()) {
       <form #commentForm="ngForm" (ngSubmit)="commentForm.valid && vm.comment()">
         <label>Comentario<textarea name="comment" [(ngModel)]="vm.commentText" maxlength="2000" required [disabled]="vm.design || vm.busy() || !vm.draft()"></textarea></label>
         <label>Segundo relativo al clip<input type="number" name="time" [(ngModel)]="vm.commentTime" min="0" [max]="vm.spec.endSeconds - vm.spec.startSeconds" step="0.1" required [disabled]="vm.design || vm.busy() || !vm.draft()" /></label>
         <button class="button primary full" type="submit" [disabled]="vm.design || vm.busy() || !vm.draft() || commentForm.invalid">Añadir observación</button>
       </form>
+      } @else {
+        <p class="empty-inline">Tu rol actual permite consultar estas observaciones, pero no añadir comentarios.</p>
+      }
       @for (item of vm.comments(); track item.id) {
         <article class="comment">
           <span>{{ item.timeSeconds }} s · revisión {{ item.revisionVersion }}</span>
@@ -67,8 +72,8 @@
           <small>{{ item.createdAt | date: "short" }}</small>
           @if (!item.deletedAt) {
             <div class="button-row">
-              <button class="button small" type="button" (click)="vm.replyTo(item)" [disabled]="vm.design || vm.busy()">Responder en esta marca</button>
-              <button class="button small" type="button" (click)="vm.deleteComment(item)" [disabled]="vm.design || vm.busy()">Retirar comentario</button>
+              @if (vm.canEditCollaboration()) { <button class="button small" type="button" (click)="vm.replyTo(item)" [disabled]="vm.design || vm.busy()">Responder en esta marca</button> }
+              @if (canDeleteComment(item)) { <button class="button small" type="button" (click)="vm.deleteComment(item)" [disabled]="vm.design || vm.busy()">Retirar comentario</button> }
             </div>
           }
         </article>
@@ -95,7 +100,7 @@
             <option value="">Selecciona una exportación</option>
             @for (item of videoExports(); track item.id) { <option [value]="item.id">Revisión {{ vm.revisionLabel(item.editorRevisionId) }} · {{ item.id }}</option> }
           </select></label>
-          @if (videoExports().length === 0) { <small class="muted">No hay exportaciones de video completadas para compartir.</small> }
+          @if (videoExports().length === 0) { <small class="muted">No hay videos exportados desde la revisión guardada actual. Exporta esta revisión antes de crear un enlace con video.</small> }
         }
         <button class="button primary full" type="submit" [disabled]="vm.design || busy() || !vm.draft() || vm.dirty() || linkForm.invalid">Crear enlace de revisión</button>
       </form>
