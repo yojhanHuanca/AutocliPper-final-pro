@@ -17,6 +17,7 @@ import type { Schema } from "../../../../core/contracts/api-types";
 import { SessionStore } from "../../../../core/auth/session.store";
 import { errorMessage } from "../../../../core/http/api-error";
 import { IconComponent } from "../../../../shared/ui/icon/icon.component";
+import { workspaceRoleLabel } from "../../../../core/labels/workspace-role-label";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -63,7 +64,7 @@ export class ProjectCollectionComponent {
     if (this.design) return "Tu rol aparecerá aquí";
     if (!this.workspace.loaded()) return "Comprobando acceso…";
     const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
-    return role ? ({ owner: "Propietario", admin: "Administrador", editor: "Editor", reader: "Lector" } as const)[role] : "Sin acceso confirmado";
+    return role ? workspaceRoleLabel(role) : "Sin acceso confirmado";
   }
   roleNotice(): string {
     if (this.design) return "";

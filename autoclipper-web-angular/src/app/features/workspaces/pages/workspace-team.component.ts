@@ -10,6 +10,7 @@ import { WorkspaceStore } from "../data-access/workspace.store";
 import { WorkspaceTeamApi } from "../data-access/workspace-team.api";
 import type { Schema } from "../../../core/contracts/api-types";
 import { canInviteAs as roleCanInviteAs, canManageMember as roleCanManageMember, canManageWorkspace, canTransferOwnership, type AssignableWorkspaceRole, type WorkspaceRole } from "../models/workspace-permissions";
+import { workspaceRoleLabel } from "../../../core/labels/workspace-role-label";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -105,7 +106,7 @@ export class WorkspaceTeamComponent {
   }
 
   roleLabel(role: WorkspaceRole): string {
-    return ({ owner: "Propietario", admin: "Administrador", editor: "Editor", reader: "Lector" })[role];
+    return workspaceRoleLabel(role);
   }
   roleDraft(member: Schema<"MemberDto">): AssignableWorkspaceRole {
     return this.roleDrafts()[member.userId] ?? (member.role === "owner" ? "reader" : member.role);

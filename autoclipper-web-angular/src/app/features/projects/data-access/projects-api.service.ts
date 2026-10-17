@@ -63,6 +63,7 @@ export class ProjectsApi {
     file: File,
     progress: (stage: string) => void,
     remember: (id: string) => void,
+    signal?: AbortSignal,
   ): Promise<Schema<"UploadStatusDto">> {
     const contentType = uploadContentType(file);
     progress("Calculando SHA-256 del archivo…");
@@ -93,6 +94,7 @@ export class ProjectsApi {
       headers: intent.headers,
       credentials: "omit",
       redirect: "error",
+      signal,
     });
     if (!result.ok)
       throw new Error(

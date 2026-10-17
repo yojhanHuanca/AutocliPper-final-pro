@@ -11,6 +11,7 @@ import {
   signal,
 } from "@angular/core";
 import { DatePipe, DecimalPipe } from "@angular/common";
+import { HttpErrorResponse } from "@angular/common/http";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -77,8 +78,11 @@ export class ProjectComponent {
   private editBody = "";
   private projectGeneration = 0;
   private intervalUploadId = "";
+  private activeUploadController?: AbortController;
+  private activeUploadId = "";
+  readonly cancellingUpload = signal(false);
+  hasActiveUpload(): boolean { return !!this.activeUploadId; }
   constructor() {
-    this.restoreReferences();
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
       const nextId = params.get("id") ?? "";
       if (nextId !== this.id) this.switchProject(nextId);
@@ -90,33 +94,58 @@ export class ProjectComponent {
       this.pipelineGeneration++;
       clearTimeout(this.timer);
       clearTimeout(this.inspectionTimer);
+      this.activeUploadController?.abort();
+      if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
     });
     void this.reload();
   }
   private storageKey(): string {
-    return `ac:resume:${this.session.user()?.id}:${this.id}`;
+    const userId = this.session.user()?.id;
+    return userId && this.id ? `ac:resume:${userId}:${this.id}` : "";
   }
   private remember(): void {
     try {
+      const key = this.storageKey();
+      if (!key) return;
+      if (!this.uploadId && !this.pipelineId) { sessionStorage.removeItem(key); return; }
       sessionStorage.setItem(
-        this.storageKey(),
+        key,
         JSON.stringify({ uploadId: this.uploadId, pipelineId: this.pipelineId, pipelineUploadId: this.pipelineUploadId }),
       );
     } catch { /* The workflow remains usable when this browser blocks session storage. */ }
   }
   private restoreReferences(): void {
+    if (!this.session.user()?.id || !this.workspace.loaded() || !this.project() || this.projectRole() === "unavailable") return;
     try {
-      const stored = sessionStorage.getItem(this.storageKey());
+      const key = this.storageKey();
+      if (!key) return;
+      const stored = sessionStorage.getItem(key);
       if (!stored) return;
       const refs: { uploadId?: string; pipelineId?: string; pipelineUploadId?: string } = JSON.parse(stored);
-      this.uploadId = refs.uploadId ?? "";
-      this.pipelineId = refs.pipelineId ?? "";
-      this.pipelineUploadId = refs.pipelineUploadId ?? "";
+      this.uploadId = typeof refs.uploadId === "string" ? refs.uploadId : "";
+      this.pipelineId = typeof refs.pipelineId === "string" ? refs.pipelineId : "";
+      // Pipeline status has no upload provenance; never trust that link from browser storage.
+      this.pipelineUploadId = "";
     } catch {
       /* Ignore an invalid or unavailable local resume reference. */
     }
   }
+  private clearResumeReferences(): void {
+    try { const key = this.storageKey(); if (key) sessionStorage.removeItem(key); } catch { /* Storage is optional. */ }
+    this.uploadId = "";
+    this.pipelineId = "";
+    this.pipelineUploadId = "";
+    this.uploadStatus.set(null);
+    this.pipeline.set(null);
+  }
+  private isAccessFailure(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && (error.status === 403 || error.status === 404);
+  }
   private switchProject(id: string): void {
+    if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
+    this.activeUploadController?.abort();
+    this.activeUploadController = undefined;
+    this.activeUploadId = "";
     this.projectGeneration++;
     this.uploadGeneration++;
     this.pipelineGeneration++;
@@ -133,6 +162,7 @@ export class ProjectComponent {
     this.uploading.set(false);
     this.inspecting.set(false);
     this.pollingPipeline.set(false);
+    this.cancellingUpload.set(false);
     this.error.set("");
     this.loadNotice.set("");
     this.message.set("");
@@ -151,7 +181,6 @@ export class ProjectComponent {
     this.pipelineBody = "";
     this.editKey = "";
     this.editBody = "";
-    this.restoreReferences();
     void this.reload();
   }
   canEdit(): boolean {
@@ -233,8 +262,13 @@ export class ProjectComponent {
         this.api.edits(projectId),
       ]);
       if (!this.isCurrentProject(generation)) return;
-      if (projectResult.status === "rejected") throw projectResult.reason;
+      if (projectResult.status === "rejected") {
+        if (this.isAccessFailure(projectResult.reason)) this.clearResumeReferences();
+        throw projectResult.reason;
+      }
+      if (projectResult.value.id !== projectId) throw new Error("La respuesta no corresponde al proyecto solicitado.");
       this.project.set(projectResult.value);
+      this.restoreReferences();
       if (editsResult.status === "fulfilled") {
         this.edits.set(editsResult.value.items);
       } else {
@@ -245,12 +279,17 @@ export class ProjectComponent {
     });
     if (!this.isCurrentProject(generation)) return;
     if (this.uploadId) await this.inspect();
+    if (!this.isCurrentProject(generation)) return;
     if (this.pipelineId) await this.pollPipeline();
   }
   async upload(): Promise<void> {
     if (!this.file || this.busy()) return;
     const generation = this.projectGeneration;
     const file = this.file;
+    const controller = new AbortController();
+    this.activeUploadController = controller;
+    this.activeUploadId = "";
+    this.cancellingUpload.set(false);
     this.uploading.set(true);
     await this.run(async () => {
       const status = await this.api.uploadFile(
@@ -259,9 +298,11 @@ export class ProjectComponent {
         (stage) => { if (this.isCurrentProject(generation)) this.message.set(stage); },
         (id) => {
           if (!this.isCurrentProject(generation)) return;
+          this.activeUploadId = id;
           this.selectUpload(id);
           this.remember();
         },
+        controller.signal,
       );
       if (!this.isCurrentProject(generation)) return;
       this.uploadStatus.set(status);
@@ -269,8 +310,14 @@ export class ProjectComponent {
         "Carga confirmada. Esperando el resultado real de la inspección.",
       );
     });
+    if (this.activeUploadController && this.activeUploadController.signal.aborted && !this.cancellingUpload()) {
+      this.activeUploadController = undefined;
+      this.activeUploadId = "";
+    }
     if (!this.isCurrentProject(generation)) return;
     this.uploading.set(false);
+    this.activeUploadController = undefined;
+    this.activeUploadId = "";
     if (this.uploadStatus()) await this.inspect();
   }
   async inspect(): Promise<void> {
@@ -302,6 +349,7 @@ export class ProjectComponent {
         this.inspectionTimer = setTimeout(() => void this.inspect(), 4000);
     } catch (error) {
       if (generation !== this.uploadGeneration || !this.isCurrentProject(projectGeneration)) return;
+      if (this.isAccessFailure(error)) this.clearResumeReferences();
       this.uploadError.set(errorMessage(error));
     } finally {
       if (generation === this.uploadGeneration && this.isCurrentProject(projectGeneration)) this.inspecting.set(false);
@@ -318,6 +366,24 @@ export class ProjectComponent {
       this.uploadStatus.update((status) => status ? { ...status, state: "aborted" } : status);
       this.message.set("La carga pendiente se canceló y liberó su reserva temporal.");
     });
+  }
+  async cancelActiveUpload(): Promise<void> {
+    const id = this.activeUploadId;
+    const generation = this.projectGeneration;
+    if (!id || this.cancellingUpload()) return;
+    this.cancellingUpload.set(true);
+    this.activeUploadController?.abort();
+    try {
+      await this.api.abortUpload(id);
+      if (this.isCurrentProject(generation) && this.uploadId.trim() === id) {
+        this.message.set("La transferencia se detuvo y la carga temporal se liberó.");
+        this.uploadError.set("");
+        this.uploadStatus.update((status) => status?.id === id ? { ...status, state: "aborted" } : status);
+        this.remember();
+      }
+    } catch (error) {
+      if (this.isCurrentProject(generation)) this.uploadError.set(`Se detuvo la transferencia, pero no se pudo confirmar la liberación de la carga ${id}. Consulta su estado o reintenta la cancelación. ${errorMessage(error)}`);
+    } finally { if (this.isCurrentProject(generation)) this.cancellingUpload.set(false); }
   }
   private validateInterval(): void {
     if (
@@ -386,6 +452,7 @@ export class ProjectComponent {
         this.timer = setTimeout(() => void this.pollPipeline(), 4000);
     } catch (error) {
       if (generation !== this.pipelineGeneration || !this.isCurrentProject(projectGeneration)) return;
+      if (this.isAccessFailure(error)) this.clearResumeReferences();
       this.pipelineError.set(errorMessage(error));
     } finally {
       if (generation === this.pipelineGeneration && this.isCurrentProject(projectGeneration)) this.pollingPipeline.set(false);
@@ -455,7 +522,8 @@ export class ProjectComponent {
     try {
       await action();
     } catch (error) {
-      if (this.isCurrentProject(generation)) this.error.set(errorMessage(error));
+      const cancelled = error instanceof DOMException && error.name === "AbortError" && this.cancellingUpload();
+      if (this.isCurrentProject(generation) && !cancelled) this.error.set(errorMessage(error));
     } finally {
       if (this.isCurrentProject(generation)) this.busy.set(false);
     }

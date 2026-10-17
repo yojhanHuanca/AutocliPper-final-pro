@@ -40,6 +40,16 @@ export class SessionStore {
   }
   async logout(): Promise<void> {
     await this.api.post("/auth/logout", {});
+    const userId = this.user()?.id;
+    if (userId) {
+      try {
+        const prefix = `ac:resume:${userId}:`;
+        for (let index = sessionStorage.length - 1; index >= 0; index--) {
+          const key = sessionStorage.key(index);
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key);
+        }
+      } catch { /* Session cleanup must not block logout. */ }
+    }
     this.user.set(null);
     this.security.clear();
   }

@@ -150,3 +150,76 @@ test('manual pipeline interval is constrained to the inspected source duration',
     else delete globalThis.sessionStorage;
   }
 });
+
+test('stored upload IDs are revalidated and stored pipeline links never establish transcript provenance', async () => {
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  const storage = new Map([['ac:resume:qa:project', JSON.stringify({uploadId:'upload-owned',pipelineId:'pipeline-owned',pipelineUploadId:'upload-owned'})]]);
+  Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)}});
+  const params = new BehaviorSubject(new Map([['id','project']]));
+  const api = {
+    get:async()=>({id:'project',workspaceId:'workspace'}), edits:async()=>({items:[]}),
+    upload:async id=>({id,projectId:'project',state:'confirmed',bytes:12,inspection:{status:'succeeded',result:{durationSeconds:10}}}),
+    pipeline:async id=>({id,status:'succeeded',analysisId:'analysis',events:[]}),
+  };
+  TestBed.configureTestingModule({providers:[
+    {provide:ProjectsApi,useValue:api},
+    {provide:WorkspaceStore,useValue:{workspaces:()=>[{id:'workspace',role:'owner'}],loaded:()=>true}},
+    {provide:SessionStore,useValue:{user:()=>({id:'qa'})}},
+    {provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','project']])},paramMap:params}},
+    {provide:Router,useValue:{navigate:async()=>true}},
+    {provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}},
+  ]});
+  try {
+    const state=TestBed.runInInjectionContext(()=>new ProjectComponent());
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(state.uploadStatus()?.projectId,'project','restored upload ID is checked against its project');
+    assert.equal(state.pipeline()?.id,'pipeline-owned');
+    assert.equal(state.hasLinkedTranscript(),false,'browser storage cannot prove which upload produced the pipeline');
+  } finally {
+    TestBed.resetTestingModule();
+    if(originalStorage) Object.defineProperty(globalThis,'sessionStorage',originalStorage);
+    else delete globalThis.sessionStorage;
+  }
+});
+
+test('upload transfer forwards AbortSignal to private storage and stops before confirmation when cancelled', async () => {
+  const originalFetch = globalThis.fetch;
+  let startFetch;
+  let resolveFetchStarted;
+  const fetchStarted = new Promise(resolve=>resolveFetchStarted=resolve);
+  let confirmed = false;
+  const calls=[];
+  const transport = {
+    post:async(path)=>{
+      calls.push(path);
+      if(path.endsWith('/uploads')) return {id:'upload-cancel',url:'https://storage.example/put',headers:{'Content-Type':'video/mp4'}};
+      if(path.endsWith('/confirm')) confirmed=true;
+      return {};
+    },
+    get:async()=>({id:'upload-cancel',projectId:'project',state:'confirmed',bytes:1,inspection:{status:'queued'}}),
+  };
+  globalThis.fetch=(url,init)=>new Promise((resolve,reject)=>{
+    startFetch={url,init};
+    resolveFetchStarted();
+    init.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});
+  });
+  try {
+    const api=Object.create(ProjectsApi.prototype);
+    api.api=transport;
+    const file=Object.assign(new Blob(['x'],{type:'video/mp4'}),{name:'clip.mp4'});
+    const controller=new AbortController();
+    const remembered=[];
+    const transfer=api.uploadFile('project',file,()=>{},id=>remembered.push(id),controller.signal);
+    await fetchStarted;
+    assert.equal(startFetch.url,'https://storage.example/put');
+    assert.equal(startFetch.init.credentials,'omit');
+    assert.equal(startFetch.init.signal,controller.signal);
+    assert.deepEqual(remembered,['upload-cancel']);
+    controller.abort();
+    await assert.rejects(transfer,error=>error.name==='AbortError');
+    assert.equal(confirmed,false);
+    assert.equal(calls.some(path=>path.endsWith('/confirm')),false);
+  } finally {
+    globalThis.fetch=originalFetch;
+  }
+});

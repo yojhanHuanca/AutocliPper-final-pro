@@ -50,6 +50,14 @@
       {{ uploading() ? "Cargando…" : "Cargar archivo privado"
       }}<ac-icon name="upload" />
     </button>
+    @if (uploading()) {
+      <p class="muted" role="status">{{ message() || "Preparando la transferencia…" }} @if (!hasActiveUpload()) { El cálculo SHA-256 debe terminar antes de habilitar la cancelación. }</p>
+    }
+    @if (uploading() && hasActiveUpload()) {
+      <button class="button small" type="button" (click)="cancelActiveUpload()" [disabled]="cancellingUpload() || !canEdit()">
+        {{ cancellingUpload() ? "Deteniendo y liberando…" : "Cancelar transferencia" }}
+      </button>
+    }
     @if (uploadError()) {
       <div class="alert error" role="alert">No se pudo consultar esta carga: {{ uploadError() }} <button type="button" (click)="inspect()" [disabled]="inspecting()">Reintentar</button></div>
     }

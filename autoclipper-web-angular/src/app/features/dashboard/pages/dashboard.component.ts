@@ -6,6 +6,7 @@ import { SessionStore } from "../../../core/auth/session.store";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 import { ProjectCollectionComponent } from "../../projects/components/project-collection/project-collection.component";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
+import { workspaceRoleLabel } from "../../../core/labels/workspace-role-label";
 @Component({
   selector: "ac-dashboard",
   imports: [RouterLink, IconComponent, ProjectCollectionComponent, WorkspaceSetupComponent],
@@ -19,11 +20,8 @@ export class DashboardComponent {
   readonly workspace = inject(WorkspaceStore);
   readonly projectsCount = signal<number | null>(null);
   roleLabel(): string {
-    return this.design
-      ? "Tu rol aparecerá aquí"
-      : (this.workspace
-          .workspaces()
-          .find((w) => w.id === this.workspace.workspaceId())?.role ??
-          "Sin espacio");
+    if (this.design) return "Tu rol aparecerá aquí";
+    const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
+    return role ? workspaceRoleLabel(role) : "Sin espacio";
   }
 }
