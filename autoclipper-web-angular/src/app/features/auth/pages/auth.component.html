@@ -1,6 +1,6 @@
 <div class="auth-layout">
   <div class="auth-content">
-    <main id="main" class="auth-form">
+    <main id="main" class="auth-form" [class.register-mode]="mode === 'register'">
       <span class="eyebrow">TU ESPACIO CREATIVO</span>
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
@@ -20,6 +20,26 @@
           <button class="text-link" type="button" (click)="changeInvitationAccount()">Cambiar de cuenta</button>
         </div>
       }
+      @if (mode === "register" && registerAccepted()) {
+        <section class="register-accepted" role="status" aria-live="polite" aria-labelledby="register-accepted-title">
+          <span class="register-status-icon"><ac-icon name="check" /></span>
+          <span class="eyebrow">SIGUIENTE PASO</span>
+          <h2 id="register-accepted-title">Solicitud recibida</h2>
+          <p>Dirección indicada: <strong>{{ maskedRegistrationEmail() }}</strong></p>
+          <p>Por privacidad, no confirmamos si la cuenta ya existía ni si se generó un correo. Si recibes un mensaje de verificación, sigue su enlace antes de iniciar sesión.</p>
+          <div class="register-next-actions">
+            <a class="button primary full" routerLink="/verify">Ir a verificar correo<ac-icon name="arrow" /></a>
+            <a class="button full" routerLink="/login">Ir a iniciar sesión</a>
+          </div>
+        </section>
+      } @else {
+      @if (mode === "register") {
+        <ol class="register-steps" aria-label="Pasos para empezar">
+          <li><span>1</span><div><strong>Crea la solicitud</strong><small>Completa tus datos.</small></div></li>
+          <li><span>2</span><div><strong>Verifica tu correo</strong><small>Abre el enlace si lo recibes.</small></div></li>
+          <li><span>3</span><div><strong>Crea un proyecto</strong><small>Entra con tu cuenta.</small></div></li>
+        </ol>
+      }
       <form #form="ngForm" (ngSubmit)="form.valid && submit()">
         @if (mode === "register") {
           <label
@@ -29,7 +49,13 @@
               required
               maxlength="100"
               autocomplete="name"
+              #nameModel="ngModel"
+              [attr.aria-invalid]="nameModel.touched && (!name.trim() || nameModel.invalid)"
+              [attr.aria-describedby]="nameModel.touched && (!name.trim() || nameModel.invalid) ? 'register-name-error' : null"
           /></label>
+            @if (nameModel.touched && (!name.trim() || nameModel.invalid)) {
+              <span class="auth-field-error" id="register-name-error" role="alert">{{ !name.trim() ? "Escribe tu nombre para continuar." : "El nombre admite hasta 100 caracteres." }}</span>
+            }
         }
         @if (mode === "login" || mode === "register" || mode === "forgot" || (mode === "invitation" && invitationReady() && !session.user())) {
           <label
@@ -42,7 +68,13 @@
               maxlength="254"
               autocomplete="email"
               placeholder="tu@correo.com"
+              #emailModel="ngModel"
+              [attr.aria-invalid]="mode === 'register' && emailModel.touched && emailModel.invalid"
+              [attr.aria-describedby]="mode === 'register' && emailModel.touched && emailModel.invalid ? 'register-email-error' : null"
           /></label>
+          @if (mode === "register" && emailModel.touched && emailModel.invalid) {
+            <span class="auth-field-error" id="register-email-error" role="alert">{{ emailModel.errors?.['required'] ? "Escribe tu correo electrónico." : "Revisa el formato del correo." }}</span>
+          }
         }
         @if (mode === "verify" || mode === "reset") {
           <label
@@ -57,8 +89,8 @@
         @if (mode === "login" || mode === "register" || mode === "reset" || (mode === "invitation" && invitationReady() && !session.user())) {
           <label
             >{{ mode === "reset" ? "Nueva contraseña" : "Contraseña"
-            }}<input
-              type="password"
+            }}<span class="auth-password-field"><input
+              [type]="mode === 'register' && showPassword() ? 'text' : 'password'"
               name="password"
               [(ngModel)]="password"
               required
@@ -67,9 +99,23 @@
               [autocomplete]="
                 mode === 'login' || mode === 'invitation' ? 'current-password' : 'new-password'
               "
-          /></label>
+              #passwordModel="ngModel"
+              [attr.aria-invalid]="mode === 'register' && passwordModel.touched && passwordModel.invalid"
+              [attr.aria-describedby]="mode === 'register' ? 'register-password-help' : null"
+          />@if (mode === "register") { <button class="auth-password-toggle" type="button" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
           @if (mode !== "login" && mode !== "invitation") {
-            <small class="muted">Entre 12 y 128 caracteres.</small>
+            @if (mode === "register") {
+              <small class="muted" id="register-password-help" aria-live="polite">{{ registrationPasswordFeedback() }}</small>
+              @if (passwordModel.touched && passwordModel.invalid) {
+                <span class="auth-field-error" role="alert">{{ passwordModel.errors?.['required'] ? "Escribe una contraseña." : "La contraseña debe tener entre 12 y 128 caracteres." }}</span>
+              }
+              <label>Confirmar contraseña<span class="auth-password-field"><input [type]="showPasswordConfirmation() ? 'text' : 'password'" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" required autocomplete="new-password" #confirmationModel="ngModel" [attr.aria-invalid]="confirmationModel.touched && (confirmationModel.invalid || passwordConfirmation !== password)" [attr.aria-describedby]="'register-confirmation-help'" /><button class="auth-password-toggle" type="button" [attr.aria-pressed]="showPasswordConfirmation()" (click)="showPasswordConfirmation.set(!showPasswordConfirmation())">{{ showPasswordConfirmation() ? "Ocultar" : "Mostrar" }}</button></span></label>
+              <small id="register-confirmation-help" class="muted">{{ confirmationModel.touched && passwordConfirmation !== password ? "Las contraseñas todavía no coinciden." : "La confirmación solo se comprueba en este formulario." }}</small>
+              @if (confirmationModel.touched && confirmationModel.invalid) { <span class="auth-field-error" role="alert">Confirma la contraseña.</span> }
+              @else if (confirmationModel.touched && passwordConfirmation !== password) { <span class="auth-field-error" role="alert">Las contraseñas deben coincidir.</span> }
+            } @else {
+              <small class="muted">Entre 12 y 128 caracteres.</small>
+            }
           }
         }
         @if (mode === "login" || (mode === "invitation" && invitationReady() && !session.user())) {
@@ -88,7 +134,7 @@
         }
         <button
           class="button primary full"
-          [disabled]="busy() || (mode === 'invitation' ? invitationChecking() || !invitationReady() || (!session.user() && form.invalid) : form.invalid)"
+          [disabled]="busy() || (mode === 'invitation' ? invitationChecking() || !invitationReady() || (!session.user() && form.invalid) : form.invalid) || (mode === 'register' && !registrationValid())"
           type="submit"
         >
           {{ busy() ? "Un momento…" : action }}<ac-icon name="arrow" />
@@ -102,16 +148,16 @@
             >¿Primera historia aquí?
             <a routerLink="/register">Crea tu cuenta</a></span
           >
+        } @else if (mode === "register") {
+          <span>¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></span>
         } @else {
           <a routerLink="/login">Volver a iniciar sesión</a>
         }
-        <a routerLink="/verify">Verificar correo</a
-        ><a routerLink="/reset">Tengo un token de recuperación</a>
+        @if (mode !== "register") {
+          <a routerLink="/verify">Verificar correo</a><a routerLink="/reset">Tengo un token de recuperación</a>
+        }
       </div>
-      @if (mode !== "invitation") { <p class="auth-limit">
-        Google requiere aceptación externa y no está habilitado en esta
-        interfaz. El correo del entorno local se entrega en Mailpit.
-      </p> }
+      }
     </main>
   </div>
   <aside class="auth-visual" [attr.data-scene]="stepIndex()" aria-label="Recorrido ilustrativo del trabajo con un clip">

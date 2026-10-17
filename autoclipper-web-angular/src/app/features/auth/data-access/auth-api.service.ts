@@ -5,7 +5,7 @@ import type { Schema } from "../../../core/contracts/api-types";
 export class AuthApi {
   private readonly api = inject(ApiTransport);
   register(body: Schema<"RegistrationDto">) {
-    return this.api.post("/auth/register", body);
+    return this.api.post<{ accepted: boolean }>("/auth/register", body);
   }
   verify(token: string) {
     return this.api.post("/auth/verify", { token });

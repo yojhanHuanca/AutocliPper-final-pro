@@ -1,6 +1,7 @@
 import { AuthApi } from "../data-access/auth-api.service";
 import { ViewEncapsulation, Component, DestroyRef, computed, effect, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { HttpErrorResponse } from "@angular/common/http";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
@@ -37,6 +38,10 @@ export class AuthComponent {
   readonly stepIndex = signal(0);
   readonly invitationReady = signal(false);
   readonly invitationChecking = signal(false);
+  readonly registerAccepted = signal(false);
+  readonly registeredEmail = signal("");
+  readonly showPassword = signal(false);
+  readonly showPasswordConfirmation = signal(false);
   readonly accent = computed(() => AUTH_STORY_ACCENTS[this.stepIndex() % AUTH_STORY_ACCENTS.length]);
   readonly accentSoft = computed(() => `${this.accent()}24`);
   readonly activeScene = computed(() => this.scenes[this.stepIndex()]);
@@ -49,6 +54,7 @@ export class AuthComponent {
   name = "";
   email = "";
   password = "";
+  passwordConfirmation = "";
   factor = "";
   token = "";
   constructor() {
@@ -116,6 +122,29 @@ export class AuthComponent {
       } as Record<string, string>
     )[this.mode];
   }
+  maskedRegistrationEmail(): string {
+    const email = this.registeredEmail();
+    const at = email.lastIndexOf("@");
+    if (at < 1) return email;
+    const local = email.slice(0, at);
+    const domain = email.slice(at + 1);
+    const dot = domain.lastIndexOf(".");
+    const host = dot > 0 ? domain.slice(0, dot) : domain;
+    const suffix = dot > 0 ? domain.slice(dot) : "";
+    return `${local.slice(0, 1)}•••@${host.slice(0, 1)}•••${suffix}`;
+  }
+  registrationValid(): boolean {
+    return this.name.trim().length > 0 && this.name.trim().length <= 100 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim()) &&
+      this.password.length >= 12 && this.password.length <= 128 &&
+      this.passwordConfirmation.length > 0 && this.password === this.passwordConfirmation;
+  }
+  registrationPasswordFeedback(): string {
+    if (!this.password) return "Contraseña de 12–128 caracteres.";
+    if (this.password.length < 12) return `Añade ${12 - this.password.length}; el rango es 12–128.`;
+    if (this.password.length > 128) return "Máximo 128; el rango es 12–128.";
+    return "Longitud válida; el rango es 12–128.";
+  }
   async changeInvitationAccount(): Promise<void> {
     this.error.set("");
     try {
@@ -129,6 +158,11 @@ export class AuthComponent {
   }
   async submit(): Promise<void> {
     if (this.busy()) return;
+    if (this.mode === "register" && !this.registerAccepted() && !this.registrationValid()) {
+      this.error.set("Revisa los campos señalados antes de continuar.");
+      return;
+    }
+    if (this.mode === "register" && this.registerAccepted()) return;
     this.busy.set(true);
     this.error.set("");
     this.message.set("");
@@ -150,14 +184,17 @@ export class AuthComponent {
         await this.session.login(buildLoginPayload(this.email, this.password, this.factor));
         await this.router.navigateByUrl(safeAuthReturnUrl(this.route.snapshot.queryParamMap.get("returnUrl")));
       } else if (this.mode === "register") {
-        await this.api.register({
+        const result = await this.api.register({
           name: this.name.trim(),
           email: this.email.trim(),
           password: this.password,
         });
-        this.message.set(
-          "Solicitud recibida. Revisa tu correo para verificar la cuenta antes de entrar.",
-        );
+        if (result?.accepted !== true) throw new Error("No se pudo completar la solicitud.");
+        this.registeredEmail.set(this.email.trim());
+        this.registerAccepted.set(true);
+        this.message.set("");
+        this.password = "";
+        this.passwordConfirmation = "";
       } else if (this.mode === "verify") {
         await this.api.verify(this.token.trim());
         this.message.set("Correo verificado. Ya puedes iniciar sesión.");
@@ -177,7 +214,11 @@ export class AuthComponent {
       this.factor = "";
       this.token = "";
     } catch (error) {
-      this.error.set(errorMessage(error));
+      this.error.set(this.mode === "register"
+        ? error instanceof HttpErrorResponse && error.status === 0
+          ? "No pudimos confirmar la solicitud porque se interrumpió la conexión. Puedes intentarlo de nuevo; por privacidad, no confirmamos si ya existe una cuenta asociada a ese correo."
+          : "No pudimos completar la solicitud. Revisa los datos e inténtalo más tarde. Por privacidad, no confirmamos si ya existe una cuenta asociada a ese correo."
+        : errorMessage(error));
     } finally {
       this.busy.set(false);
     }
