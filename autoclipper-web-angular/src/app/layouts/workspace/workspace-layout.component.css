@@ -179,10 +179,15 @@
   flex-direction: column;
 }
 .app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   height: 76px;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
   padding: 0 35px;
   gap: 20px;
