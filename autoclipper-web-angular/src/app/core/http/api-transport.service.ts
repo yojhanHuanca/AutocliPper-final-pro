@@ -16,9 +16,25 @@ export class ApiTransport {
       }),
     );
   }
+  postResponse<T>(path: string, body: unknown, etag?: string) {
+    return firstValueFrom(
+      this.http.post<T>(`${this.base}${path}`, body, {
+        observe: "response",
+        headers: etag ? { "If-Match": etag } : {},
+      }),
+    );
+  }
   patch<T>(path: string, body: unknown, etag?: string): Promise<T> {
     return firstValueFrom(
       this.http.patch<T>(`${this.base}${path}`, body, {
+        headers: etag ? { "If-Match": etag } : {},
+      }),
+    );
+  }
+  patchResponse<T>(path: string, body: unknown, etag?: string) {
+    return firstValueFrom(
+      this.http.patch<T>(`${this.base}${path}`, body, {
+        observe: "response",
         headers: etag ? { "If-Match": etag } : {},
       }),
     );

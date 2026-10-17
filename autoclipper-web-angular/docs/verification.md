@@ -70,3 +70,7 @@ La carga inicial de configuración usa resultados independientes: un fallo de pr
 ### Carga parcial inicial del editor
 
 Si falla una consulta secundaria al abrir un borrador, el editor conserva la composición cargada, muestra un aviso de las secciones afectadas y ofrece reintentar la carga. La prueba de estado fuerza un fallo del historial y verifica que el borrador permanece disponible sin convertir la carga parcial en un error fatal. En esta continuación el gateway local respondió 200 en `/v1/health/live` y `/v1/health/ready`; el snapshot OpenAPI coincide byte a byte con el contrato público central. Pasan las 23 pruebas, typecheck y build de producción (315.64 KB raw, 87.01 KB transferencia estimada). No se repitió una aceptación E2E que crea recursos locales ni una ronda visual.
+
+### Concurrencia al guardar/restaurar revisiones
+
+PATCH y restore ahora consumen las respuestas HTTP completas para conservar el `ETag` cuando el servidor lo envía, y derivan el valor entre comillas de `draft.version` según la definición del contrato cuando no hay header. Ambos envían `If-Match` en las siguientes escrituras. La prueba verifica el token enviado en dos guardados consecutivos y una restauración, además de la preferencia por el header explícito. 24 pruebas aprobadas; typecheck y build aprobados. El gateway responde 200 en readiness; no se ejecutó una escritura real sobre un proyecto persistido.

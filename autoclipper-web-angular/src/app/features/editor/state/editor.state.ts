@@ -228,8 +228,8 @@ export class EditorState {
         spec: this.buildSpec(),
       };
       const saved = await this.api.save(this.id, body, this.etag ?? undefined);
-      this.accept(saved);
-      this.message.set(`Revisión ${saved.version} guardada.`);
+      this.accept(saved.draft, saved.etag);
+      this.message.set(`Revisión ${saved.draft.version} guardada.`);
       this.renderKey = "";
       await Promise.all([this.loadHistory(), this.loadReview()]);
     });
@@ -252,13 +252,14 @@ export class EditorState {
     await this.run(async () => {
       const draft = this.draft();
       if (!draft || this.dirty()) return;
-      const restored = await this.api.restore(this.id, {
-        version: draft.version,
-        revisionVersion: version,
-      });
-      this.accept(restored);
+      const restored = await this.api.restore(
+        this.id,
+        { version: draft.version, revisionVersion: version },
+        this.etag ?? undefined,
+      );
+      this.accept(restored.draft, restored.etag);
       this.message.set(
-        `Revisión ${version} recuperada como revisión ${restored.version}.`,
+        `Revisión ${version} recuperada como revisión ${restored.draft.version}.`,
       );
       await Promise.all([this.loadHistory(), this.loadReview()]);
     });

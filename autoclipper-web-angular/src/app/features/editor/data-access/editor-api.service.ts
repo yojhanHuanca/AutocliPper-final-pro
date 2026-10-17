@@ -1,6 +1,18 @@
 import { Injectable, inject } from "@angular/core";
 import type { Schema, Response } from "../../../core/contracts/api-types";
 import { ApiTransport } from "../../../core/http/api-transport.service";
+import type { HttpResponse } from "@angular/common/http";
+
+function currentEtag(
+  response: HttpResponse<Schema<"EditorDraftDto">>,
+): string {
+  const draft = response.body;
+  if (!draft) throw new Error("El servidor no devolvió la revisión.");
+  // The public contract defines ETag as the quoted current draft version;
+  // PATCH/restore responses do not currently document the response header.
+  return response.headers.get("ETag") ?? `"${draft.version}"`;
+}
+
 @Injectable({ providedIn: "root" })
 export class EditorApi {
   private readonly api = inject(ApiTransport);
@@ -9,25 +21,33 @@ export class EditorApi {
       `/edits/${encodeURIComponent(id)}`,
     );
     if (!result.body) throw new Error("El servidor no devolvió la revisión.");
-    return { draft: result.body, etag: result.headers.get("ETag") };
+    return {
+      draft: result.body,
+      etag: result.headers.get("ETag") ?? `"${result.body.version}"`,
+    };
   }
-  save(id: string, body: Schema<"UpdateEditDto">, etag?: string) {
-    return this.api.patch<Schema<"EditorDraftDto">>(
+  async save(id: string, body: Schema<"UpdateEditDto">, etag?: string) {
+    const result = await this.api.patchResponse<Schema<"EditorDraftDto">>(
       `/edits/${encodeURIComponent(id)}`,
       body,
       etag,
     );
+    if (!result.body) throw new Error("El servidor no devolvió la revisión.");
+    return { draft: result.body, etag: currentEtag(result) };
   }
   history(id: string, before?: number | null) {
     return this.api.get<Response<"/v1/edits/{id}/revisions">>(
       `/edits/${encodeURIComponent(id)}/revisions${before ? "?beforeVersion=" + before : ""}`,
     );
   }
-  restore(id: string, body: Schema<"RestoreRevisionDto">) {
-    return this.api.post<Schema<"EditorDraftDto">>(
+  async restore(id: string, body: Schema<"RestoreRevisionDto">, etag?: string) {
+    const result = await this.api.postResponse<Schema<"EditorDraftDto">>(
       `/edits/${encodeURIComponent(id)}/restore`,
       body,
+      etag,
     );
+    if (!result.body) throw new Error("El servidor no devolvió la revisión.");
+    return { draft: result.body, etag: currentEtag(result) };
   }
   review(id: string) {
     return this.api.get<Schema<"ReviewHistoryDto">>(

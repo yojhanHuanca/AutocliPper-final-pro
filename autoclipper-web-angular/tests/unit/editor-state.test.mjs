@@ -10,14 +10,17 @@ TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   let resolveEdit;
   let editCalls = 0, confirmations = 0, allowDiscard = false;
+  const writeEtags=[];
   let failHistory = true;
   const response = new Promise(resolve => { resolveEdit = resolve; });
-  const api = { edit:()=>{ editCalls++; return response; }, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
+  let currentDraft;
+  const api = { edit:()=>{ editCalls++; return response; }, save:async(_id,body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
   TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     assert.equal(state.timeline().endSeconds,30);
-    resolveEdit({etag:'"1"',draft:{id:'fixture-edit',uploadId:'fixture-upload',projectId:'fixture-project',name:'Explicit unit fixture',version:1,revision:{id:'fixture-revision',version:1,spec:{version:1,kind:'clip',startSeconds:12,endSeconds:18,aspect:'square',subtitles:{source:'transcript',analysisId:'fixture-analysis'}}}}});
+    currentDraft={id:'fixture-edit',uploadId:'fixture-upload',projectId:'fixture-project',name:'Explicit unit fixture',version:1,revision:{id:'fixture-revision',version:1,spec:{version:1,kind:'clip',startSeconds:12,endSeconds:18,aspect:'square',subtitles:{source:'transcript',analysisId:'fixture-analysis'}}}};
+    resolveEdit({etag:'"1"',draft:currentDraft});
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(state.draft().id,'fixture-edit','A secondary endpoint failure must not hide the loaded draft.');
     assert.match(state.loadNotice(),/historial/);
@@ -52,6 +55,16 @@ test('timeline and caption validation follow async load, local corrections and c
     const afterDiscard=confirmations;
     assert.equal(editorChangesGuard({vm:state}),true);
     assert.equal(confirmations,afterDiscard,'Saved forms should leave without prompting.');
+    state.spec.aspect='vertical'; state.touchForm();
+    await state.save();
+    assert.equal(state.draft().version,2);
+    assert.equal(state.dirty(),false);
+    state.spec.aspect='square'; state.touchForm();
+    await state.save();
+    assert.equal(state.draft().version,3);
+    await state.restore(1);
+    assert.equal(state.draft().version,4);
+    assert.deepEqual(writeEtags,['"1"','"2"','"3"'],'Save and restore must send the latest concurrency token.');
     state.history.set([{id:'existing-revision',version:1}]); state.nextVersion.set(1);
     failHistory=true;
     await state.moreHistory();
