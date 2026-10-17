@@ -22,6 +22,7 @@ export class AdminConsoleComponent {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
   readonly access = signal<Schema<"AdminAccessDto"> | null>(null);
+  readonly notFound = signal(false);
   readonly loadingAccess = signal(true);
   readonly elevatedUntil = signal("");
   readonly now = signal(Date.now());
@@ -83,24 +84,35 @@ export class AdminConsoleComponent {
     const version = ++this.accessVersion;
     this.loadingAccess.set(true);
     this.error.set("");
+    this.notFound.set(false);
     try {
       const result = await this.api.access();
       if (version !== this.accessVersion) return;
+      const previous = this.access();
+      const authorityChanged = !!previous && this.authorityChanged(previous, result);
+      if (authorityChanged) this.clearData();
       this.access.set(result);
       this.elevatedUntil.set(result.elevatedUntil ?? "");
       if (!result.granted || !result.mfaEnabled || !result.elevatedUntil || Date.parse(result.elevatedUntil) <= Date.now()) {
         this.clearData();
         this.section.set(null);
+      } else if (authorityChanged) {
+        if (this.workspaceFilter() && result.workspaceIds !== null && !result.workspaceIds.includes(this.workspaceFilter())) this.workspaceFilter.set("");
+        if (!this.section() || !result.permissions.includes(`${this.section()}.read` as AdminPermission)) {
+          this.section.set(this.sections.find((item) => result.permissions.includes(item.permission))?.id ?? null);
+        }
+        if (this.section()) await this.loadSection();
       } else if (!this.section() || !result.permissions.includes(`${this.section()}.read` as AdminPermission)) {
         this.clearData();
         this.section.set(this.sections.find((item) => result.permissions.includes(item.permission))?.id ?? null);
-        if (this.sections.some((item) => result.permissions.includes(item.permission))) void this.loadSection();
+        if (this.sections.some((item) => result.permissions.includes(item.permission))) await this.loadSection();
       }
     } catch (error) {
       if (version !== this.accessVersion) return;
       this.access.set(null);
       this.clearData();
-      this.error.set(errorMessage(error));
+      this.notFound.set(this.httpStatus(error) === 404);
+      this.error.set(this.notFound() ? "" : errorMessage(error));
     } finally {
       if (version === this.accessVersion) this.loadingAccess.set(false);
     }
@@ -201,7 +213,17 @@ export class AdminConsoleComponent {
     return version === this.pageVersion && section === this.section() && workspaceId === (section === "users" ? undefined : this.workspaceFilter().trim() || undefined) && this.isElevated();
   }
   private errorIsForbidden(error: unknown): boolean {
-    return typeof error === "object" && error !== null && "status" in error && error.status === 403;
+    return this.httpStatus(error) === 403;
+  }
+  private httpStatus(error: unknown): number | null {
+    return typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : null;
+  }
+  private authorityChanged(previous: Schema<"AdminAccessDto">, next: Schema<"AdminAccessDto">): boolean {
+    const permissions = (value: Schema<"AdminAccessDto">) => [...value.permissions].sort();
+    const workspaces = (value: Schema<"AdminAccessDto">) => value.workspaceIds === null ? null : [...value.workspaceIds].sort();
+    return previous.granted !== next.granted || previous.mfaEnabled !== next.mfaEnabled ||
+      JSON.stringify(permissions(previous)) !== JSON.stringify(permissions(next)) ||
+      JSON.stringify(workspaces(previous)) !== JSON.stringify(workspaces(next));
   }
   private clearData(): void {
     this.pageVersion += 1;

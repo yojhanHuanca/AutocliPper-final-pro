@@ -20,9 +20,9 @@
     @if (loadingAccess()) { <section class="panel admin-console-state" role="status">Comprobando permisos administrativos de esta cuenta…</section> }
     @else if (!access()) {
       <section class="panel admin-console-state">
-        <span class="admin-console-state-icon"><ac-icon name="shield" /></span>
-        <h2>No se pudo consultar tu acceso.</h2>
-        <p>El servicio no confirmó permisos vigentes. No se han solicitado datos administrativos.</p>
+        <span class="admin-console-state-icon"><ac-icon [name]="notFound() ? 'clock' : 'shield'" /></span>
+        <h2>{{ notFound() ? "La integración administrativa está en espera." : "No se pudo consultar tu acceso." }}</h2>
+        <p>{{ notFound() ? "El servidor todavía no reconoce el endpoint de acceso administrativo. No se han solicitado filas ni se habilitaron controles; esta consola se activará cuando el backend exponga la API." : "El servicio no confirmó permisos vigentes. No se han solicitado datos administrativos." }}</p>
         <button class="button" type="button" (click)="refreshAccess()">Reintentar</button>
       </section>
     } @else if (!access()!.granted) {

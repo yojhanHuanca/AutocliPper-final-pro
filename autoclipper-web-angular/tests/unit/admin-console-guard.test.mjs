@@ -14,11 +14,15 @@ function subject(access) {
   component.loadingPage = signal(false);
   component.error = signal('');
   component.pageVersion = 0;
+  component.accessVersion = 0;
   component.users = signal([]);
   component.workspaces = signal([]);
   component.jobs = signal([]);
   component.consumption = signal([]);
   component.nextBeforeId = signal(null);
+  component.loadingAccess = signal(false);
+  component.notFound = signal(false);
+  component.elevatedUntil = signal('');
   component.apiCalls = 0;
   component.api = { users: async () => { component.apiCalls++; return { items: [], nextBeforeId: null }; } };
   return component;
@@ -38,6 +42,75 @@ test('the console requests no administrative rows without a grant, MFA and fresh
     await component.loadSection();
     assert.equal(component.apiCalls, 0);
   }
+});
+
+test('changing workspace scope and reducing permissions clears old rows/cursor before reloading the active allowed section', async () => {
+  const previous = access({ permissions: ['workspaces.read', 'jobs.read'], workspaceIds: ['workspace-A'] });
+  const next = access({ permissions: ['workspaces.read'], workspaceIds: ['workspace-B'] });
+  const component = subject(previous);
+  component.sections = [
+    { id: 'users', permission: 'users.read', label: 'Usuarios', icon: 'users' },
+    { id: 'workspaces', permission: 'workspaces.read', label: 'Espacios', icon: 'folder' },
+    { id: 'jobs', permission: 'jobs.read', label: 'Procesamiento', icon: 'film' },
+    { id: 'consumption', permission: 'consumption.read', label: 'Consumo', icon: 'chart' },
+  ];
+  component.availableSections = computed(() => component.sections.filter(item => component.access()?.permissions.includes(item.permission)));
+  component.section.set('workspaces');
+  component.workspaceFilter.set('workspace-A');
+  component.workspaces.set([{ id: 'workspace-A' }]);
+  component.jobs.set([{ id: 'old-authorized-job' }]);
+  component.nextBeforeId.set('old-scope-cursor');
+  const filteredRequests = [];
+  component.api.access = async () => next;
+  component.api.workspaces = async (beforeId, workspaceId) => {
+    filteredRequests.push({ beforeId, workspaceId });
+    return { items: [{ id: 'workspace-B' }], nextBeforeId: null };
+  };
+
+  await component.refreshAccess();
+
+  assert.equal(component.workspaceFilter(), '', 'a filter from the revoked scope is discarded');
+  assert.deepEqual(filteredRequests, [{ beforeId: undefined, workspaceId: undefined }]);
+  assert.deepEqual(component.workspaces(), [{ id: 'workspace-B' }]);
+  assert.deepEqual(component.jobs(), [], 'the revoked jobs permission cannot leave old rows in memory');
+  assert.equal(component.nextBeforeId(), null, 'the cursor from the previous scope is discarded');
+});
+
+test('a revoked active section is replaced by an allowed section and its old rows are removed', async () => {
+  const previous = access({ permissions: ['workspaces.read', 'jobs.read'], workspaceIds: ['workspace-A'] });
+  const next = access({ permissions: ['workspaces.read'], workspaceIds: ['workspace-A'] });
+  const component = subject(previous);
+  component.sections = [
+    { id: 'users', permission: 'users.read', label: 'Usuarios', icon: 'users' },
+    { id: 'workspaces', permission: 'workspaces.read', label: 'Espacios', icon: 'folder' },
+    { id: 'jobs', permission: 'jobs.read', label: 'Procesamiento', icon: 'film' },
+    { id: 'consumption', permission: 'consumption.read', label: 'Consumo', icon: 'chart' },
+  ];
+  component.availableSections = computed(() => component.sections.filter(item => component.access()?.permissions.includes(item.permission)));
+  component.section.set('jobs');
+  component.jobs.set([{ id: 'revoked-job' }]);
+  component.nextBeforeId.set('job-cursor');
+  const calls = [];
+  component.api.access = async () => next;
+  component.api.workspaces = async () => { calls.push('workspaces'); return { items: [{ id: 'workspace-A' }], nextBeforeId: null }; };
+  component.api.jobs = async () => { calls.push('jobs'); return { items: [], nextBeforeId: null }; };
+
+  await component.refreshAccess();
+
+  assert.equal(component.section(), 'workspaces');
+  assert.deepEqual(calls, ['workspaces']);
+  assert.deepEqual(component.jobs(), []);
+  assert.equal(component.nextBeforeId(), null);
+});
+
+test('a missing published access endpoint leaves the console in a closed waiting state', async () => {
+  const component = subject(null);
+  component.section.set(null);
+  component.api.access = async () => { throw { status: 404 }; };
+  await component.refreshAccess();
+  assert.equal(component.notFound(), true);
+  assert.equal(component.access(), null);
+  assert.equal(component.apiCalls, 0);
 });
 
 test('an authorized, elevated read calls only its permitted data endpoint', async () => {
