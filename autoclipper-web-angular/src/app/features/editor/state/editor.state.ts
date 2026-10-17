@@ -26,6 +26,7 @@ export class EditorState {
   readonly tab = signal("composition");
   readonly busy = signal(false);
   readonly error = signal("");
+  readonly loadNotice = signal("");
   readonly message = signal("");
   readonly previewUrl = signal("");
   readonly previewVersion = signal<string | number>("");
@@ -161,12 +162,20 @@ export class EditorState {
     await this.run(async () => {
       const result = await this.api.edit(this.id);
       this.accept(result.draft, result.etag);
-      await Promise.all([
+      const labels = ["historial", "comentarios", "exportaciones", "revisión"];
+      const results = await Promise.allSettled([
         this.loadHistory(),
         this.loadComments(),
         this.loadExports(),
         this.loadReview(),
       ]);
+      const unavailable = results.flatMap((result, index) =>
+        result.status === "rejected" ? [labels[index]] : [],
+      );
+      if (unavailable.length)
+        this.loadNotice.set(
+          `El borrador está disponible; no se pudo cargar ${unavailable.join(", ")}. Puedes volver a consultar la sección.`,
+        );
     });
   }
   private buildSpec(): Schema<"EditorSpecDto"> {
@@ -324,7 +333,9 @@ export class EditorState {
       )
         this.timer = setTimeout(() => void this.loadExports(), 4000);
     } catch (error) {
-      this.error.set(errorMessage(error));
+      this.loadNotice.set(
+        `No se pudieron cargar las exportaciones: ${errorMessage(error)}`,
+      );
     }
   }
   async render(): Promise<void> {
@@ -377,6 +388,7 @@ export class EditorState {
     if (this.design || this.busy()) return;
     this.busy.set(true);
     this.error.set("");
+    this.loadNotice.set("");
     this.message.set("");
     try {
       await action();

@@ -66,3 +66,7 @@ Veintiuna pruebas pasan. La restauración propaga fallos 5xx/red y libera el int
 El guard del selector de espacios también conserva `returnUrl` si su petición falla después de restaurar la sesión. Veintidós pruebas pasan; build y typecheck aprobados. Bundle inicial 315.64 KB raw, ~87.00 KB estimados.
 
 La carga inicial de configuración usa resultados independientes: un fallo de privacidad conserva perfil, 2FA y sesiones disponibles y muestra cuál sección falló. Una prueba con fallo explícito de una sola sección lo verifica. Veintitrés pruebas pasan, typecheck y build aprobados (315.64 KB raw, 87.03 KB transferencia estimada). No se pudo revisar visualmente porque Work bloqueó el navegador local.
+
+### Carga parcial inicial del editor
+
+Si falla una consulta secundaria al abrir un borrador, el editor conserva la composición cargada, muestra un aviso de las secciones afectadas y ofrece reintentar la carga. La prueba de estado fuerza un fallo del historial y verifica que el borrador permanece disponible sin convertir la carga parcial en un error fatal. En esta continuación el gateway local respondió 200 en `/v1/health/live` y `/v1/health/ready`; el snapshot OpenAPI coincide byte a byte con el contrato público central. Pasan las 23 pruebas, typecheck y build de producción (315.64 KB raw, 87.01 KB transferencia estimada). No se repitió una aceptación E2E que crea recursos locales ni una ronda visual.

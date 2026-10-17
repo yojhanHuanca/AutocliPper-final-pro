@@ -10,7 +10,7 @@ TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 test('timeline and caption validation follow async load, local corrections and changed clip bounds', async () => {
   let resolveEdit;
   let editCalls = 0, confirmations = 0, allowDiscard = false;
-  let failHistory = false;
+  let failHistory = true;
   const response = new Promise(resolve => { resolveEdit = resolve; });
   const api = { edit:()=>{ editCalls++; return response; }, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
   TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
@@ -19,6 +19,10 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.equal(state.timeline().endSeconds,30);
     resolveEdit({etag:'"1"',draft:{id:'fixture-edit',uploadId:'fixture-upload',projectId:'fixture-project',name:'Explicit unit fixture',version:1,revision:{id:'fixture-revision',version:1,spec:{version:1,kind:'clip',startSeconds:12,endSeconds:18,aspect:'square',subtitles:{source:'transcript',analysisId:'fixture-analysis'}}}}});
     await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(state.draft().id,'fixture-edit','A secondary endpoint failure must not hide the loaded draft.');
+    assert.match(state.loadNotice(),/historial/);
+    assert.equal(state.error(),'');
+    failHistory=false;
     assert.deepEqual(state.timeline(),{startSeconds:12,endSeconds:18,captionSource:'transcript'});
     assert.equal(state.dirty(),false);
     assert.equal(editorChangesGuard({vm:state}),true);

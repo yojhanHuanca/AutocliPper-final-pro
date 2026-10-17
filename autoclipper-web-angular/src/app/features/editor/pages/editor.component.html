@@ -35,6 +35,14 @@
 @if (vm.error()) {
   <div class="alert error" role="alert">{{ vm.error() }}</div>
 }
+@if (vm.loadNotice()) {
+  <div class="alert" role="status">
+    {{ vm.loadNotice() }}
+    <button class="button small" type="button" (click)="vm.reload()" [disabled]="vm.busy()">
+      Reintentar carga
+    </button>
+  </div>
+}
 @if (vm.message()) {
   <div class="alert" role="status">{{ vm.message() }}</div>
 }
