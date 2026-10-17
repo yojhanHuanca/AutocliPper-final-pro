@@ -52,7 +52,13 @@ export class ProjectComponent {
   readonly pipelineError = signal("");
   readonly inspecting = signal(false);
   readonly pollingPipeline = signal(false);
-  readonly sourceDurationSeconds = computed(() => Math.min(300, this.uploadStatus()?.inspection?.result?.durationSeconds ?? 300));
+  readonly sourceDurationSeconds = computed<number | null>(() => {
+    const status = this.uploadStatus();
+    if (!status || status.id !== this.uploadId.trim() || status.projectId !== this.id || status.state !== "confirmed" || status.inspection?.status !== "succeeded") return null;
+    const duration = status.inspection?.result?.durationSeconds;
+    return typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : null;
+  });
+  readonly sourceSelectionLimitSeconds = computed(() => Math.min(300, this.sourceDurationSeconds() ?? 300));
   readonly projectRole = computed(() => {
     if (!this.workspace.loaded()) return "loading" as const;
     const project = this.project();
@@ -228,6 +234,50 @@ export class ProjectComponent {
     const task = this.pipeline();
     return !!task?.analysisId && task.status === 'succeeded' && task.id === this.pipelineId.trim() && this.pipelineUploadId === this.uploadId.trim();
   }
+  hasDraftForSelectedUpload(): boolean {
+    const uploadId = this.uploadId.trim();
+    return !!uploadId && this.edits().some((edit) => edit.uploadId === uploadId);
+  }
+  pipelineInProgress(): boolean {
+    const status = this.pipeline()?.status;
+    return !!status && ["queued", "audio", "analysis", "render", "stopping"].includes(status);
+  }
+  pipelineBlocksSelectedUpload(): boolean {
+    return this.pipelineInProgress() && (!this.hasKnownPipelineUpload() || this.pipelineMatchesSelectedUpload());
+  }
+  pipelineActionLabel(): string {
+    if (this.pollingPipeline() && !this.pipeline()) return "Consultando procesamiento…";
+    if (this.pipelineBlocksSelectedUpload()) return "Procesamiento en curso";
+    if (this.pipeline()?.status === "succeeded" && this.pipelineMatchesSelectedUpload()) return "Procesar de nuevo";
+    if (this.pipeline()?.status === "failed" || this.pipeline()?.status === "cancelled") return "Reintentar procesamiento";
+    return "Procesar intervalo";
+  }
+  workflowStatus(step: "source" | "render" | "draft"): string {
+    if (step === "source") {
+      if (this.inspected()) return "Listo";
+      const status = this.uploadStatus();
+      if (status?.state === "aborted") return "Cancelado";
+      if (status?.state === "pending") return "Carga pendiente";
+      if (status?.inspection?.status === "failed") return "Revisar archivo";
+      if (status?.inspection?.status === "queued" || status?.inspection?.status === "running") return "En inspección";
+      return "Pendiente";
+    }
+    if (step === "render") {
+      const task = this.pipeline();
+      if (task) {
+        if (!this.hasKnownPipelineUpload()) return "Vínculo no confirmado";
+        if (!this.pipelineMatchesSelectedUpload()) return "Otra carga";
+        if (this.pipelineInProgress()) return "En proceso";
+        if (task.status === "succeeded") return "MP4 disponible";
+        if (task.status === "failed") return "No completado";
+        if (task.status === "cancelled") return "Cancelado";
+      }
+      return this.inspected() ? "Disponible" : "Tras inspección";
+    }
+    if (this.hasDraftForSelectedUpload()) return "Borrador listo";
+    if (this.edits().length) return "Otros borradores del proyecto";
+    return this.inspected() ? "Disponible" : "Tras inspección";
+  }
   pipelineMatchesSelectedUpload(): boolean {
     return !!this.pipelineUploadId && this.pipelineUploadId === this.uploadId.trim();
   }
@@ -242,9 +292,6 @@ export class ProjectComponent {
   }
   pipelineStateLabel(state: Schema<"PipelineStatusDto">["status"]): string {
     return ({ queued: "En cola", audio: "Preparando audio", analysis: "Transcribiendo", render: "Creando el clip", stopping: "Cancelación solicitada", succeeded: "Completado", failed: "No se pudo completar", cancelled: "Cancelado" } as Record<string, string>)[state] ?? state;
-  }
-  usageStateLabel(state: Schema<"PipelineStatusDto">["usageState"]): string {
-    return ({ legacy: "Trabajo anterior", pending: "Consumo pendiente", accepted: "Reserva aceptada", rejected: "Reserva rechazada" } as const)[state];
   }
   eventStateLabel(state: string): string {
     return ({ queued: "En cola", audio: "Preparando audio", analysis: "Transcribiendo", render: "Creando el clip", stopping: "Cancelación solicitada", succeeded: "Completado", failed: "Error", cancelled: "Cancelado" } as Record<string, string>)[state] ?? state;
@@ -392,13 +439,14 @@ export class ProjectComponent {
       this.startSeconds < 0 ||
       this.endSeconds - this.startSeconds < 0.1 ||
       this.endSeconds - this.startSeconds > 120 ||
-      this.endSeconds > this.sourceDurationSeconds()
+        this.endSeconds > this.sourceSelectionLimitSeconds()
     )
-      throw new Error(`El intervalo debe durar entre 0,1 y 120 segundos y quedar dentro de la fuente (${this.sourceDurationSeconds()} s).`);
+      throw new Error(`El intervalo debe durar entre 0,1 y 120 segundos y quedar dentro del límite procesable${this.sourceDurationSeconds() ? ` (${this.sourceSelectionLimitSeconds()} s)` : " de 300 segundos"}.`);
   }
   async startPipeline(): Promise<void> {
     const generation = this.projectGeneration;
     await this.run(async () => {
+      if (this.pollingPipeline() || this.pipelineBlocksSelectedUpload()) throw new Error("Ya hay un procesamiento activo para esta carga. Espera a que termine o solicita su cancelación.");
       if (!this.inspected()) throw new Error('Consulta una carga inspeccionada de este proyecto antes de procesar.');
       const uploadId = this.uploadId.trim();
       this.validateInterval();

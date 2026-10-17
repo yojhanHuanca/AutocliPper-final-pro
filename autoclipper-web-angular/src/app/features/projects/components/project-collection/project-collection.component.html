@@ -62,14 +62,14 @@
       <span class="eyebrow">EL PUNTO DE PARTIDA</span>
       <h2>{{ compact() ? "Proyectos recientes" : "Tus proyectos" }}</h2>
     </div>
-    <button
+    @if (compact()) { <button
       class="button small"
       type="button"
       (click)="newProject.set(!newProject())"
       [disabled]="design || !canEdit()"
     >
       <ac-icon name="plus" />Nuevo
-    </button>
+    </button> }
     <form class="search-form" (ngSubmit)="load()">
       <ac-icon name="search" /><input
         aria-label="Buscar proyectos por nombre"
@@ -102,7 +102,6 @@
             Creado {{ project.createdAt | date: "mediumDate" }} · Versión
             {{ project.version }}
           </p>
-          <span class="badge">Proyecto real</span>
         </div>
         <a class="button small" [routerLink]="['/app/projects', project.id]"
           >Abrir<ac-icon name="arrow"

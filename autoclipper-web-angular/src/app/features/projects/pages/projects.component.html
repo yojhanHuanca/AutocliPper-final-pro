@@ -1,1 +1,15 @@
-<ac-project-collection />
+@if (!design && !workspace.loaded()) {
+  <div class="loading-state" role="status"><span class="spinner"></span>Consultando tus espacios de trabajo…</div>
+} @else if (!design && !workspace.workspaces().length) {
+  <section class="workspace-first panel">
+    <span class="workspace-first-icon"><ac-icon name="film" /></span>
+    <div>
+      <span class="eyebrow">ANTES DE TUS PROYECTOS</span>
+      <h1>Crea tu espacio de trabajo.</h1>
+      <p>Un espacio organiza tus proyectos y define quién puede cargar y editar videos.</p>
+    </div>
+  </section>
+  <ac-workspace-setup />
+} @else {
+  <ac-project-collection />
+}

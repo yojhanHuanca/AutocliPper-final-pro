@@ -1,0 +1,36 @@
+@layer components {
+  .workspace-first {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 20px;
+    border-color: #d7e2fa;
+    background: linear-gradient(112deg, #f4f7ff 0%, #fff 74%);
+  }
+
+  .workspace-first-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #e8efff;
+    color: var(--accent);
+  }
+
+  .workspace-first h1 {
+    margin-top: 5px;
+    font-size: clamp(24px, 4vw, 34px);
+  }
+
+  .workspace-first p {
+    margin-bottom: 0;
+    max-width: 560px;
+  }
+
+  @media (max-width: 560px) {
+    .workspace-first { gap: 12px; padding: 19px; }
+    .workspace-first-icon { width: 38px; height: 38px; }
+  }
+}

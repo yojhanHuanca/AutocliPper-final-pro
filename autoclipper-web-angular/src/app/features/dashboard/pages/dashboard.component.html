@@ -1,24 +1,31 @@
-@if (!design && !workspace.workspaces().length) { <ac-workspace-setup/> }
+@if (!design && !workspace.loaded()) {
+  <div class="loading-state workspace-loading" role="status"><span class="spinner"></span>Consultando tus espacios de trabajo…</div>
+} @else if (!design && !workspace.workspaces().length) {
+  <ac-workspace-setup />
+}
 <section class="page-heading">
   <div>
-    <span class="eyebrow">HAZ ESPACIO PARA LA PRÓXIMA IDEA</span>
-    <h1>Tu contenido, otra historia.</h1>
+    <span class="eyebrow">{{ !design && !workspace.workspaces().length ? "EL PRIMER PASO" : "HAZ ESPACIO PARA LA PRÓXIMA IDEA" }}</span>
+    <h1>{{ !design && !workspace.workspaces().length ? "Primero, tu espacio." : "Tu contenido, otra historia." }}</h1>
     <p>
       {{
         design
           ? "Una mirada al espacio donde tus ideas tomarán forma."
+        : !workspace.workspaces().length
+          ? "Primero crea un espacio para organizar tu video y empezar tu primer clip."
           : "Hola, " +
-            (session.user()?.name ?? "") +
-            ". Continúa un proyecto o empieza con un nuevo video."
+              (session.user()?.name ?? "") +
+              ". Continúa un proyecto o empieza con un nuevo video."
       }}
     </p>
   </div>
-  <a
+  @if (design || workspace.workspaces().length) { <a
     class="button primary"
     [routerLink]="design ? '/design/projects' : '/app/projects'"
-    ><ac-icon name="plus" />Ir a proyectos</a
-  >
+    ><ac-icon name="folder" />{{ design ? "Explorar proyectos" : "Ver mis proyectos" }}</a
+  > }
 </section>
+@if (design || workspace.workspaces().length) {
 <div class="stats-grid">
   <article class="stat-card">
     <span class="stat-icon"><ac-icon name="folder" /></span>
@@ -37,9 +44,9 @@
   <article class="stat-card">
     <span class="stat-icon"><ac-icon name="film" /></span>
     <div>
-      <span>Tu próximo clip</span
-      ><strong class="stat-text">Empieza con una idea</strong
-      ><small>Los clips se consultan dentro de cada proyecto</small>
+      <span>Siguiente paso</span
+      ><strong class="stat-text">{{ nextClipLabel() }}</strong
+      ><small>{{ nextClipDescription() }}</small>
     </div>
   </article>
   <article class="stat-card">
@@ -55,7 +62,8 @@
     </div>
   </article>
 </div>
-
+}
+@if (design || workspace.workspaces().length) {
 <div class="dashboard-grid">
   <ac-project-collection
     [compact]="true"
@@ -112,3 +120,4 @@
     </article>
   </aside>
 </div>
+}

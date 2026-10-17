@@ -55,7 +55,9 @@ test('changing upload or pipeline ignores stale requests and only links transcri
     state.selectPipeline('pipeline-b'); resolvePipeline({...pipeline,id:'pipeline-a'}); await oldPipeline;
     assert.equal(state.pipeline(),null);
     await state.pollPipeline(); assert.equal(state.hasLinkedTranscript(),false);
+    assert.equal(state.workflowStatus('render'),'Vínculo no confirmado','a pipeline ID from storage cannot be presented as the selected source output');
     await state.startPipeline(); assert.equal(state.hasLinkedTranscript(),true);
+    assert.equal(state.workflowStatus('render'),'MP4 disponible');
     state.selectUpload('upload-c');
     assert.equal(state.inspected(),false); assert.equal(state.hasLinkedTranscript(),false);
     await state.createEdit(); assert.equal(creates,0);
@@ -137,13 +139,23 @@ test('manual pipeline interval is constrained to the inspected source duration',
     const state=TestBed.runInInjectionContext(()=>new ProjectComponent());
     await new Promise(resolve=>setImmediate(resolve));
     state.selectUpload('upload-short');
+    assert.equal(state.sourceDurationSeconds(),null,'uninspected files have no measured duration');
     await state.inspect();
     assert.equal(state.sourceDurationSeconds(),14);
+    assert.equal(state.workflowStatus('source'),'Listo');
+    assert.equal(state.workflowStatus('render'),'Disponible');
     assert.equal(state.endSeconds,14);
+    state.pipeline.set({id:'pipeline-active',status:'analysis',events:[]});
+    state.pipelineId='pipeline-active';
+    await state.startPipeline();
+    assert.equal(submitted,0,'an active task cannot be duplicated from the primary action');
+    assert.match(state.error(),/procesamiento activo/);
+    state.pipeline.set(null);
+    state.pipelineId='';
     state.endSeconds=14.1;
     await state.startPipeline();
     assert.equal(submitted,0);
-    assert.match(state.error(),/dentro de la fuente/);
+    assert.match(state.error(),/límite procesable/);
   } finally {
     TestBed.resetTestingModule();
     if(originalStorage) Object.defineProperty(globalThis,'sessionStorage',originalStorage);

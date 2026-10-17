@@ -5,12 +5,23 @@
   <div>
     <span class="eyebrow">TU HISTORIA, EN PROCESO</span>
     <h1>{{ project()?.name ?? "Cargando proyecto…" }}</h1>
-    <p>Archivo privado → inspección → transcripción local → clip.</p>
+    <p>Prepara un MP4 desde un intervalo elegido por ti y abre un borrador para seguir editándolo.</p>
   </div>
   <button class="button" type="button" (click)="reload()" [disabled]="busy()">
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
+<ol class="creator-route" aria-label="Estado del recorrido para crear tu clip">
+  <li [class.route-complete]="inspected()" [class.route-current]="!inspected()">
+    <span class="route-index">1</span><div><strong>Video de origen</strong><span>{{ workflowStatus('source') }}</span></div>
+  </li>
+  <li [class.route-complete]="pipeline()?.status === 'succeeded' && pipelineMatchesSelectedUpload()" [class.route-current]="pipelineBlocksSelectedUpload()" [class.route-ready]="inspected() && !pipelineBlocksSelectedUpload() && !(pipeline()?.status === 'succeeded' && pipelineMatchesSelectedUpload())">
+    <span class="route-index">2</span><div><strong>Procesar intervalo</strong><span>{{ workflowStatus('render') }}</span></div>
+  </li>
+  <li [class.route-complete]="hasDraftForSelectedUpload()" [class.route-ready]="inspected() && !hasDraftForSelectedUpload()">
+    <span class="route-index">3</span><div><strong>Editar borrador</strong><span>{{ workflowStatus('draft') }}</span></div>
+  </li>
+</ol>
 @if (!project() && busy()) {
   <div class="loading-state" role="status"><span class="spinner"></span>Consultando el proyecto y sus permisos…</div>
 }
@@ -28,9 +39,9 @@
 }
 <div class="project-workflow">
   <section class="panel">
-    <span class="eyebrow">01 / MATERIAL DE ORIGEN</span>
-    <h2>Trae tu video.</h2>
-    <p>Video privado de hasta 100 MiB. La fuente local se limita a 300 segundos y se inspecciona antes de procesarla.</p>
+    <span class="eyebrow">PASO 1 · VIDEO DE ORIGEN</span>
+    <h2>Elige tu video.</h2>
+    <p>El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
     <label class="upload-drop"
       ><ac-icon name="upload" /><strong>{{
         file?.name ?? "Selecciona tu archivo de video"
@@ -50,6 +61,7 @@
       {{ uploading() ? "Cargando…" : "Cargar archivo privado"
       }}<ac-icon name="upload" />
     </button>
+    @if (file && !uploading()) { <p class="selected-file" role="status">Listo para revisar: <strong>{{ file.name }}</strong></p> }
     @if (uploading()) {
       <p class="muted" role="status">{{ message() || "Preparando la transferencia…" }} @if (!hasActiveUpload()) { El cálculo SHA-256 debe terminar antes de habilitar la cancelación. }</p>
     }
@@ -120,9 +132,9 @@
     }
   </section>
   <section class="panel">
-    <span class="eyebrow">02 / TU MOMENTO</span>
-    <h2>Elige dónde empieza.</h2>
-    <p>El intervalo se elige manualmente dentro de la duración inspeccionada. El servidor prepara audio, transcripción local y render del clip.</p>
+    <span class="eyebrow">PASO 2 · PROCESAMIENTO</span>
+    <h2>Elige el intervalo.</h2>
+    <p>Selecciona a mano el fragmento que quieres convertir en un MP4. El servicio genera subtítulos cuando termina la transcripción local; no elige momentos por ti.</p>
     <form
       #pipelineForm="ngForm"
       (ngSubmit)="pipelineForm.valid && startPipeline()"
@@ -134,46 +146,51 @@
             name="start"
             [(ngModel)]="startSeconds"
             min="0"
-            [max]="sourceDurationSeconds()"
+            [max]="sourceSelectionLimitSeconds()"
             step="0.1"
-            required [disabled]="busy() || !canEdit()" /></label
+            required [disabled]="busy() || !canEdit() || !inspected()" /></label
         ><label
           >Fin (segundos)<input
             type="number"
             name="end"
             [(ngModel)]="endSeconds"
             min="0.1"
-            [max]="sourceDurationSeconds()"
+            [max]="sourceSelectionLimitSeconds()"
             step="0.1"
-            required [disabled]="busy() || !canEdit()" /></label
+            required [disabled]="busy() || !canEdit() || !inspected()" /></label
         ><label
-          >Formato<select name="aspect" [(ngModel)]="aspect" [disabled]="busy() || !canEdit()">
+          >Formato<select name="aspect" [(ngModel)]="aspect" [disabled]="busy() || !canEdit() || !inspected()">
             <option value="vertical">Vertical · 9:16</option>
             <option value="square">Cuadrado · 1:1</option>
             <option value="horizontal">Horizontal · 16:9</option>
             <option value="source">Original</option>
           </select></label
         ><label
-          >Idioma<select name="language" [(ngModel)]="language" [disabled]="busy() || !canEdit()">
+          >Idioma<select name="language" [(ngModel)]="language" [disabled]="busy() || !canEdit() || !inspected()">
             <option value="auto">Detectar</option>
             <option value="es">Español</option>
             <option value="en">Inglés</option>
           </select></label
         >
       </div>
-      <p class="muted">
-        Clip de 0,1 a 120 segundos. Esta fuente dura {{ sourceDurationSeconds() }} segundos (máximo local: 300).
-      </p>
+      @if (sourceDurationSeconds(); as duration) {
+        <p class="muted">Duración medida: {{ duration }} s. Puedes elegir hasta {{ sourceSelectionLimitSeconds() }} s en este recorrido; el intervalo admite de 0,1 a 120 s.</p>
+      } @else if (inspected()) {
+        <p class="muted">La inspección no devolvió una duración medible. Puedes indicar hasta 300 segundos; el servidor validará el límite exacto al procesar.</p>
+      } @else {
+        <p class="muted">El intervalo se habilita cuando el archivo termine de inspeccionarse y conozcamos su duración.</p>
+      }
       <button
         class="button primary"
         type="submit"
         [disabled]="
-          busy() || pipelineForm.invalid || !inspected() || !canEdit()
+          busy() || pipelineForm.invalid || !inspected() || !canEdit() || pollingPipeline() || pipelineBlocksSelectedUpload()
         "
       >
-        {{ hasLinkedTranscript() ? "Crear clip con transcripción" : "Crear borrador sin subtítulos" }}<ac-icon name="scissors" />
+        {{ pipelineActionLabel() }}<ac-icon name="scissors" />
       </button>
     </form>
+    <p class="pipeline-explainer">Esta acción genera el video final del intervalo. Crear un borrador para editarlo es un paso separado.</p>
     @if (pipelineError()) {
       <div class="alert error" role="alert">No se pudo consultar el pipeline: {{ pipelineError() }} <button type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">Reintentar</button></div>
     }
@@ -182,13 +199,12 @@
     }
     @if (pipeline(); as task) {
       <div class="pipeline-card">
-        <div class="panel-heading">
-          <h3>Estado: {{ pipelineStateLabel(task.status) }}</h3>
-          <span class="badge">{{ usageStateLabel(task.usageState) }}</span>
+        <div class="panel-heading" aria-live="polite">
+          <h3>Procesamiento: {{ pipelineStateLabel(task.status) }}</h3>
         </div>
         @if (pollingPipeline()) { <p class="muted" role="status">Consultando el estado actualizado…</p> }
         @if (hasKnownPipelineUpload() && !pipelineMatchesSelectedUpload()) {
-          <p class="alert">Este procesamiento pertenece a otra carga guardada. Sus archivos se pueden descargar, pero su transcripción no se vinculará al archivo seleccionado.</p>
+          <p class="alert">Este procesamiento se inició para otra carga. Puedes descargar sus archivos, pero su transcripción no se vinculará al video seleccionado.</p>
         } @else if (!hasKnownPipelineUpload()) {
           <p class="alert">Este pipeline se consultó por ID y no está vinculado a la carga seleccionada; su transcripción no se asociará al borrador.</p>
         }
@@ -227,7 +243,7 @@
               VTT
             </button>
           </div>
-        } @else if (!["failed", "cancelled"].includes(task.status)) {
+        } @else if (!["failed", "cancelled", "stopping"].includes(task.status)) {
           <button
             class="button small"
             type="button"
@@ -237,6 +253,7 @@
             Solicitar cancelación
           </button>
         }
+        @if (task.status === "stopping") { <p class="muted" role="status">La cancelación ya se solicitó. El estado se actualizará automáticamente.</p> }
         <small class="resource-id">Pipeline: {{ task.id }}</small>
         <button class="button small" type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">{{ pollingPipeline() ? "Consultando…" : "Actualizar estado" }}</button>
       </div>
@@ -261,8 +278,8 @@
 <section class="panel">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">03 / DALE FORMA</span>
-      <h2>Clips y revisiones.</h2>
+      <span class="eyebrow">PASO 3 · EDITOR</span>
+      <h2>Abre tu borrador.</h2>
     </div>
     <button
       class="button"
@@ -270,15 +287,16 @@
       (click)="createEdit()"
       [disabled]="busy() || !inspected() || !canEdit()"
     >
-      Crear borrador del intervalo<ac-icon name="plus" />
+      Crear borrador y abrir editor<ac-icon name="scissors" />
     </button>
   </div>
   <p>
-    El borrador usa el intervalo y formato anteriores.
     @if (hasLinkedTranscript()) {
-      Conserva la transcripción autorizada del pipeline iniciado aquí para esta carga.
+      El borrador usará el intervalo, formato y transcripción de esta carga.
+    } @else if (pipelineInProgress()) {
+      Puedes abrir el borrador ahora sin subtítulos mientras termina el procesamiento.
     } @else {
-      Se creará sin subtítulos. Un pipeline consultado por ID no acredita su vínculo con la carga seleccionada.
+      El borrador usará el intervalo y formato anteriores. Sin una transcripción completada para esta carga, se abrirá sin subtítulos.
     }
   </p>
   <div class="edit-list">
@@ -297,7 +315,7 @@
         <ac-icon name="scissors" />
         <div>
           <h3>Tu próximo corte tiene un lugar aquí.</h3>
-          <p>Carga e inspecciona un video para crear tu primer borrador.</p>
+          <p>{{ inspected() ? "Aún no hay borradores. Crea el primero con el intervalo de arriba y continúa en el editor." : "Carga e inspecciona un video para crear tu primer borrador." }}</p>
         </div>
       </div>
     }

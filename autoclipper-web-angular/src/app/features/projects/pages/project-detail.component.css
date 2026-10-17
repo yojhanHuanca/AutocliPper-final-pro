@@ -3,6 +3,60 @@
   font-size: 10px;
   margin-bottom: 15px;
 }
+.creator-route {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 8px 0 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+.creator-route li {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.creator-route li + li:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 19px;
+  bottom: 19px;
+  width: 1px;
+  background: var(--border);
+}
+.route-index {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid #d7d9df;
+  color: #565e6e;
+  font-weight: 700;
+  font-size: 13px;
+}
+.creator-route li > div { min-width: 0; display: grid; gap: 4px; }
+.creator-route strong { font-size: 13px; }
+.creator-route li > div > span { color: var(--muted); font-size: 11px; }
+.creator-route .route-complete .route-index {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.creator-route .route-current .route-index {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--tint);
+}
+.creator-route .route-ready .route-index { border-color: #cbd7f0; color: var(--accent); }
 .project-workflow {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -40,6 +94,10 @@
   background: #fff;
   margin-top: 8px;
 }
+.upload-drop:focus-within { outline: 3px solid #2354bb55; outline-offset: 3px; }
+.selected-file { margin: 12px 0; overflow-wrap: anywhere; }
+.selected-file strong { color: var(--text); }
+.pipeline-explainer { margin: 12px 0 0; font-size: 12px; }
 .resource-status {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -114,6 +172,7 @@
 .edit-card:hover {
   transform: translateY(-3px);
 }
+.edit-card:focus-visible { outline: 3px solid #2354bb66; outline-offset: 3px; }
 .edit-art {
   height: 100px;
   background: var(--surface);
@@ -136,5 +195,23 @@
 .edit-card .text-link {
   font-size: 10px;
 }
-
+@media (max-width: 800px) {
+  .creator-route li { padding: 14px 12px; gap: 9px; }
+}
+@media (max-width: 560px) {
+  .creator-route { grid-template-columns: 1fr; margin-bottom: 16px; }
+  .creator-route li { padding: 12px 15px; }
+  .creator-route li + li:before { top: 0; right: 15px; bottom: auto; width: auto; height: 1px; }
+  .creator-route strong { font-size: 13px; }
+  .project-workflow .panel { padding: 19px 16px; }
+  .edit-list { grid-template-columns: 1fr; }
+  .edit-art { height: 110px; }
+  .pipeline-card { padding: 14px; }
+}
+}
+@layer responsive {
+  @media (max-width: 560px) {
+    .project-workflow .edit-list { grid-template-columns: 1fr; }
+    .project-workflow .edit-card { min-width: 0; }
+  }
 }

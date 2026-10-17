@@ -107,7 +107,7 @@
         ><span>Mi espacio <span class="muted">/ Estudio</span></span>
       </div>
       <div class="topbar-right">
-        <span class="connection" [class.connected]="gatewayState() === 'active'" [attr.aria-label]="gatewayLabel()">{{
+        <span class="connection" [class.connected]="gatewayState() === 'active'" [attr.aria-label]="design ? 'Exploración de diseño' : gatewayLabel()" aria-live="polite" aria-atomic="true">{{
           design ? "Exploración de diseño" : gatewayLabel()
         }}</span
         ><span class="avatar small">{{
