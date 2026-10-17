@@ -1,12 +1,18 @@
 <header class="landing-nav wrap">
-  <a class="brand" routerLink="/"><ac-brand/></a>
-  <nav aria-label="Navegación principal">
-    <a href="#proceso">Cómo funciona</a><a href="#estudio">El estudio</a
-    ><a href="#alcance">Disponible hoy</a>
+  <a class="brand" routerLink="/" aria-label="AutoClipper, ir al inicio" (click)="closeMenu()"><ac-brand /></a>
+  <nav id="public-navigation" class="landing-nav-links" [class.is-open]="menuOpen()" aria-label="Navegación principal">
+    <a href="/#estudio" (click)="closeMenu()">Producto</a>
+    <a href="/#proceso" (click)="closeMenu()">Cómo funciona</a>
+    <a href="/#alcance" (click)="closeMenu()">Disponible hoy</a>
+    <a class="landing-nav-mobile-login" routerLink="/login" (click)="closeMenu()">Acceso</a>
   </nav>
-  <a class="button small" routerLink="/login"
-    >Entrar al estudio <ac-icon name="arrow"
-  /></a>
+  <div class="landing-nav-actions">
+    <a class="landing-nav-login" routerLink="/login" (click)="closeMenu()">Acceso</a>
+    <a class="landing-nav-start" routerLink="/register" (click)="closeMenu()">Comenzar <ac-icon name="arrow" /></a>
+  </div>
+  <button class="landing-nav-toggle" type="button" aria-controls="public-navigation" [attr.aria-expanded]="menuOpen()" [attr.aria-label]="menuOpen() ? 'Cerrar menú' : 'Abrir menú'" (click)="menuOpen.set(!menuOpen())">
+    <span></span><span></span><span></span>
+  </button>
 </header>
 <router-outlet />
 <footer class="landing-footer wrap">
