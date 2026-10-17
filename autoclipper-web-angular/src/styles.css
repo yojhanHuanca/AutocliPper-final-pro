@@ -602,24 +602,6 @@
   .table-scroll + .button {
     margin-top: 18px;
   }
-  @keyframes clip-float {
-    0%,
-    100% {
-      transform: translateY(0) rotate(7deg);
-    }
-    50% {
-      transform: translateY(-9px) rotate(5deg);
-    }
-  }
-  @keyframes scissor-cut {
-    0%,
-    100% {
-      transform: translateY(-6px) rotate(-14deg);
-    }
-    50% {
-      transform: translateY(21px) rotate(8deg);
-    }
-  }
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -632,12 +614,6 @@
 }
 @layer responsive {
   @media (min-width: 1600px) {
-    .hero-art {
-      height: 530px;
-    }
-    .hero h1 {
-      font-size: 98px;
-    }
     .editor-layout {
       grid-template-columns: 175px minmax(350px, 1fr) 340px;
     }
@@ -691,9 +667,6 @@
     .stat-card strong.stat-text {
       font-size: 14px;
     }
-    .story-layout {
-      gap: 50px;
-    }
     .editor-layout {
       grid-template-columns: 110px minmax(210px, 1fr) 260px;
       gap: 10px;
@@ -723,36 +696,8 @@
     .settings-grid {
       grid-template-columns: minmax(0, 1fr) 250px;
     }
-    .studio-inspector h3 {
-      font-size: 30px;
-    }
-    .studio-inspector {
-      padding: 24px;
-    }
-    .floating-clip {
-      right: 6%;
-    }
   }
   @media (max-width: 1050px) {
-    .landing-nav nav {
-      gap: 18px;
-      font-size: 11px;
-    }
-    .hero-art {
-      height: 410px;
-    }
-    .floating-clip {
-      height: 310px;
-      width: 185px;
-      top: 24px;
-      right: 5%;
-    }
-    .hero h1 {
-      font-size: 73px;
-    }
-    .hero-bottom p {
-      font-size: 12px;
-    }
     .app-shell {
       grid-template-columns: 200px minmax(0, 1fr);
     }
@@ -864,58 +809,10 @@
       font-size: 10px;
       padding: 9px;
     }
-    .studio-notes {
-      gap: 25px;
-    }
-    .studio-media {
-      min-height: 310px;
-      margin: 15px;
-    }
-    .studio-inspector {
-      padding: 20px;
-    }
-    .studio-inspector h3 {
-      font-size: 27px;
-    }
-    .studio-inspector > div {
-      font-size: 10px;
-      gap: 8px;
-      padding: 12px 0;
-    }
-    .story-layout {
-      gap: 35px;
-    }
-    .chapter {
-      padding-left: 27px;
-      min-height: 260px;
-    }
-    .chapter h3 {
-      font-size: 25px;
-    }
-    .chapter p {
-      font-size: 12px;
-    }
-    .story-overlay strong {
-      font-size: 26px;
-    }
-    .story-overlay {
-      padding: 20px;
-    }
   }
   @media (max-width: 800px) {
     .wrap {
       width: calc(100% - 44px);
-    }
-    .landing-nav {
-      min-height: 80px;
-      gap: 16px;
-    }
-    .landing-nav nav {
-      display: none;
-    }
-    .landing-nav .button {
-      font-size: 10px;
-      padding: 10px;
     }
     .brand {
       font-size: 21px;
@@ -923,219 +820,6 @@
     .brand ac-icon {
       width: 27px;
       height: 27px;
-    }
-    .hero {
-      padding-top: 40px;
-    }
-    .hero h1 {
-      font-size: clamp(48px, 8vw, 69px);
-      line-height: 1.04;
-    }
-    .hero-bottom {
-      align-items: flex-start;
-      gap: 20px;
-    }
-    .hero-bottom p {
-      font-size: 11px;
-    }
-    .hero-bottom .button {
-      font-size: 11px;
-      padding: 12px;
-      flex-shrink: 0;
-    }
-    .hero-art {
-      height: 360px;
-    }
-    .floating-clip {
-      height: 260px;
-      width: 155px;
-      right: 5%;
-      top: 20px;
-      border-width: 4px;
-      border-radius: 10px;
-    }
-    .floating-clip strong {
-      font-size: 18px;
-      bottom: 40px;
-    }
-    .hero-image {
-      width: 84%;
-    }
-    .hero-timeline {
-      gap: 12px;
-      left: 15px;
-      right: 15px;
-      padding: 12px;
-    }
-    .hero-timeline > span {
-      font-size: 8px;
-    }
-    .waveform {
-      gap: 2px;
-      height: 20px;
-    }
-    .cut-tool {
-      height: 40px;
-      width: 40px;
-      right: calc(26% - 20px);
-    }
-    .cut-tool ac-icon {
-      width: 22px;
-      height: 22px;
-    }
-    .hero-footnote {
-      flex-wrap: wrap;
-      font-size: 8px;
-      padding: 12px 0;
-    }
-    .hero-footnote > span:last-child {
-      display: none;
-    }
-    .hero-footnote .motion-toggle {
-      font-size: 9px;
-      padding: 2px;
-    }
-    .story-section {
-      padding-top: 65px;
-    }
-    .story-layout {
-      gap: 25px;
-      grid-template-columns: 1.1fr 1fr;
-    }
-    .story-screen {
-      padding: 10px;
-      top: 20px;
-    }
-    .screen-top {
-      font-size: 8px;
-    }
-    .screen-top > span:last-child {
-      display: none;
-    }
-    .story-photo {
-      aspect-ratio: 1.2;
-    }
-    .story-overlay {
-      padding: 15px;
-    }
-    .story-overlay strong {
-      font-size: 23px;
-    }
-    .story-controls button {
-      font-size: 8px;
-    }
-    .film-strip {
-      gap: 3px;
-    }
-    .film-strip > span {
-      border-width: 3px;
-      border-block-width: 6px;
-    }
-    .film-strip > ac-icon {
-      width: 25px;
-      height: 25px;
-    }
-    .chapter {
-      min-height: 275px;
-      padding-left: 24px;
-    }
-    .chapter h3 {
-      font-size: 23px;
-    }
-    .chapter p {
-      font-size: 11px;
-    }
-    .chapter-detail {
-      font-size: 8px;
-    }
-    .chapter-number {
-      width: 26px;
-      height: 26px;
-      left: -13px;
-      font-size: 8px;
-    }
-    .studio-section {
-      padding: 60px 0;
-    }
-    .studio-composition {
-      grid-template-columns: 45px 1.15fr 1fr;
-    }
-    .studio-rail {
-      gap: 23px;
-      padding: 25px 8px;
-    }
-    .studio-rail ac-icon {
-      width: 17px;
-      height: 17px;
-    }
-    .studio-media {
-      min-height: 260px;
-      margin: 11px;
-    }
-    .studio-subtitle {
-      font-size: 17px;
-      left: 7px;
-      right: 7px;
-      bottom: 20px;
-    }
-    .studio-inspector {
-      padding: 16px 10px;
-    }
-    .studio-inspector .eyebrow {
-      font-size: 7px;
-    }
-    .studio-inspector h3 {
-      font-size: 24px;
-      margin-bottom: 15px;
-    }
-    .studio-inspector > div {
-      font-size: 8px;
-      padding: 10px 0;
-      gap: 8px;
-    }
-    .studio-inspector > div ac-icon {
-      width: 14px;
-      height: 14px;
-    }
-    .studio-inspector .text-link {
-      font-size: 8px;
-    }
-    .studio-track {
-      padding: 15px;
-    }
-    .studio-notes {
-      gap: 22px;
-    }
-    .studio-notes h3 {
-      font-size: 17px;
-    }
-    .studio-notes p {
-      font-size: 11px;
-    }
-    .capabilities {
-      padding-block: 65px;
-    }
-    .capability-grid article {
-      padding: 24px;
-    }
-    .capability-grid h3 {
-      font-size: 25px;
-    }
-    .capability-grid li {
-      font-size: 10px;
-      gap: 9px;
-    }
-    .capability-grid p {
-      font-size: 11px;
-    }
-    .capability-grid .eyebrow {
-      font-size: 8px;
-    }
-    .landing-footer {
-      flex-wrap: wrap;
-    }
-    .landing-footer > span {
-      font-size: 9px;
     }
     .app-shell {
       display: block;
@@ -1223,261 +907,6 @@
   @media (max-width: 560px) {
     .wrap {
       width: calc(100% - 34px);
-    }
-    .hero {
-      padding-top: 34px;
-    }
-    .hero > .eyebrow {
-      font-size: 8px;
-    }
-    .hero h1 {
-      font-size: 47px;
-      margin: 21px 0;
-    }
-    .hero-bottom {
-      display: block;
-    }
-    .hero-bottom p br {
-      display: none;
-    }
-    .hero-bottom p {
-      font-size: 12px;
-      max-width: 340px;
-      margin-bottom: 23px;
-    }
-    .hero-bottom .button {
-      font-size: 12px;
-      padding: 13px 17px;
-    }
-    .hero-art {
-      height: 335px;
-    }
-    .hero-image {
-      width: 100%;
-    }
-    .hero-image img {
-      object-position: 43% center;
-    }
-    .floating-clip {
-      height: 235px;
-      width: 135px;
-      right: 5%;
-      top: 27px;
-      transform: rotate(6deg);
-    }
-    .floating-clip strong {
-      font-size: 16px;
-      left: 5px;
-      right: 5px;
-      bottom: 36px;
-    }
-    .clip-caption {
-      font-size: 6px;
-      bottom: 12px;
-    }
-    .clip-format {
-      font-size: 8px;
-    }
-    .image-tag {
-      left: 15px;
-      top: 16px;
-      font-size: 7px;
-    }
-    .cut-line {
-      right: 41%;
-      top: 40px;
-    }
-    .cut-tool {
-      right: calc(41% - 20px);
-      top: 40%;
-    }
-    .hero-timeline {
-      gap: 10px;
-      bottom: 14px;
-      padding: 10px;
-    }
-    .hero-timeline > span {
-      display: none;
-    }
-    .hero-footnote {
-      gap: 8px;
-    }
-    .hero-footnote > span:first-child {
-      font-size: 7px;
-    }
-    .motion-toggle {
-      font-size: 8px !important;
-    }
-    .section-intro h2 {
-      font-size: 36px;
-    }
-    .section-intro > .eyebrow {
-      font-size: 8px;
-    }
-    .section-intro > p {
-      font-size: 12px;
-    }
-    .story-section {
-      padding-top: 54px;
-    }
-    .story-layout {
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-      margin-top: 25px;
-    }
-    .story-screen {
-      position: relative;
-      top: auto;
-      width: 100%;
-      margin: 0;
-    }
-    .story-photo {
-      aspect-ratio: 1.55;
-    }
-    .story-overlay strong {
-      font-size: 26px;
-      max-width: 260px;
-    }
-    .screen-top {
-      font-size: 9px;
-    }
-    .screen-top > span:last-child {
-      display: block;
-      font-size: 8px;
-    }
-    .story-controls button {
-      font-size: 9px;
-    }
-    .story-chapters {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px 17px;
-      padding-left: 12px;
-    }
-    .chapter {
-      min-height: 0;
-      padding: 8px 0 24px 19px;
-    }
-    .chapter h3 {
-      font-size: 21px;
-    }
-    .chapter p {
-      font-size: 11px;
-      margin: 12px 0;
-    }
-    .chapter-detail {
-      font-size: 8px;
-      line-height: 1.6;
-      display: block;
-    }
-    .studio-section {
-      margin-top: 20px;
-      padding-block: 48px;
-    }
-    .studio-composition {
-      grid-template-columns: 37px 1fr;
-      margin-top: 25px;
-    }
-    .studio-rail {
-      grid-row: 1;
-      gap: 27px;
-    }
-    .studio-media {
-      min-height: 285px;
-      margin: 11px;
-    }
-    .studio-subtitle {
-      font-size: 22px;
-    }
-    .studio-inspector {
-      grid-column: 1/-1;
-      padding: 24px;
-    }
-    .studio-inspector h3 {
-      font-size: 28px;
-      margin: 14px 0 18px;
-    }
-    .studio-inspector h3 br {
-      display: none;
-    }
-    .studio-inspector > div {
-      font-size: 11px;
-      gap: 12px;
-    }
-    .studio-inspector > div ac-icon {
-      width: 17px;
-      height: 17px;
-    }
-    .studio-inspector .eyebrow {
-      font-size: 8px;
-    }
-    .studio-inspector .text-link {
-      font-size: 10px;
-    }
-    .studio-track {
-      grid-template-columns: 65px 1fr;
-      padding: 15px;
-      gap: 9px;
-    }
-    .studio-track span {
-      font-size: 6px;
-    }
-    .studio-track > div {
-      height: 23px;
-    }
-    .studio-notes {
-      grid-template-columns: 1fr;
-      gap: 25px;
-      margin-top: 30px;
-    }
-    .studio-notes article {
-      display: grid;
-      grid-template-columns: 24px 1fr;
-      gap: 0 10px;
-    }
-    .studio-notes article > span {
-      margin-top: 4px;
-    }
-    .studio-notes p {
-      grid-column: 2;
-      font-size: 12px;
-      margin: 8px 0 0;
-    }
-    .studio-notes h3 {
-      font-size: 21px;
-    }
-    .capabilities {
-      padding-block: 48px;
-    }
-    .capability-grid {
-      grid-template-columns: 1fr;
-      margin-top: 25px;
-    }
-    .capability-grid article {
-      padding: 26px;
-    }
-    .capability-grid li {
-      font-size: 12px;
-    }
-    .capability-grid p {
-      font-size: 12px;
-    }
-    .closing {
-      padding: 40px 0 65px;
-    }
-    .closing > .eyebrow {
-      font-size: 7px;
-    }
-    .closing h2 {
-      font-size: 46px;
-    }
-    .landing-footer {
-      gap: 17px;
-      padding-bottom: 80px;
-    }
-    .landing-footer .brand {
-      width: 100%;
     }
     .auth-layout {
       display: block;
@@ -1873,9 +1302,6 @@
       animation: none !important;
       transition: none !important;
     }
-    .floating-clip {
-      transform: rotate(6deg);
-    }
     .spinner {
       border-color: var(--accent);
     }
@@ -1948,13 +1374,6 @@
     .editor-heading > .button-row { flex-wrap: wrap; justify-content: flex-start; }
   }
   @media (max-width: 800px) {
-    .hero-bottom p { font-size: 13px; }
-    .hero-timeline > span { font-size: 11px; }
-    .hero-footnote { font-size: 10px; }
-    .hero-footnote .motion-toggle { font-size: 11px; }
-    .screen-top { font-size: 11px; }
-    .story-controls button { font-size: 10px; }
-    .chapter-detail { font-size: 10px; }
     .design-banner { font-size: 11px; }
   }
 }

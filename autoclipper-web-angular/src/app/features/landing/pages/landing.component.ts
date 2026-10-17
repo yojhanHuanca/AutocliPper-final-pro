@@ -1,10 +1,7 @@
 import { BrandComponent } from '../../../shared/ui/brand/brand.component';
 import {
-  AfterViewInit,
   Component,
   DestroyRef,
-  ElementRef,
-  ViewEncapsulation,
   inject,
   signal,
   computed,
@@ -15,7 +12,6 @@ import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { createAccentCycle, LANDING_ACCENTS } from '../landing-accent';
 
 @Component({
-  encapsulation: ViewEncapsulation.None,
   selector: "ac-landing",
   imports: [BrandComponent, RouterLink, IconComponent],
   host: {
@@ -27,8 +23,7 @@ import { createAccentCycle, LANDING_ACCENTS } from '../landing-accent';
   templateUrl: "./landing.component.html",
   styleUrl: "./landing.component.css",
 })
-export class LandingComponent implements AfterViewInit {
-  private readonly element = inject(ElementRef<HTMLElement>);
+export class LandingComponent {
   private readonly destroy = inject(DestroyRef);
   readonly scene = signal(0);
   readonly motionPaused = signal(false);
@@ -55,48 +50,31 @@ export class LandingComponent implements AfterViewInit {
     (_, n) => 20 + (Math.sin(n * 1.7) + 1) * 30,
   );
   readonly sceneLabels = ["Carga", "Transcribe", "Edita", "Exporta"];
-  readonly sceneTitles = [
-    "Todo empieza con tu video.",
-    "Dale voz a cada palabra.",
-    "Encuentra tu propio corte.",
-    "Listo para otra historia.",
+  readonly transcriptLines = [
+    { time: "00:12–00:16", text: "No necesitas contarlo todo." },
+    { time: "00:16–00:20", text: "Solo encontrar esa idea que conecta." },
+    { time: "00:20–00:24", text: "Y darle el espacio que merece." },
   ];
   readonly chapters = [
     {
       title: "Trae tu historia.",
-      copy: "Carga tu archivo en un espacio privado. Comprobamos su integridad y formato antes de procesarlo.",
-      detail: "MP4 · WebM · MOV · MKV / hasta 100 MiB",
+      copy: "Elige un archivo local. Comprobamos su formato y duración antes de procesarlo.",
+      detail: "Carga privada · hasta 100 MiB",
     },
     {
       title: "Cada palabra, en su lugar.",
-      copy: "La transcripción local convierte el audio en texto con tiempos. Tú eliges el intervalo del clip.",
-      detail: "whisper.cpp local / selección manual",
+      copy: "Consulta la transcripción con tiempos para encontrar la idea que quieres conservar.",
+      detail: "Audio a texto · transcripción local",
     },
     {
       title: "Haz el corte tuyo.",
-      copy: "Ajusta formato, encuadre y subtítulos. Guarda cada decisión como una revisión que puedes recuperar.",
-      detail: "9:16 · 1:1 · 16:9 / revisiones versionadas",
+      copy: "Tú decides el inicio, el final y el encuadre. Guarda el borrador para seguir trabajando.",
+      detail: "Selección manual · control creativo",
     },
     {
-      title: "Comparte el resultado.",
-      copy: "Revisa con tu equipo y descarga el render autorizado, junto con sus archivos de subtítulos.",
-      detail: "MP4 · SRT · VTT / enlaces privados temporales",
+      title: "Llévate tu clip.",
+      copy: "Descarga el video procesado y los subtítulos. Tú eliges dónde y cuándo compartirlo.",
+      detail: "MP4 · SRT · VTT",
     },
   ];
-  ngAfterViewInit(): void {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries)
-          if (entry.isIntersecting)
-            this.scene.set(
-              Number((entry.target as HTMLElement).dataset["chapter"]),
-            );
-      },
-      { rootMargin: "-25% 0px -35% 0px", threshold: 0 },
-    );
-    this.element.nativeElement
-      .querySelectorAll(".chapter")
-      .forEach((node: Element) => observer.observe(node));
-    this.destroy.onDestroy(() => observer.disconnect());
-  }
 }

@@ -50,3 +50,43 @@
 }
 
 }
+
+/* Public navigation and footer breakpoints live with the public layout. */
+
+@layer responsive {
+  @media (max-width: 1050px) {
+    .landing-nav nav {
+      gap: 18px;
+      font-size: 12px;
+    }
+  }
+  @media (max-width: 800px) {
+    .landing-nav {
+      min-height: 80px;
+      gap: 16px;
+    }
+    .landing-nav nav {
+      display: none;
+    }
+    .landing-nav .button {
+      font-size: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+    .landing-footer {
+      flex-wrap: wrap;
+    }
+    .landing-footer > span {
+      font-size: 11px;
+    }
+  }
+  @media (max-width: 560px) {
+    .landing-footer {
+      gap: 17px;
+      padding-bottom: 80px;
+    }
+    .landing-footer .brand {
+      width: 100%;
+    }
+  }
+}
