@@ -14,6 +14,7 @@
       (click)="vm.restore(revision.version)"
       [disabled]="
         vm.design ||
+        !vm.canEditCollaboration() ||
         vm.busy() ||
         vm.dirty() ||
         revision.version === vm.draft()?.version
