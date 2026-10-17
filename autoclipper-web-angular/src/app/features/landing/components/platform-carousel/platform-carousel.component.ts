@@ -12,9 +12,7 @@ interface Platform {
   styleUrl: './platform-carousel.component.css',
 })
 export class PlatformCarouselComponent implements AfterViewInit {
-  readonly pausedByPage = input(false);
   readonly reducedMotion = input(false);
-  readonly pausedByUser = signal(false);
   readonly hovered = signal(false);
   readonly focused = signal(false);
 
@@ -46,7 +44,7 @@ export class PlatformCarouselComponent implements AfterViewInit {
       const elapsed = Math.min(time - this.lastFrame, 48);
       const cycleWidth = element.scrollWidth / 2;
       if (cycleWidth > 0) {
-        element.scrollLeft = (element.scrollLeft + elapsed * 0.037) % cycleWidth;
+        element.scrollLeft = (element.scrollLeft + elapsed * 0.065) % cycleWidth;
       }
     }
     this.lastFrame = time;
@@ -54,7 +52,7 @@ export class PlatformCarouselComponent implements AfterViewInit {
   };
 
   isPaused(): boolean {
-    return this.pausedByPage() || this.reducedMotion() || this.pausedByUser() || this.hovered() || this.focused();
+    return this.reducedMotion() || this.hovered() || this.focused();
   }
 
   move(direction: -1 | 1): void {

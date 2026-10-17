@@ -236,14 +236,6 @@
   font-size: 10px;
   letter-spacing: 0.12em;
 }
-.motion-toggle {
-  border: 0;
-  background: none;
-  color: var(--muted);
-  padding: 8px;
-  font-size: 12px;
-  text-decoration: underline;
-}
 .section-intro h2 {
   font-size: clamp(36px, 4vw, 57px);
   font-weight: 540;
@@ -532,7 +524,7 @@
     .floating-clip strong { font-size:18px; }.hero-timeline { left:15px;right:15px;padding:12px;gap:12px; }
     .hero-timeline > span { font-size:11px; }.waveform { gap:2px; }.cut-tool { width:40px;height:40px;right:calc(26% - 20px); }
     .cut-tool ac-icon { width:22px;height:22px; }.hero-footnote { flex-wrap:wrap;gap:10px;font-size:10px; }.hero-footnote > span:last-child { display:none; }
-    .motion-toggle { font-size:11px;padding:8px 0; }.story-section { padding-top:62px; }
+    .story-section { padding-top:62px; }
     .story-layout { grid-template-columns:minmax(0,1fr);gap:20px; }.story-screen { max-width:580px;width:100%;margin-inline:auto; }
     .story-chapters { grid-template-columns:repeat(2,minmax(0,1fr));gap:0 25px; }.chapter { gap:8px 12px;padding:20px 0; }
     .chapter-title { font-size:23px; }.chapter-copy { font-size:12px; }.chapter-detail { font-size:11px; }
@@ -550,7 +542,7 @@
     .clip-caption { font-size:8px;bottom:14px;letter-spacing:0; }.clip-format { font-size:10px; }
     .image-tag { left:14px;top:15px;font-size:8px;letter-spacing:.08em;max-width:88%; }.cut-line { right:41%;top:40px; }
     .cut-tool { right:calc(41% - 20px);top:40%; }.hero-timeline { bottom:14px;padding:10px; }.hero-timeline > span { display:none; }
-    .hero-footnote { align-items:flex-start;gap:4px; }.hero-footnote > span:first-child { font-size:11px;line-height:1.6;max-width:28ch; }.hero-footnote .motion-toggle { font-size:11px; }
+    .hero-footnote { align-items:flex-start;gap:4px; }.hero-footnote > span:first-child { font-size:11px;line-height:1.6;max-width:28ch; }
     .section-intro h2 { font-size:clamp(31px,8.5vw,42px);line-height:1.12; }.section-intro > .eyebrow { font-size:9px;letter-spacing:.1em; }
     .section-intro > p { font-size:14px;max-width:35ch; }.story-section { padding-top:48px; }.story-layout { margin-top:25px;gap:10px; }
     .story-screen { padding:11px; }.screen-top { font-size:10px;gap:8px; }.screen-top > span:last-child { font-size:9px;white-space:nowrap; }

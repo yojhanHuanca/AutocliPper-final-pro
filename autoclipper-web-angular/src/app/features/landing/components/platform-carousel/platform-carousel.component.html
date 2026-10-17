@@ -7,9 +7,6 @@
     <div class="platforms-actions" aria-label="Controles del carrusel">
       <button type="button" aria-label="Ver plataformas anteriores" (click)="move(-1)">←</button>
       <button type="button" aria-label="Ver plataformas siguientes" (click)="move(1)">→</button>
-      <button type="button" class="pause-button" [attr.aria-pressed]="pausedByUser()" (click)="pausedByUser.set(!pausedByUser())">
-        {{ pausedByUser() ? 'Reanudar' : 'Pausar' }}
-      </button>
     </div>
   </div>
   <div

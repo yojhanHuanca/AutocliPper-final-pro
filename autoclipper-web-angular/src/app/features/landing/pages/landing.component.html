@@ -60,20 +60,11 @@
     </div>
     <div class="hero-footnote">
       <span>Transcripción local · Edición versionada · Exportación privada</span
-      ><button
-        type="button"
-        class="motion-toggle"
-        [attr.aria-pressed]="motionPaused()"
-        (click)="motionPaused.set(!motionPaused())"
-      >
-        {{
-          motionPaused() ? "Reanudar animaciones" : "Pausar animaciones"
-        }}</button
       ><span>DESLIZA PARA DESCUBRIR ↓</span>
     </div>
   </section>
 
-  <ac-platform-carousel [pausedByPage]="motionPaused()" [reducedMotion]="reducedMotion()" />
+  <ac-platform-carousel [reducedMotion]="reducedMotion()" />
 
   <section class="story-section wrap" id="proceso">
     <div class="section-intro">

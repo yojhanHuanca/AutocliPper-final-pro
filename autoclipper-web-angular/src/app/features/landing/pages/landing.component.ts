@@ -16,7 +16,7 @@ import { PlatformCarouselComponent } from '../components/platform-carousel/platf
   selector: "ac-landing",
   imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent],
   host: {
-    "[class.motion-paused]": "motionPaused() || reducedMotion()",
+    "[class.motion-paused]": "reducedMotion()",
     "[style.--accent]": "accent().color",
     "[style.--accent-hover]": "accent().hover",
     "[style.--tint]": "accent().tint",
@@ -27,7 +27,6 @@ import { PlatformCarouselComponent } from '../components/platform-carousel/platf
 export class LandingComponent {
   private readonly destroy = inject(DestroyRef);
   readonly scene = signal(0);
-  readonly motionPaused = signal(false);
   readonly reducedMotion = signal(false);
   private readonly accentIndex = signal(0);
   readonly accent = computed(() => LANDING_ACCENTS[this.accentIndex()]);
@@ -40,7 +39,7 @@ export class LandingComponent {
       const timer = window.setInterval(tick, ms);
       return () => window.clearInterval(timer);
     });
-    effect(() => cycle.configure(this.motionPaused(), this.reducedMotion()));
+    effect(() => cycle.configure(false, this.reducedMotion()));
     this.destroy.onDestroy(() => {
       cycle.destroy();
       preference.removeEventListener('change', onPreference);

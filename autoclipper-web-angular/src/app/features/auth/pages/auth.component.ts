@@ -16,7 +16,7 @@ import { safeAuthReturnUrl } from "../models/auth-return-url";
   selector: "ac-auth",
   imports: [FormsModule, RouterLink, IconComponent],
   host: {
-    "[class.motion-paused]": "motionPaused() || reducedMotion()",
+    "[class.motion-paused]": "reducedMotion()",
     "[style.--auth-accent]": "accent()",
     "[style.--auth-accent-soft]": "accentSoft()",
   },
@@ -33,7 +33,6 @@ export class AuthComponent {
   readonly busy = signal(false);
   readonly error = signal("");
   readonly message = signal("");
-  readonly motionPaused = signal(false);
   readonly reducedMotion = signal(false);
   readonly stepIndex = signal(0);
   readonly invitationReady = signal(false);
@@ -69,7 +68,7 @@ export class AuthComponent {
       const timer = window.setInterval(tick, milliseconds);
       return () => window.clearInterval(timer);
     });
-    effect(() => cycle.configure(this.motionPaused(), this.reducedMotion()));
+    effect(() => cycle.configure(false, this.reducedMotion()));
     this.destroyRef.onDestroy(() => {
       motionPreference.removeEventListener("change", updateMotionPreference);
       cycle.destroy();

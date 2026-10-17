@@ -162,20 +162,6 @@
   </div>
   <aside class="auth-visual" [attr.data-scene]="stepIndex()" aria-label="Recorrido ilustrativo del trabajo con un clip">
     <div class="auth-visual-content">
-      <div class="auth-visual-topline">
-        <button
-          class="auth-motion-toggle"
-          type="button"
-          [attr.aria-pressed]="motionPaused() || reducedMotion()"
-          [disabled]="reducedMotion()"
-          (click)="motionPaused.set(!motionPaused())"
-        >
-          <span class="auth-motion-dot"></span>
-          <span class="auth-motion-icon">{{ motionPaused() || reducedMotion() ? "▶" : "Ⅱ" }}</span>
-          {{ reducedMotion() ? "Movimiento reducido" : motionPaused() ? "Reanudar" : "Pausar" }}
-        </button>
-      </div>
-
       <section class="auth-demo" aria-hidden="true">
         <div class="auth-demo-header">
           <span class="auth-demo-label"><i></i> {{ activeScene().micro }}</span>

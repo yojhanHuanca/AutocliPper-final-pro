@@ -8,7 +8,6 @@
   button { background: #fff; border: 1px solid var(--border); color: var(--text); border-radius: 7px; min-width: 35px; height: 35px; font-size: 17px; cursor: pointer; }
   button:hover { border-color: var(--accent); color: var(--accent); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .pause-button { min-width: 76px; padding: 0 10px; font-size: 11px; font-weight: 650; }
   .platforms-window { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
   .platforms-window:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .platforms-window::-webkit-scrollbar { display: none; }
