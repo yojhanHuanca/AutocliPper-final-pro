@@ -7,25 +7,29 @@ import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { EditorState, EditorApi, ProjectsApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, WorkspaceStore, SessionStore, HttpErrorResponse, editorChangesGuard } from '../../.local/tests/client.mjs';
+import { EditorState, EditorApi, ProjectsApi, CollaborationApi, DESIGN_MODE, EDITOR_DISCARD_CONFIRMATION, WorkspaceStore, SessionStore, HttpErrorResponse, editorChangesGuard, EditorNavigationService } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 
 const userSpec=()=>({version:1,kind:'clip',startSeconds:10,endSeconds:16,aspect:'vertical',subtitles:{source:'user',cues:[{startSeconds:10,endSeconds:12,text:'Primera frase del fixture.'},{startSeconds:12,endSeconds:14,text:'Segunda frase del fixture.'}]}});
 const transcriptSpec=analysisId=>({...userSpec(),subtitles:{source:'transcript',analysisId}});
+const videoExport=(overrides={})=>({id:'export-fixture',status:'succeeded',editorRevisionId:'revision-fixture',artifacts:[{kind:'video',bytes:100,sha256:'fixture',contentType:'video/mp4'}],...overrides});
 async function setup({role='editor',spec=userSpec()}={}) {
   const route=new BehaviorSubject(new Map([['id','edit-fixture']]));
   const memberships=signal([{id:'workspace-fixture',role}]);
   let saved={id:'edit-fixture',uploadId:'upload-fixture',projectId:'project-fixture',name:'Fixture de prueba',version:1,revision:{id:'revision-fixture',version:1,spec:structuredClone(spec)}};
   const revisions=new Map([[1,structuredClone(spec)]]);
-  const calls={writes:[],restores:[],reads:0,analyses:[]};
-  const control={discard:false,failSave:false,failAnalysis:false,deferredAnalysis:null,pendingSave:null};
+  const calls={writes:[],restores:[],reads:0,analyses:[],downloads:[]};
+  const control={discard:false,failSave:false,failAnalysis:false,deferredAnalysis:null,pendingSave:null,downloadUrl:'https://media.example.test/render.mp4?grant=fixture',pendingDownload:null};
   const segments=[
     {startSeconds:9,endSeconds:11,text:'Cruza el inicio.'},
     {startSeconds:11,endSeconds:13,text:'Texto de la transcripción.'},
     {startSeconds:15,endSeconds:17,text:'Cruza el final.'},
     {startSeconds:18,endSeconds:19,text:'Fuera del intervalo.'},
   ];
+  const renderSpec=spec=>({...spec,subtitles:spec.subtitles?.source==='user'?{provenance:'user',cues:structuredClone(spec.subtitles.cues)}:spec.subtitles?.source==='transcript'?{provenance:'transcript',cues:segments.filter(cue=>cue.startSeconds<spec.endSeconds&&cue.endSeconds>spec.startSeconds).map(cue=>({...cue,startSeconds:Math.max(spec.startSeconds,cue.startSeconds),endSeconds:Math.min(spec.endSeconds,cue.endSeconds)}))}:undefined});
+  saved.revision.renderSpec=renderSpec(spec);
   const api={
+    download:async(id,kind)=>{calls.downloads.push({id,kind});if(control.pendingDownload)await control.pendingDownload;return{url:control.downloadUrl};},
     edit:async id=>{calls.reads++;return{draft:{...structuredClone(saved),id},etag:'"'+saved.version+'"'};},
     project:async()=>({id:'project-fixture',name:'Proyecto unitario',workspaceId:'workspace-fixture'}),
     analysis:async id=>{
@@ -38,13 +42,14 @@ async function setup({role='editor',spec=userSpec()}={}) {
       calls.writes.push({id,body:structuredClone(body),etag});
       if(control.pendingSave)await control.pendingSave;
       if(control.failSave)throw new HttpErrorResponse({status:412,statusText:'Precondition Failed'});
-      saved={...saved,version:saved.version+1,revision:{...saved.revision,version:saved.version+1,spec:structuredClone(body.spec)}};
+      saved={...saved,version:saved.version+1,revision:{...saved.revision,id:'revision-fixture-'+(saved.version+1),version:saved.version+1,spec:structuredClone(body.spec),renderSpec:renderSpec(body.spec)}};
       revisions.set(saved.version,structuredClone(body.spec));
       return{draft:structuredClone(saved),etag:'"'+saved.version+'"'};
     },
     restore:async(id,body,etag)=>{
       calls.restores.push({id,body,etag});
-      saved={...saved,version:saved.version+1,revision:{...saved.revision,version:saved.version+1,spec:structuredClone(revisions.get(body.revisionVersion))}};
+      const spec=structuredClone(revisions.get(body.revisionVersion));
+      saved={...saved,version:saved.version+1,revision:{...saved.revision,id:'revision-fixture-'+(saved.version+1),version:saved.version+1,spec,renderSpec:renderSpec(spec)}};
       return{draft:structuredClone(saved),etag:'"'+saved.version+'"'};
     },
     history:async()=>({items:[],nextBeforeVersion:null}),exports:async()=>({items:[]}),
@@ -63,6 +68,109 @@ async function setup({role='editor',spec=userSpec()}={}) {
   assert.equal(state.busy(),false);
   return{state,control,calls,memberships,segments,route,api};
 }
+
+test('a reader can seek in the authorized current render; playback highlights overlaps without changing selection or dirty state',async()=>{
+  try {
+    const {state,calls}=await setup({role:'reader'});
+    const item=videoExport();state.exports.set([item]);state.selectCue(1);
+    await state.preview(item);
+    const token=state.previewSession().token;
+    assert.equal(state.previewSyncReady(),false);assert.equal(state.selectedCueSeekTime(),null);
+    state.previewMetadata(token,6);state.previewTimeChanged(token,0);
+    assert.equal(state.previewSyncReady(),true);assert.equal(state.selectedCueSeekTime(),2);
+    state.seekSelectedCue();assert.deepEqual(state.previewSeek(),{token,sequence:1,seconds:2});
+    state.previewTimeChanged(token,0.5);assert.deepEqual(state.playingCueIndices(),[0]);
+    assert.equal(state.selectedCue().index,1);assert.equal(state.dirty(),false);
+    state.previewTimeChanged(token,2);assert.deepEqual(state.playingCueIndices(),[1],'Cue boundaries are half-open.');
+    assert.equal(state.playbackPosition().sourceSeconds,12);
+    state.previewTimeChanged(token,6);assert.deepEqual(state.playingCueIndices(),[]);
+    assert.equal(state.playbackPosition().percent,100);
+    assert.deepEqual(calls.downloads,[{id:item.id,kind:'video'}]);assert.equal(calls.writes.length,0);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('old or unidentified revisions and dirty forms never seek or highlight the current cues; save does not relabel an older render',async()=>{
+  try {
+    const {state}=await setup();state.selectCue(0);
+    for(const revisionId of ['older-revision',undefined]) {
+      const item=videoExport({editorRevisionId:revisionId});state.exports.set([item]);await state.preview(item);
+      const token=state.previewSession().token;state.previewMetadata(token,6);state.previewTimeChanged(token,1);
+      assert.equal(state.previewSyncReady(),false);assert.match(state.previewSyncNotice(),/otra revisión/);
+      state.seekSelectedCue();assert.equal(state.previewSeek(),null);assert.deepEqual(state.playingCueIndices(),[]);
+    }
+    const item=videoExport();state.exports.set([item]);await state.preview(item);
+    state.previewMetadata(state.previewSession().token,6);assert.equal(state.previewSyncReady(),true);
+    state.updateCue(0,'text','Cambio sin guardar');
+    assert.equal(state.previewSyncReady(),false);assert.match(state.previewSyncNotice(),/sin guardar/);
+    state.seekSelectedCue();assert.equal(state.previewSeek(),null);
+    await state.save();assert.equal(state.dirty(),false);assert.equal(state.previewSyncReady(),false);
+    assert.equal(state.previewSession().revisionId,'revision-fixture');assert.match(state.previewSyncNotice(),/otra revisión/);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('transcript seeks use the immutable resolved render, including cues crossing the clip and overlapping speech',async()=>{
+  try {
+    const spec=userSpec();spec.subtitles.cues[1].startSeconds=11;
+    const {state}=await setup({spec});const item=videoExport();state.exports.set([item]);await state.preview(item);
+    const token=state.previewSession().token;state.previewMetadata(token,6);state.previewTimeChanged(token,1.5);
+    assert.deepEqual(state.playingCueIndices(),[0,1]);
+  } finally {TestBed.resetTestingModule();}
+  try {
+    const {state}=await setup({spec:transcriptSpec('analysis-fixture')});const item=videoExport();state.exports.set([item]);await state.preview(item);
+    const token=state.previewSession().token;state.previewMetadata(token,6);
+    state.selectCue(0);assert.equal(state.selectedCueSeekTime(),0);
+    state.selectCue(2);assert.equal(state.selectedCueSeekTime(),5);
+    assert.equal(state.dirty(),false);assert.equal(state.captionSource,'transcript');
+    state.previewMetadata(token,9);assert.equal(state.previewSyncReady(),false);assert.equal(state.selectedCueSeekTime(),null);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('refresh obtains a new authorized URL; late events and nonfinite times cannot affect the new player',async()=>{
+  try {
+    const {state,control,calls}=await setup();const item=videoExport();state.exports.set([item]);await state.preview(item);
+    const oldToken=state.previewSession().token;state.previewMetadata(oldToken,6);state.previewTimeChanged(oldToken,1);
+    state.previewFailed(oldToken);assert.equal(state.previewSyncReady(),false);assert.equal(state.previewTime(),null);
+    control.downloadUrl='https://media.example.test/render.mp4?grant=renewed';await state.refreshPreview();
+    const token=state.previewSession().token;assert.notEqual(token,oldToken);assert.equal(state.previewError(),'');
+    state.previewFailed(oldToken);state.previewMetadata(oldToken,99);state.previewTimeChanged(oldToken,2);
+    assert.equal(state.previewDuration(),null);assert.equal(state.previewError(),'');
+    state.previewMetadata(token,6);state.previewTimeChanged(token,2);
+    for(const value of [NaN,Infinity,-1,7])state.previewTimeChanged(token,value);
+    assert.equal(state.previewTime(),2);assert.equal(calls.downloads.length,2);
+    assert.equal(state.previewUrl(),control.downloadUrl);
+    state.exports.set([]);await state.refreshPreview();
+    assert.equal(calls.downloads.length,2);assert.match(state.previewError(),/Actualiza Exportaciones/);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('only listed completed video exports can obtain a player URL; invalid media URLs are rejected',async()=>{
+  try {
+    const {state,control,calls}=await setup();
+    await state.preview(videoExport());assert.equal(calls.downloads.length,0);
+    for(const item of [videoExport({status:'running'}),videoExport({artifacts:[{kind:'srt'}]})]) {
+      state.exports.set([item]);await state.preview(item);
+    }
+    assert.equal(calls.downloads.length,0);
+    const item=videoExport();state.exports.set([item]);
+    for(const url of ['javascript:alert(1)','https://user:password@media.example.test/render.mp4']) {
+      control.downloadUrl=url;await state.preview(item);assert.equal(state.previewSession(),null);assert.match(state.error(),/inválida/);
+    }
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('changing edit invalidates pending playback downloads and media events',async()=>{
+  try {
+    const {state,control,route}=await setup();const item=videoExport();state.exports.set([item]);await state.preview(item);
+    const token=state.previewSession().token;
+    // The navigation guard approved this destination before the download began.
+    assert.equal(TestBed.inject(EditorNavigationService).allowEdit('next-edit'),true);
+    let finish;control.pendingDownload=new Promise(resolve=>finish=resolve);
+    const pending=state.preview(item);route.next(new Map([['id','next-edit']]));finish();await pending;
+    for(let n=0;n<40&&state.busy();n++)await new Promise(resolve=>setImmediate(resolve));
+    state.previewMetadata(token,6);state.previewTimeChanged(token,2);state.previewFailed(token);
+    assert.equal(state.previewSession(),null);assert.equal(state.previewUrl(),'');assert.equal(state.previewError(),'');assert.equal(state.previewDuration(),null);
+  } finally {TestBed.resetTestingModule();}
+});
 
 test('selection is not dirty, text/times synchronize, save keeps ETag and restore replaces selected cues',async()=>{
   try {

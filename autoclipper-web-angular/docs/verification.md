@@ -1,5 +1,17 @@
 # Evidencia de la primera entrega
 
+## Reproducción vinculada a frases — 2026-10-17
+
+El reproductor solicita el enlace de un video terminado de la lista autorizada. Cada enlace crea una instancia de video identificada; los eventos de una instancia anterior o de otra edición se descartan. La sincronización exige el ID inmutable de la revisión actual, formulario sin cambios pendientes y metadatos finitos compatibles con el intervalo del renderSpec guardado (tolerancia de 0,25 s por redondeo de medios). Una exportación antigua puede reproducirse con aviso, sin vincularle las frases actuales.
+
+El botón «Ir a esta frase en el video» convierte tiempos absolutos de fuente a tiempos relativos del clip y busca sin autoplay. Solo vincula frases presentes en los cues resueltos del render guardado, con texto y extremos coincidentes dentro del clip. El avance real del reproductor mueve la línea y resalta todas las frases superpuestas activas, sin modificar la selección de edición ni ensuciar el formulario. Un fallo de medios permite solicitar un enlace nuevo mediante la misma API autorizada; no agrega fallback con credenciales.
+
+79 pruebas aprobadas con Node 24.19.0: incluyen conversión, extremos recortados, superposición, metadatos inválidos, revisión antigua/no identificada, cambios sin guardar, guardado creando otro ID de revisión, consulta por lector, renovación de enlace, URLs inválidas y respuestas/eventos tardíos. Son fixtures de DTO en tests; no acreditan reproducción real por UI. La primera ejecución detectó un import del compilador faltante en el nuevo test y un fixture de navegación que omitía la aprobación del guard; ambos se corrigieron antes de la ejecución completa aprobada. Contrato público comprobado contra upstream.
+
+La API/Docker permanece apagada. La aceptación con video real y los roles QA siguen pendientes, conservando las confirmaciones ya registradas. No se modifican backend ni infraestructura.
+
+Revisión visual del estado vacío a 1440×1000 y 390×844: sin desbordamiento horizontal (ancho del documento igual al viewport útil), sin video ni acciones de búsqueda ficticias. Se amplió a 11 px el texto del marco y de ayuda del reproductor. Capturas locales: C:/Users/USER/Documents/Codex/artifacts/autoclipper-editor-playback-2026-10-17/desktop-empty.jpg y mobile-empty.jpg. Typecheck y build de producción aprobados; la reproducción con contenido todavía requiere aceptación contra la API activa.
+
 ## Edición de cues en el timeline — 2026-10-17
 
 La pista permite seleccionar frases con ratón, teclado (flechas, Inicio/Fin) o selector nativo. El editor de frase se comparte con el panel y actualiza un único formulario. Texto y tiempos se validan antes de persistir; una copia editable explícita transforma la transcripción vinculada en cues aportados por el usuario dentro del clip, conservando el análisis original.

@@ -16,6 +16,10 @@
       <span>{{ vm.selectedCuePosition() + 1 }} de {{ vm.captionEntries().length }}</span>
       <button type="button" class="button small" (click)="vm.selectAdjacentCue(1)" [disabled]="vm.selectedCuePosition() >= vm.captionEntries().length - 1" [attr.aria-label]="'Frase siguiente, ' + contextName()">Siguiente</button>
     </div>
+    <div class="cue-playback">
+      <button type="button" class="button small" (click)="vm.seekSelectedCue()" [disabled]="vm.selectedCueSeekTime() === null || vm.busy()" [attr.aria-describedby]="id('playback-help')">Ir a esta frase en el video<ac-icon name="play" /></button>
+      <p [id]="id('playback-help')" class="cue-help">@if (vm.selectedCueSeekTime() !== null) { Busca el inicio de esta frase sin iniciar la reproducción. } @else if (vm.previewSyncNotice()) { {{ vm.previewSyncNotice() }} } @else { Selecciona un render de esta revisión con esta frase y espera a que cargue para buscar su tiempo. }</p>
+    </div>
     @if (vm.captionSource === 'user') {
       <fieldset class="cue-fields" [disabled]="!vm.canChangeCaptions()">
         <legend>Ajusta texto y tiempos</legend>

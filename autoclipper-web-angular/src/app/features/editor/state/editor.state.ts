@@ -10,6 +10,7 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
 import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
 import { copyTranscriptCues, layoutCaptionCues } from '../models/caption-timeline';
+import { playbackWindow, renderedCaptionCues } from '../models/caption-playback';
 import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
@@ -64,6 +65,38 @@ export class EditorState {
   readonly message = signal("");
   readonly previewUrl = signal("");
   readonly previewVersion = signal<string | number>("");
+  readonly previewSession = signal<{ token: number; exportId: string; revisionId: string | undefined; url: string } | null>(null);
+  private previewGeneration = 0;
+  readonly previewDuration = signal<number | null>(null);
+  readonly previewTime = signal<number | null>(null);
+  readonly previewError = signal('');
+  readonly previewSeek = signal<{ token: number; sequence: number; seconds: number } | null>(null);
+  private seekSequence = 0;
+  readonly previewSyncNotice = computed(() => {
+    const session = this.previewSession();
+    if (!session) return '';
+    if (this.previewError()) return this.previewError();
+    if (this.dirty()) return 'Hay cambios sin guardar. Guarda y exporta esta revisión para sincronizar sus frases.';
+    if (!session.revisionId || session.revisionId !== this.draft()?.revision.id)
+      return 'Este render pertenece a otra revisión o no informa su revisión. Sus tiempos no se vinculan al borrador actual.';
+    if (this.previewDuration() === null) return 'Cargando los tiempos del video…';
+    if (!playbackWindow(this.draft()?.revision.renderSpec, this.previewDuration()))
+      return 'No se pudo comprobar el intervalo de este render. La sincronización de frases está desactivada.';
+    return '';
+  });
+  readonly previewSyncReady = computed(() => !!this.previewSession() && !this.previewSyncNotice());
+  readonly renderedCues = computed(() => this.previewSyncReady()
+    ? renderedCaptionCues(this.captionEntries(), this.draft()?.revision.renderSpec, this.previewDuration()) : []);
+  readonly playingCueIndices = computed(() => {
+    const time = this.previewTime();
+    return time === null ? [] : this.renderedCues().filter(cue => time >= cue.from && time < cue.to).map(cue => cue.index);
+  });
+  readonly selectedCueSeekTime = computed(() => this.renderedCues().find(cue => cue.index === this.selectedCue()?.index)?.from ?? null);
+  readonly playbackPosition = computed(() => {
+    const window = this.previewSyncReady() ? playbackWindow(this.draft()?.revision.renderSpec, this.previewDuration()) : null;
+    const time = this.previewTime();
+    return window && time !== null ? { sourceSeconds: window.start + Math.min(time, window.duration), percent: Math.min(100, time / (window.end - window.start) * 100) } : null;
+  });
   private readonly formVersion = signal(0);
   readonly timeline = computed(() => {
     this.formVersion();
@@ -248,6 +281,12 @@ export class EditorState {
     this.message.set("");
     this.previewUrl.set("");
     this.previewVersion.set("");
+    this.previewGeneration++;
+    this.previewSession.set(null);
+    this.previewDuration.set(null);
+    this.previewTime.set(null);
+    this.previewError.set('');
+    this.previewSeek.set(null);
     this.formVersion.set(0);
     this.spec = { version: 1, kind: "clip", startSeconds: 0, endSeconds: 30, aspect: "vertical" };
     this.cropX = 0.5;
@@ -734,18 +773,57 @@ export class EditorState {
       ? String(this.history().find((r) => r.id === id)?.version ?? id)
       : "No informada";
   }
-  async preview(item: Schema<"EditorExportDto">): Promise<void> {
+  hasVideoArtifact(item: Schema<'EditorExportDto'>): boolean {
+    return item.status === 'succeeded' && item.artifacts.some(artifact => artifact.kind === 'video');
+  }
+  async preview(requested: Schema<"EditorExportDto">): Promise<void> {
+    const item = this.exports().find(exported => exported.id === requested.id);
+    if (!item || !this.hasVideoArtifact(item)) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const result = await this.api.download(item.id, "video");
       if (!this.isCurrentEdit(generation)) return;
       this.safeUrl(result.url);
+      this.previewSession.set({ token: ++this.previewGeneration, exportId: item.id, revisionId: item.editorRevisionId, url: result.url });
+      this.previewDuration.set(null);
+      this.previewTime.set(null);
+      this.previewError.set('');
+      this.previewSeek.set(null);
       this.previewUrl.set(result.url);
       this.previewVersion.set(this.revisionLabel(item.editorRevisionId));
       this.message.set(
         "Reproduciendo exportación guardada. Si el enlace vence, selecciona Reproducir de nuevo.",
       );
     });
+  }
+  previewMetadata(token: number, duration: number): void {
+    if (token !== this.previewSession()?.token) return;
+    this.previewDuration.set(Number.isFinite(duration) && duration > 0 ? duration : null);
+    if (this.previewDuration() === null) this.previewError.set('El video no informa una duración válida. Solicita otro enlace de reproducción.');
+  }
+  previewTimeChanged(token: number, seconds: number): void {
+    const duration = this.previewDuration();
+    if (token !== this.previewSession()?.token || this.previewError() || duration === null || !Number.isFinite(seconds) || seconds < 0 || seconds > duration) return;
+    this.previewTime.set(seconds);
+  }
+  previewFailed(token: number): void {
+    if (token !== this.previewSession()?.token) return;
+    this.previewError.set('No pudimos reproducir el video. El enlace puede haber vencido; solicita uno nuevo.');
+    this.previewTime.set(null);
+  }
+  seekSelectedCue(): void {
+    const seconds = this.selectedCueSeekTime();
+    const session = this.previewSession();
+    if (!session || seconds === null || this.busy()) return;
+    this.previewSeek.set({ token: session.token, sequence: ++this.seekSequence, seconds });
+  }
+  async refreshPreview(): Promise<void> {
+    const item = this.exports().find(item => item.id === this.previewSession()?.exportId);
+    if (!item || !this.hasVideoArtifact(item)) {
+      this.previewError.set('Esta exportación ya no está disponible en la lista. Actualiza Exportaciones para consultar su estado.');
+      return;
+    }
+    await this.preview(item);
   }
   async download(id: string, kind: string): Promise<void> {
     await this.run(async () => {
@@ -755,7 +833,7 @@ export class EditorState {
   }
   private safeUrl(value: string): string {
     const parsed = new URL(value);
-    if (!["https:", "http:"].includes(parsed.protocol))
+    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password)
       throw new Error("El servidor devolvió una URL inválida.");
     return parsed.href;
   }

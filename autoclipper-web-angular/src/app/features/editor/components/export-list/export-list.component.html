@@ -23,9 +23,11 @@
       <p class="muted">Código de error: {{ item.errorCode }}</p>
     }
     @if (item.status === "succeeded") {
-      <button class="button small" type="button" (click)="vm.preview(item)">
+      @if (vm.hasVideoArtifact(item)) {
+      <button class="button small" type="button" (click)="vm.preview(item)" [disabled]="vm.busy()">
         Reproducir<ac-icon name="play" />
       </button>
+      }
       <div class="button-row">
         @for (artifact of item.artifacts; track artifact.kind) {
           <button
