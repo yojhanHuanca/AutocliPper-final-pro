@@ -65,6 +65,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import("./features/settings/settings.routes").then((m) => m.routes),
       },
+      {
+        path: "team",
+        loadComponent: () =>
+          import("./features/workspaces/pages/workspace-team.component").then(
+            (m) => m.WorkspaceTeamComponent,
+          ),
+      },
     ],
   },
   {
@@ -111,6 +118,13 @@ export const routes: Routes = [
         path: "settings",
         loadChildren: () =>
           import("./features/settings/settings.routes").then((m) => m.routes),
+      },
+      {
+        path: "team",
+        loadComponent: () =>
+          import("./features/workspaces/pages/workspace-team.component").then(
+            (m) => m.WorkspaceTeamComponent,
+          ),
       },
     ],
   },

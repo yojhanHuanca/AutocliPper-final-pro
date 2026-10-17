@@ -10,6 +10,16 @@
       @if (message()) {
         <div class="alert success" role="status">{{ message() }}</div>
       }
+      @if (mode === "invitation" && invitationChecking()) {
+        <p class="alert" role="status">Revisando si ya tienes una sesión iniciada…</p>
+      }
+      @if (mode === "invitation" && invitationReady() && session.user()) {
+        <div class="auth-invitation-account">
+          <span>Sesión iniciada como</span>
+          <strong>{{ session.user()?.email }}</strong>
+          <button class="text-link" type="button" (click)="changeInvitationAccount()">Cambiar de cuenta</button>
+        </div>
+      }
       <form #form="ngForm" (ngSubmit)="form.valid && submit()">
         @if (mode === "register") {
           <label
@@ -21,7 +31,7 @@
               autocomplete="name"
           /></label>
         }
-        @if (mode === "login" || mode === "register" || mode === "forgot") {
+        @if (mode === "login" || mode === "register" || mode === "forgot" || (mode === "invitation" && invitationReady() && !session.user())) {
           <label
             >Correo electrónico<input
               type="email"
@@ -44,7 +54,7 @@
               spellcheck="false"
           /></label>
         }
-        @if (mode === "login" || mode === "register" || mode === "reset") {
+        @if (mode === "login" || mode === "register" || mode === "reset" || (mode === "invitation" && invitationReady() && !session.user())) {
           <label
             >{{ mode === "reset" ? "Nueva contraseña" : "Contraseña"
             }}<input
@@ -76,14 +86,16 @@
         }
         <button
           class="button primary full"
-          [disabled]="busy() || form.invalid"
+          [disabled]="busy() || (mode === 'invitation' ? invitationChecking() || !invitationReady() || (!session.user() && form.invalid) : form.invalid)"
           type="submit"
         >
           {{ busy() ? "Un momento…" : action }}<ac-icon name="arrow" />
         </button>
       </form>
       <div class="auth-links">
-        @if (mode === "login") {
+        @if (mode === "invitation") {
+          <a routerLink="/login">Volver a iniciar sesión</a>
+        } @else if (mode === "login") {
           <span
             >¿Primera historia aquí?
             <a routerLink="/register">Crea tu cuenta</a></span
@@ -94,10 +106,10 @@
         <a routerLink="/verify">Verificar correo</a
         ><a routerLink="/reset">Tengo un token de recuperación</a>
       </div>
-      <p class="auth-limit">
+      @if (mode !== "invitation") { <p class="auth-limit">
         Google requiere aceptación externa y no está habilitado en esta
         interfaz. El correo del entorno local se entrega en Mailpit.
-      </p>
+      </p> }
     </main>
   </div>
   <aside class="auth-visual" [attr.data-scene]="stepIndex()" aria-label="Recorrido ilustrativo del trabajo con un clip">

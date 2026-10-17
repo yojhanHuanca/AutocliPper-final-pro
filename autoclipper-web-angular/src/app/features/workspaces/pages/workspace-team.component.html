@@ -1,0 +1,131 @@
+<section class="page-heading team-page-heading">
+  <div>
+    <span class="eyebrow">ESPACIO DE TRABAJO</span>
+    <h1>Equipo y espacio.</h1>
+    <p>Invita a quienes te ayudan a convertir material en historias.</p>
+  </div>
+  @if (!design && activeWorkspace()) {
+    <span class="team-kind-badge">{{ activeWorkspace()!.kind === "team" ? "Equipo" : "Espacio personal" }}</span>
+  }
+</section>
+
+@if (design) {
+  <section class="team-design-note panel" aria-labelledby="team-design-title">
+    <span class="team-note-icon"><ac-icon name="users" /></span>
+    <div>
+      <h2 id="team-design-title">Tu equipo, con permisos claros.</h2>
+      <p>Esta propuesta describe las funciones por rol. Los nombres, integrantes y permisos concretos aparecerán al conectar una cuenta con acceso al espacio.</p>
+    </div>
+  </section>
+  <section class="team-role-guide" aria-label="Qué puede hacer cada rol">
+    @for (item of capabilities; track item.role) {
+      <article class="team-role-card">
+        <span class="team-role-mark"><ac-icon name="shield" /></span>
+        <h2>{{ item.role }}</h2>
+        <p>{{ item.detail }}</p>
+      </article>
+    }
+  </section>
+  <p class="team-honesty-note">No se muestran personas, invitaciones ni accesos de ejemplo.</p>
+} @else {
+  @if (error()) { <div class="alert error team-alert" role="alert">{{ error() }} @if (forbidden()) { <button class="button small" type="button" (click)="workspaceStore.loadWorkspaces()">Actualizar espacios</button> } @else { <button class="button small" type="button" (click)="refresh()" [disabled]="loading()">Reintentar</button> }</div> }
+  @if (message()) { <div class="alert success" role="status">{{ message() }}</div> }
+
+  @if (activeWorkspace(); as workspace) {
+    <section class="team-overview panel">
+      <div class="team-overview-main">
+        <span class="team-workspace-icon"><ac-icon name="film" /></span>
+        <div>
+          <span class="eyebrow">ESPACIO ACTIVO</span>
+          <h2>{{ workspace.name }}</h2>
+          <p>{{ workspace.kind === "team" ? "Un espacio compartido para crear, editar y revisar." : "Tu espacio personal. Crea un equipo cuando quieras trabajar con otras personas." }}</p>
+        </div>
+      </div>
+      <div class="team-overview-role">
+        <span>Tu rol</span><strong>{{ roleLabel(workspace.role) }}</strong>
+      </div>
+    </section>
+
+    <section class="team-role-guide" aria-label="Permisos por rol">
+      @for (item of capabilities; track item.role) {
+        <article class="team-role-card" [class.current-role]="roleLabel(actorRole()!) === item.role">
+          <span class="team-role-mark"><ac-icon name="shield" /></span>
+          <h2>{{ item.role }}</h2>
+          <p>{{ item.detail }}</p>
+          @if (roleLabel(actorRole()!) === item.role) { <span class="team-you-role">Tu acceso</span> }
+        </article>
+      }
+    </section>
+
+    <section class="team-members panel" aria-labelledby="team-members-heading">
+      <div class="team-section-heading">
+        <div><span class="eyebrow">PERSONAS CON ACCESO</span><h2 id="team-members-heading">Miembros</h2></div>
+        <button class="button small" type="button" (click)="refresh()" [disabled]="loading() || mutationBusy()"><ac-icon name="refresh" />{{ loading() ? "Actualizando…" : "Actualizar" }}</button>
+      </div>
+      <p class="team-contract-note">El contrato muestra el identificador de cada cuenta, no su nombre ni correo.</p>
+      @if (loading() && !members().length) { <p class="team-state" role="status">Cargando miembros del espacio…</p> }
+      @if (!loading() && !error() && !members().length) { <p class="team-state">No hay miembros disponibles para este espacio.</p> }
+      @for (member of members(); track member.userId) {
+        <article class="team-member-row">
+          <span class="avatar">{{ isCurrentMember(member) ? "Tú" : "AC" }}</span>
+          <div class="team-member-identity">
+            <strong>{{ isCurrentMember(member) ? "Tu cuenta" : "Cuenta del equipo" }}</strong>
+            <small>…{{ member.userId.slice(-8) }} · Se unió {{ member.createdAt | date: "mediumDate" }}</small>
+          </div>
+          <span class="team-member-role">{{ roleLabel(member.role) }}</span>
+          @if (canManageMember(member)) {
+            <div class="team-member-actions">
+              <label class="visually-hidden" [for]="'role-' + member.userId">Rol de la cuenta {{ member.userId.slice(-8) }}</label>
+              <select [id]="'role-' + member.userId" [value]="roleDraft(member)" (change)="setRoleDraft(member.userId, $any($event.target).value)" [disabled]="mutationBusy()">
+                @for (role of roleOptions(member); track role) { <option [value]="role">{{ roleLabel(role) }}</option> }
+              </select>
+              <button class="button small" type="button" (click)="saveRole(member)" [disabled]="mutationBusy() || roleDraft(member) === member.role">Guardar rol</button>
+              @if (pendingRemoval() === member.userId) {
+                <span class="team-confirm-copy">Retirar esta cuenta le quitará acceso al espacio.</span>
+                <button class="button small danger" type="button" (click)="confirmRemove(member)" [disabled]="mutationBusy()">Confirmar retiro</button>
+                <button class="button small" type="button" (click)="pendingRemoval.set('')" [disabled]="mutationBusy()">Cancelar</button>
+              } @else {
+                <button class="button small danger" type="button" (click)="pendingRemoval.set(member.userId)" [disabled]="mutationBusy()">Retirar</button>
+              }
+            </div>
+          }
+        </article>
+      }
+    </section>
+
+    @if (canManage()) {
+      @if (workspace.kind === "team") {
+        <section class="team-invite-panel panel" aria-labelledby="invite-heading">
+          <div><span class="eyebrow">TRABAJO EN EQUIPO</span><h2 id="invite-heading">Invita a alguien.</h2><p>El enlace de aceptación se envía al correo. La persona tendrá que entrar con esa misma cuenta.</p></div>
+          <form #inviteForm="ngForm" (ngSubmit)="inviteForm.valid && invite()">
+            <label>Correo de la persona<input type="email" name="inviteEmail" [(ngModel)]="inviteEmail" required email maxlength="254" autocomplete="email" placeholder="creador@ejemplo.com" [disabled]="mutationBusy()" /></label>
+            <label>Acceso inicial<select name="inviteRole" [(ngModel)]="inviteRole" [disabled]="mutationBusy()"><option value="editor">Editor</option><option value="reader">Lector</option>@if (actorRole() === "owner") { <option value="admin">Administrador</option> }</select></label>
+            <button class="button primary" type="submit" [disabled]="inviteForm.invalid || mutationBusy() || !canInviteSelected()">{{ mutationBusy() ? "Enviando…" : "Enviar invitación" }}<ac-icon name="arrow" /></button>
+          </form>
+          <p class="team-contract-note team-invitation-limit">Las invitaciones enviadas aún no se listan aquí: el OpenAPI generado no define el esquema de respuesta de esa consulta. No se muestra ni almacena el token del correo.</p>
+        </section>
+      } @else {
+        <section class="team-invite-panel panel">
+          <div><span class="eyebrow">CREA UN EQUIPO</span><h2>Invita a colaborar.</h2><p>Los espacios personales no admiten invitaciones. Crea un espacio de equipo y conserva tu espacio personal.</p></div>
+          <form #teamForm="ngForm" (ngSubmit)="teamForm.valid && createTeam()">
+            <label>Nombre del equipo<input name="teamName" [(ngModel)]="teamName" required maxlength="100" placeholder="Mi estudio" [disabled]="createBusy" /></label>
+            <button class="button primary" type="submit" [disabled]="teamForm.invalid || createBusy">{{ createBusy ? "Creando…" : "Crear espacio de equipo" }}<ac-icon name="arrow" /></button>
+          </form>
+        </section>
+      }
+    }
+
+    @if (canTransfer()) {
+      <section class="team-transfer panel" aria-labelledby="transfer-heading">
+        <div><span class="eyebrow">PROPIEDAD DEL ESPACIO</span><h2 id="transfer-heading">Transferir propiedad.</h2><p>La nueva persona propietaria tendrá control del equipo. Tú conservarás el rol de administrador.</p></div>
+        <div class="team-transfer-controls">
+          <label>Elegir nuevo propietario<select [(ngModel)]="transferTarget" name="transferTarget" [disabled]="mutationBusy()"><option value="">Selecciona un miembro</option>@for (member of members(); track member.userId) { @if (member.role !== "owner" && !isCurrentMember(member)) { <option [value]="member.userId">Cuenta …{{ member.userId.slice(-8) }} · {{ roleLabel(member.role) }}</option> } }</select></label>
+          @if (!transferConfirmation()) { <button class="button danger" type="button" (click)="transferConfirmation.set(true)" [disabled]="!transferTarget || mutationBusy()">Continuar</button> }
+          @else { <div class="team-transfer-confirm" role="group" aria-label="Confirmar transferencia de propiedad"><p>Vas a transferir el control permanente de <strong>{{ workspace.name }}</strong>. Revisa el miembro seleccionado antes de continuar.</p><button class="button danger" type="button" (click)="transferOwnership()" [disabled]="mutationBusy()">Confirmar transferencia</button><button class="button" type="button" (click)="transferConfirmation.set(false)" [disabled]="mutationBusy()">Cancelar</button></div> }
+        </div>
+      </section>
+    }
+  } @else {
+    <section class="panel team-no-workspace"><h2>No hay un espacio seleccionado.</h2><p>Actualiza la lista de espacios o vuelve a entrar al estudio.</p><button class="button" type="button" (click)="workspaceStore.loadWorkspaces()">Actualizar espacios</button></section>
+  }
+}

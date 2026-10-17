@@ -9,7 +9,7 @@ import {
 } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { ActivatedRoute } from "@angular/router";
+import { ActivatedRoute, RouterLink } from "@angular/router";
 import type { Schema } from "../../../core/contracts/api-types";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
@@ -19,7 +19,7 @@ import { isValidIanaTimezone } from '../models/timezone';
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-settings",
-  imports: [FormsModule, DatePipe, IconComponent],
+  imports: [FormsModule, DatePipe, IconComponent, RouterLink],
   templateUrl: "./settings.component.html",
   styleUrl: "./settings.component.css",
 })

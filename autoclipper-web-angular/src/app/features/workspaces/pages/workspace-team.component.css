@@ -1,0 +1,59 @@
+@layer components {
+ac-workspace-team { display: block; }
+.team-page-heading { margin-bottom: 22px; }
+.team-page-heading h1 { letter-spacing: -.045em; }
+.team-kind-badge { padding: 8px 12px; border: 1px solid #d4deed; border-radius: 99px; color: #315184; background: #f5f8fd; font-size: 12px; font-weight: 650; }
+.team-overview { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; }
+.team-overview-main { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.team-workspace-icon,.team-note-icon,.team-role-mark { display: grid; flex: 0 0 auto; place-items: center; color: var(--accent); background: var(--tint); }
+.team-workspace-icon { width: 48px; height: 48px; border-radius: 11px; }
+.team-overview h2 { margin: 5px 0; font-size: 23px; overflow-wrap: anywhere; }
+.team-overview p { margin: 0; color: var(--muted); font-size: 13px; }
+.team-overview-role { display: grid; gap: 4px; padding-left: 22px; border-left: 1px solid var(--border); min-width: 150px; }
+.team-overview-role span,.team-contract-note { color: var(--muted); font-size: 12px; }
+.team-overview-role strong { color: var(--accent); font-size: 15px; }
+.team-role-guide { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
+.team-role-card { position: relative; min-width: 0; min-height: 150px; padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: white; }
+.team-role-mark { width: 30px; height: 30px; margin-bottom: 14px; border-radius: 8px; }
+.team-role-card h2 { margin: 0 0 7px; font-size: 14px; }
+.team-role-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.team-role-card.current-role { border-color: #9eb5df; background: #f7f9fd; }
+.team-you-role { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 11px; font-weight: 700; }
+.team-members { margin-top: 20px; }
+.team-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.team-section-heading h2,.team-invite-panel h2,.team-transfer h2 { margin: 5px 0 8px; font-size: 22px; }
+.team-contract-note { margin: 5px 0 16px; line-height: 1.5; }
+.team-member-row { display: flex; align-items: center; gap: 13px; min-width: 0; padding: 15px 0; border-top: 1px solid var(--border); }
+.team-member-identity { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.team-member-identity strong { font-size: 13px; }
+.team-member-identity small { color: var(--muted); font-size: 11px; }
+.team-member-role { min-width: 115px; color: #354b6b; font-size: 12px; font-weight: 650; }
+.team-member-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.team-member-actions select,.team-transfer-controls select { max-width: 180px; min-height: 38px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--text); background: white; font-size: 12px; }
+.team-member-actions .button { min-height: 36px; padding: 7px 9px; font-size: 11px; }
+.team-confirm-copy { flex-basis: 100%; color: #7a3434; font-size: 11px; text-align: right; }
+.team-invite-panel,.team-transfer { display: grid; grid-template-columns: minmax(0,1fr) minmax(320px,1.1fr); align-items: center; gap: 28px; margin-top: 20px; padding: 24px; }
+.team-invite-panel > div > p,.team-transfer > div > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.team-invite-panel form { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(130px,.8fr) auto; align-items: end; gap: 10px; }
+.team-invite-panel label,.team-transfer-controls label { display: grid; gap: 7px; color: var(--text); font-size: 12px; font-weight: 650; }
+.team-invite-panel input,.team-invite-panel select,.team-transfer-controls select { width: 100%; min-width: 0; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: white; color: var(--text); font: inherit; }
+.team-invite-panel form > button { white-space: nowrap; }
+.team-invitation-limit { grid-column: 1/-1; margin: -10px 0 0; }
+.team-transfer { grid-template-columns: minmax(0,1fr) minmax(280px,.8fr); border-color: #d8dce5; }
+.team-transfer-controls { display: grid; gap: 12px; justify-items: start; }
+.team-transfer-controls select { max-width: 360px; }
+.team-transfer-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 13px; border: 1px solid #e4bebe; border-radius: 9px; background: #fff8f8; }
+.team-transfer-confirm p { flex-basis: 100%; margin: 0; color: #613b3b; font-size: 12px; line-height: 1.55; }
+.team-state { padding: 20px 0 5px; color: var(--muted); font-size: 13px; }
+.team-alert { margin: 12px 0; }
+.team-alert .button { margin-left: 10px; }
+.team-design-note { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; padding: 24px; }
+.team-note-icon { width: 48px; height: 48px; border-radius: 11px; }
+.team-design-note h2 { margin: 0 0 7px; font-size: 21px; }
+.team-design-note p,.team-honesty-note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.team-honesty-note { padding: 5px 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+@media(max-width:1100px) { .team-role-guide { grid-template-columns: repeat(2,minmax(0,1fr)); } .team-invite-panel { grid-template-columns: 1fr; gap: 18px; } }
+@media(max-width:700px) { .team-overview { align-items: flex-start; flex-direction: column; } .team-overview-role { padding: 0; border: 0; } .team-member-row { flex-wrap: wrap; } .team-member-role { margin-left: auto; text-align: right; } .team-member-actions { width: 100%; justify-content: flex-start; padding-left: 45px; } .team-confirm-copy { text-align: left; } .team-invite-panel form { grid-template-columns: 1fr 1fr; } .team-invite-panel form > label:first-child { grid-column: 1/-1; } .team-invite-panel form > button { grid-column: 1/-1; } .team-transfer { grid-template-columns: 1fr; gap: 18px; } }
+@media(max-width:500px) { .team-role-guide { grid-template-columns: 1fr; } .team-role-card { min-height: 0; } .team-design-note { align-items: flex-start; flex-direction: column; } .team-invite-panel form { grid-template-columns: 1fr; } .team-invite-panel form > label:first-child,.team-invite-panel form > button { grid-column: auto; } .team-member-actions { padding-left: 0; } .team-member-identity small { overflow-wrap: anywhere; } }
+}

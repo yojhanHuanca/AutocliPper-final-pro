@@ -321,14 +321,13 @@
         design ? "Exploración de estructura" : "Sesión autenticada"
       }}</span>
     </article>
-    <article class="panel compact">
+    <a class="panel compact settings-team-link" [routerLink]="design ? '/design/team' : '/app/team'">
       <ac-icon name="users" />
-      <h3>Equipos e integraciones.</h3>
+      <h3>Equipo y espacio.</h3>
       <p>
-        El selector del estudio usa tus espacios y roles reales. La
-        administración avanzada de membresías e integraciones tendrá su propia
-        entrega de interfaz.
+        {{ design ? "Explora los roles y la propuesta de organización." : "Consulta los miembros, permisos e invitaciones de tu espacio." }}
       </p>
-    </article>
+      <span class="text-link">{{ design ? "Ver propuesta" : "Administrar equipo" }} <ac-icon name="arrow" /></span>
+    </a>
   </aside>
 </div>

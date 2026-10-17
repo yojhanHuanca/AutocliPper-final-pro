@@ -18,6 +18,9 @@ export { uploadContentType } from '../src/app/features/projects/models/upload-fi
 export { ProjectComponent } from '../src/app/features/projects/pages/project-detail.component';
 export { ProjectsApi } from '../src/app/features/projects/data-access/projects-api.service';
 export { WorkspaceStore } from '../src/app/features/workspaces/data-access/workspace.store';
+export { WorkspaceTeamApi } from '../src/app/features/workspaces/data-access/workspace-team.api';
+export { WorkspaceTeamComponent } from '../src/app/features/workspaces/pages/workspace-team.component';
+export { canInviteAs, canManageMember, canManageWorkspace, canTransferOwnership, hasWorkspaceLevel } from '../src/app/features/workspaces/models/workspace-permissions';
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
 export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';

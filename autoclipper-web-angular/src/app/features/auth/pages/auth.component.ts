@@ -6,6 +6,7 @@ import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from "./auth-story";
+import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -22,7 +23,8 @@ import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from "./a
 export class AuthComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly api = inject(AuthApi);
-  private readonly session = inject(SessionStore);
+  readonly session = inject(SessionStore);
+  private readonly workspaces = inject(WorkspaceStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly busy = signal(false);
@@ -31,6 +33,8 @@ export class AuthComponent {
   readonly motionPaused = signal(false);
   readonly reducedMotion = signal(false);
   readonly stepIndex = signal(0);
+  readonly invitationReady = signal(false);
+  readonly invitationChecking = signal(false);
   readonly accent = computed(() => AUTH_STORY_ACCENTS[this.stepIndex() % AUTH_STORY_ACCENTS.length]);
   readonly accentSoft = computed(() => `${this.accent()}24`);
   readonly activeScene = computed(() => this.scenes[this.stepIndex()]);
@@ -65,6 +69,14 @@ export class AuthComponent {
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
     if (this.token) void this.router.navigate([], { relativeTo: this.route, queryParams: { token: null }, queryParamsHandling: 'merge', replaceUrl: true });
     if (this.route.snapshot.queryParamMap.get('connection') === 'unavailable') this.error.set('No pudimos consultar tu espacio. Revisa la conexión con el servidor y vuelve a entrar.');
+    if (this.mode === "invitation") {
+      this.invitationChecking.set(true);
+      void this.session.restore().catch((error) => this.error.set(errorMessage(error))).finally(() => {
+        this.invitationChecking.set(false);
+        this.invitationReady.set(true);
+      });
+      this.destroyRef.onDestroy(() => { this.token = ""; });
+    }
   }
   get mode(): string {
     return this.route.snapshot.data["mode"] as string;
@@ -73,6 +85,7 @@ export class AuthComponent {
     return (
       {
         login: "Qué bueno verte.",
+        invitation: "Te invitaron a un equipo.",
         register: "Dale otra vida a tus ideas.",
         verify: "Confirma tu correo.",
         forgot: "Volvamos a conectar.",
@@ -81,7 +94,9 @@ export class AuthComponent {
     )[this.mode];
   }
   get description(): string {
-    return this.mode === "login"
+    return this.mode === "invitation"
+      ? "Entra con el correo al que llegó la invitación y confirma el acceso al espacio."
+      : this.mode === "login"
       ? "Entra y continúa donde dejaste tu historia."
       : this.mode === "register"
         ? "Crea tu cuenta para empezar con tu propio material."
@@ -91,6 +106,7 @@ export class AuthComponent {
     return (
       {
         login: "Entrar al estudio",
+        invitation: this.session.user() ? "Aceptar invitación" : "Entrar para revisar invitación",
         register: "Crear cuenta",
         verify: "Verificar correo",
         forgot: "Solicitar recuperación",
@@ -98,13 +114,30 @@ export class AuthComponent {
       } as Record<string, string>
     )[this.mode];
   }
+  async changeInvitationAccount(): Promise<void> {
+    await this.session.logout();
+    this.email = "";
+    this.message.set("");
+  }
   async submit(): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set("");
     this.message.set("");
     try {
-      if (this.mode === "login") {
+      if (this.mode === "invitation") {
+        if (!this.token) throw new Error("El enlace de invitación no contiene un token válido. Pide a quien te invitó que envíe uno nuevo.");
+        if (!this.session.user()) {
+          await this.session.login({ email: this.email.trim(), password: this.password });
+          this.password = "";
+          this.message.set("Sesión iniciada. Revisa que esta sea la cuenta que recibió el correo y pulsa «Aceptar invitación» para confirmar.");
+          return;
+        }
+        await this.workspaces.acceptInvitation(this.token);
+        this.token = "";
+        this.message.set("Invitación aceptada. Ya tienes acceso al espacio.");
+        await this.router.navigateByUrl("/app");
+      } else if (this.mode === "login") {
         await this.session.login({
           email: this.email.trim(),
           password: this.password,

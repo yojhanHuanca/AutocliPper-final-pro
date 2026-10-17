@@ -9,29 +9,48 @@ export class WorkspaceStore {
   readonly loaded = signal(false);
   private creationKey = "";
   private creationName = "";
+  private creationKind: "personal" | "team" = "personal";
+  private loadVersion = 0;
   async createPersonal(name: string): Promise<void> {
-    if (name !== this.creationName || !this.creationKey) {
+    await this.create(name, "personal");
+  }
+  async createTeam(name: string): Promise<void> {
+    await this.create(name, "team");
+  }
+  private async create(name: string, kind: "personal" | "team"): Promise<void> {
+    if (name !== this.creationName || kind !== this.creationKind || !this.creationKey) {
       this.creationName = name;
+      this.creationKind = kind;
       this.creationKey = crypto.randomUUID();
     }
-    await this.api.post(
+    const created = await this.api.post<Schema<"CreatedWorkspaceDto">>(
       "/workspaces",
-      { name, kind: "personal" },
+      { name, kind },
       this.creationKey,
     );
     this.creationKey = "";
     await this.loadWorkspaces();
+    if (this.workspaces().some((workspace) => workspace.id === created.id)) {
+      this.workspaceId.set(created.id);
+    }
   }
   async loadWorkspaces(): Promise<void> {
+    const version = ++this.loadVersion;
     const result =
       await this.api.get<Schema<"WorkspaceListDto">>("/workspaces");
+    if (version !== this.loadVersion) return;
     this.workspaces.set(result.items);
     this.loaded.set(true);
     if (!result.items.some((w) => w.id === this.workspaceId()))
       this.workspaceId.set(result.items[0]?.id ?? "");
   }
 
+  async acceptInvitation(token: string): Promise<void> {
+    await this.api.post<void>("/workspaces/invitations/accept", { token });
+  }
+
   clear(): void {
+    this.loadVersion += 1;
     this.workspaces.set([]);
     this.workspaceId.set("");
     this.loaded.set(false);
