@@ -1,15 +1,19 @@
-import { Component, ViewEncapsulation, inject, signal } from "@angular/core";
-import { WorkspaceSetupComponent } from '../../workspaces/components/workspace-setup/workspace-setup.component';
+import { Component, ViewEncapsulation, computed, effect, inject } from "@angular/core";
+import { DatePipe, DecimalPipe } from "@angular/common";
 import { RouterLink } from "@angular/router";
 import { DESIGN_MODE } from "../../../core/config/design-mode.token";
 import { SessionStore } from "../../../core/auth/session.store";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
-import { ProjectCollectionComponent } from "../../projects/components/project-collection/project-collection.component";
+import { WorkspaceSetupComponent } from "../../workspaces/components/workspace-setup/workspace-setup.component";
+import { hasWorkspaceLevel } from "../../workspaces/models/workspace-permissions";
+import { consumptionQuotaProgress } from "../../consumption/models/ledger-labels";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { workspaceRoleLabel } from "../../../core/labels/workspace-role-label";
+import { DashboardState, type HomeSource } from "../state/dashboard.state";
 @Component({
   selector: "ac-dashboard",
-  imports: [RouterLink, IconComponent, ProjectCollectionComponent, WorkspaceSetupComponent],
+  imports: [RouterLink, DatePipe, DecimalPipe, IconComponent, WorkspaceSetupComponent],
+  providers: [DashboardState],
   templateUrl: "./dashboard.component.html",
   styleUrl: "./dashboard.component.css",
   encapsulation: ViewEncapsulation.None,
@@ -18,20 +22,25 @@ export class DashboardComponent {
   readonly design = inject(DESIGN_MODE);
   readonly session = inject(SessionStore);
   readonly workspace = inject(WorkspaceStore);
-  readonly projectsCount = signal<number | null>(null);
-  nextClipLabel(): string {
-    if (this.design) return "Empieza con un proyecto";
-    if (this.projectsCount() === null) return "Consultando proyectos…";
-    return this.projectsCount() === 0 ? "Crea tu primer proyecto" : "Abre un proyecto";
+  readonly vm = inject(DashboardState);
+  readonly activeWorkspace = computed(() => this.workspace.workspaces().find(item => item.id === this.workspace.workspaceId()) ?? null);
+  readonly canCreate = computed(() => !this.design && !this.vm.denied() && this.workspace.loaded() && !!this.activeWorkspace() && hasWorkspaceLevel(this.activeWorkspace()!.role, "editor"));
+  readonly resumeDraft = computed(() => this.vm.drafts()[0] ?? null);
+  readonly resumeProject = computed(() => this.vm.projects()[0] ?? null);
+  readonly quotaProgress = consumptionQuotaProgress;
+  readonly base = this.design ? "/design" : "/app";
+  constructor() {
+    effect(() => {
+      if (this.design) return;
+      const active = this.activeWorkspace();
+      void this.vm.load(this.workspace.loaded() && active ? active.id : "");
+    });
   }
-  nextClipDescription(): string {
-    if (this.design) return "Los videos y borradores aparecen dentro de cada proyecto.";
-    if (this.projectsCount() === null) return "El siguiente paso aparecerá al cargar la lista.";
-    return this.projectsCount() === 0 ? "Ponle nombre y carga tu primer video." : "Elige un video para continuar con tu clip.";
-  }
-  roleLabel(): string {
-    if (this.design) return "Tu rol aparecerá aquí";
-    const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
-    return role ? workspaceRoleLabel(role) : "Sin espacio";
+  refresh(): void { if (!this.design && this.activeWorkspace()) void this.vm.load(this.activeWorkspace()!.id); }
+  roleLabel(): string { const role = this.activeWorkspace()?.role; return !this.vm.denied() && role ? workspaceRoleLabel(role) : "Acceso pendiente"; }
+  sourceLabel(source: HomeSource): string {
+    if (source.state === "aborted") return "Carga cancelada";
+    if (source.state === "pending") return "Sin confirmar";
+    return ({ succeeded: "Inspeccionado", failed: "Inspección rechazada", queued: "En espera", running: "Inspeccionando" } as Record<string, string>)[source.inspection?.status ?? ""] ?? "Inspección pendiente";
   }
 }

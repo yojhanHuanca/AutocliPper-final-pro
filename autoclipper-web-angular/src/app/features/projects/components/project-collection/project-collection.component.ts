@@ -47,6 +47,7 @@ export class ProjectCollectionComponent {
   private creationKey = "";
   private creationBody = "";
   constructor() {
+    if (!this.design && this.route.snapshot.queryParamMap?.get("new") === "1") this.newProject.set(true);
     effect(() => {
       const id = this.workspace.workspaceId();
       if (!this.design && id) void this.load(id);

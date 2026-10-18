@@ -1,123 +1,76 @@
-@if (!design && !workspace.loaded()) {
-  <div class="loading-state workspace-loading" role="status"><span class="spinner"></span>Consultando tus espacios de trabajo…</div>
-} @else if (!design && !workspace.workspaces().length) {
-  <ac-workspace-setup />
-}
-<section class="page-heading">
-  <div>
-    <span class="eyebrow">{{ !design && !workspace.workspaces().length ? "EL PRIMER PASO" : "HAZ ESPACIO PARA LA PRÓXIMA IDEA" }}</span>
-    <h1>{{ !design && !workspace.workspaces().length ? "Primero, tu espacio." : "Tu contenido, otra historia." }}</h1>
-    <p>
-      {{
-        design
-          ? "Una mirada al espacio donde tus ideas tomarán forma."
-        : !workspace.workspaces().length
-          ? "Primero crea un espacio para organizar tu video y empezar tu primer clip."
-          : "Hola, " +
-              (session.user()?.name ?? "") +
-              ". Continúa un proyecto o empieza con un nuevo video."
-      }}
-    </p>
+<div class="creator-home">
+<header class="home-heading">
+  <div><span class="eyebrow">TU ESPACIO CREATIVO</span><h1>Tu estudio, a punto.</h1><p>{{ design ? 'Todo lo que necesitas para volver a tu contenido.' : 'Hola, ' + (session.user()?.name ?? '') + '. Retoma una idea o empieza tu próximo corte.' }}</p></div>
+  <div class="home-heading-actions">
+    @if (canCreate()) { <a class="button primary" routerLink="/app/projects" [queryParams]="{new:'1'}"><ac-icon name="plus" />Nuevo proyecto</a> }
+    @else { <a class="button primary" [routerLink]="base + '/projects'"><ac-icon name="folder" />Ver proyectos</a> }
+    @if (!design && activeWorkspace()) { <button class="home-refresh" type="button" (click)="refresh()" [disabled]="vm.loading()"><ac-icon name="clock" />{{ vm.loading() ? 'Actualizando…' : 'Actualizar inicio' }}</button> }
   </div>
-  @if (design || workspace.workspaces().length) { <a
-    class="button primary"
-    [routerLink]="design ? '/design/projects' : '/app/projects'"
-    ><ac-icon name="folder" />{{ design ? "Explorar proyectos" : "Ver mis proyectos" }}</a
-  > }
-</section>
-@if (design || workspace.workspaces().length) {
-<div class="stats-grid">
-  <article class="stat-card">
-    <span class="stat-icon"><ac-icon name="folder" /></span>
-    <div>
-      <span>Proyectos consultados</span
-      ><strong>{{ projectsCount() ?? "—" }}</strong
-      ><small>{{
-        projectsCount() !== null
-          ? "Listado actual · máximo 100"
-          : design
-            ? "Conecta tu cuenta para consultar"
-            : "Esperando datos del servidor"
-      }}</small>
-    </div>
-  </article>
-  <article class="stat-card">
-    <span class="stat-icon"><ac-icon name="film" /></span>
-    <div>
-      <span>Siguiente paso</span
-      ><strong class="stat-text">{{ nextClipLabel() }}</strong
-      ><small>{{ nextClipDescription() }}</small>
-    </div>
-  </article>
-  <article class="stat-card">
-    <span class="stat-icon"><ac-icon name="shield" /></span>
-    <div>
-      <span>Tu espacio, tus permisos</span
-      ><strong class="stat-text">{{ roleLabel() }}</strong
-      ><small>{{
-        design
-          ? "Sin permisos administrativos simulados"
-          : "Permisos comprobados por el servidor"
-      }}</small>
-    </div>
-  </article>
-</div>
-}
-@if (design || workspace.workspaces().length) {
-<div class="dashboard-grid">
-  <ac-project-collection
-    [compact]="true"
-    (loadedCount)="projectsCount.set($event)"
-  />
-  <aside class="dashboard-aside">
-    <article class="getting-started">
-      <span class="eyebrow">DEL VIDEO AL CLIP</span>
-      <h2>Un recorrido. Tu propio ritmo.</h2>
-      <ol>
-        <li>
-          <span>01</span>
-          <div>
-            <strong>Crea tu proyecto</strong>
-            <p>Un lugar para tu próxima idea.</p>
-          </div>
-        </li>
-        <li>
-          <span>02</span>
-          <div>
-            <strong>Sube tu material</strong>
-            <p>Privado, validado y listo para trabajar.</p>
-          </div>
-        </li>
-        <li>
-          <span>03</span>
-          <div>
-            <strong>Elige tu momento</strong>
-            <p>Transcripción local e intervalo manual.</p>
-          </div>
-        </li>
-        <li>
-          <span>04</span>
-          <div>
-            <strong>Dale forma y exporta</strong>
-            <p>Revisiones, subtítulos y un nuevo corte.</p>
-          </div>
-        </li>
-      </ol>
-      <ac-icon class="aside-scissors" name="scissors" />
-    </article>
-    <article class="panel compact">
-      <ac-icon name="users" />
-      <h3>Historias que se revisan en equipo.</h3>
-      <p>
-        Comentarios y aprobaciones viven dentro del editor de cada clip. El
-        acceso depende de tu rol.
-      </p>
-      @if (design) {
-        <a class="text-link" routerLink="/design/editor"
-          >Explorar editor<ac-icon name="arrow"
-        /></a>
+</header>
+@if (!design && !workspace.loaded()) { <p class="alert" role="status">Consultando tus espacios…</p> }
+@else if (!design && !workspace.workspaces().length) { <ac-workspace-setup /> }
+@else {
+  <div class="home-workspace-line"><span><i></i>{{ design ? 'Tu espacio aparecerá al conectar la cuenta' : activeWorkspace()?.name ?? 'Elige un espacio' }}</span><span>{{ design ? 'Vista de estructura' : roleLabel() }}</span></div>
+  @if (vm.error()) { <div class="alert error" role="alert">{{ vm.error() }} <button class="button small" type="button" (click)="refresh()" [disabled]="vm.loading()">Reintentar</button></div> }
+  @if (!design && activeWorkspace()?.role === 'reader') { <p class="alert" role="status">Tienes acceso de lectura. Puedes retomar las consultas del proyecto y revisar sus borradores; crear material requiere rol de editor.</p> }
+  <div class="home-top-grid">
+    <section class="home-resume" aria-labelledby="home-resume-heading">
+      <div class="home-resume-copy">
+        <span class="home-kicker">{{ resumeDraft() ? 'RETOMA TU EDICIÓN' : resumeProject() ? 'VUELVE A TU PROYECTO' : 'DEL DIRECTO AL PRÓXIMO CLIP' }}</span>
+        @if (resumeDraft(); as draft) {
+          <h2 id="home-resume-heading">{{ draft.name }}</h2><p>{{ draft.projectName }} · Revisión {{ draft.version }}</p><span class="home-resume-date">Guardada {{ draft.updatedAt | date:'medium' }}</span>
+          <a class="button" [routerLink]="['/app/edits',draft.id]">Continuar en el editor<ac-icon name="arrow" /></a>
+        } @else if (resumeProject(); as project) {
+          <h2 id="home-resume-heading">{{ project.name }}</h2><p>{{ vm.loading() ? 'Consultando los borradores de tus proyectos recientes…' : vm.draftsError() ? 'Abre el proyecto para consultar sus borradores y material.' : 'Tu siguiente corte empieza con el video de este proyecto.' }}</p>
+          <a class="button" [routerLink]="['/app/projects',project.id]">Abrir mesa del proyecto<ac-icon name="arrow" /></a>
+        } @else {
+          <h2 id="home-resume-heading">Dale espacio a tu próxima historia.</h2><p>{{ vm.loading() ? 'Estamos consultando tu trabajo. Tus proyectos aparecerán aquí.' : vm.error() ? 'No pudimos confirmar tu trabajo. Reintenta la consulta para continuar.' : 'Organiza la grabación de tu directo, episodio o video. Un proyecto reúne tu material y cada nuevo corte.' }}</p>
+          <a class="button" [routerLink]="design ? '/login' : '/app/projects'" [queryParams]="canCreate() ? {new:'1'} : null">{{ design ? 'Conectar mi cuenta' : canCreate() ? 'Crear proyecto' : 'Consultar proyectos' }}<ac-icon name="arrow" /></a>
+        }
+      </div>
+      <div class="home-cut-art" aria-hidden="true"><span class="home-cut-frame"></span><span class="home-cut-frame"></span><span class="home-cut-frame"></span><span class="home-cut-line"></span><ac-icon name="scissors" /></div>
+    </section>
+    <section class="home-allowance panel" aria-labelledby="home-allowance-heading">
+      <div class="home-section-top"><span class="eyebrow">MATERIAL POR ETAPA</span><ac-icon name="chart" /></div><h2 id="home-allowance-heading">Espacio para crear.</h2>
+      @if (vm.usage(); as usage) {
+        <div class="home-available"><strong>{{ usage.availableSeconds | number:'1.0-0' }}</strong><span>segundos disponibles</span></div>
+        <progress max="100" [value]="quotaProgress(usage)" aria-label="Material consumido o reservado de la asignación del periodo"></progress>
+        <dl class="home-usage-details"><div><dt>Consumido</dt><dd>{{ usage.consumedSeconds | number:'1.0-0' }} s</dd></div><div><dt>Reservado</dt><dd>{{ usage.reservedSeconds | number:'1.0-0' }} s</dd></div></dl>
+        <p>Periodo UTC: {{ usage.periodStart | date:'mediumDate':'UTC' }} – {{ usage.periodEnd | date:'mediumDate':'UTC' }}.</p>
+      } @else { <div class="home-available"><strong>—</strong><span>{{ vm.loading() ? 'Consultando la asignación…' : 'Sin resumen confirmado' }}</span></div><p>{{ vm.usageError() || (design ? 'Al conectar tu cuenta verás el consumo real de tu espacio.' : 'El consumo se muestra cuando el servicio confirma los datos de este espacio.') }}</p> }
+      <a class="text-link" [routerLink]="design ? '/login' : '/app/consumption'">{{ design ? 'Conectar cuenta' : 'Ver consumo y movimientos' }}<ac-icon name="arrow" /></a><small>Asignación de desarrollo · Sin cobros ni precios.</small>
+    </section>
+  </div>
+  <section class="home-drafts" aria-labelledby="home-drafts-heading">
+    <div class="home-section-heading"><div><h2 id="home-drafts-heading">Vuelve a tus cortes.</h2><p>Borradores de tus proyectos más recientes · hasta cuatro consultados.</p></div><a class="text-link" [routerLink]="base + '/projects'">Todos los proyectos<ac-icon name="arrow" /></a></div>
+    @if (vm.draftsError()) { <p class="alert" role="status">{{ vm.draftsError() }}</p> }
+    <div class="home-draft-grid">
+      @for (draft of vm.drafts(); track draft.id) {
+        <a class="home-draft-card" [routerLink]="['/app/edits',draft.id]"><div class="home-draft-art" aria-hidden="true"><ac-icon name="captions" /><span>Revisión {{ draft.version }}</span></div><div class="home-draft-body"><span>{{ draft.projectName }}</span><h3>{{ draft.name }}</h3><p>Guardado {{ draft.updatedAt | date:'mediumDate' }}</p><strong>Abrir editor<ac-icon name="arrow" /></strong></div></a>
+      } @empty {
+        <div class="home-empty-work"><span class="home-empty-icon"><ac-icon name="scissors" /></span><div><h3>{{ vm.loading() ? 'Buscando tus revisiones…' : vm.draftsError() || vm.error() ? 'No se confirmó la lista de borradores.' : 'Tu próximo corte tendrá un lugar aquí.' }}</h3><p>{{ design ? 'Conecta tu cuenta para retomar los borradores que ya guardaste.' : 'Abre un proyecto, carga tu material y crea un borrador para editarlo.' }}</p></div><a class="button" [routerLink]="base + '/projects'">Ir a proyectos<ac-icon name="arrow" /></a></div>
       }
-    </article>
-  </aside>
-</div>
+    </div>
+  </section>
+  <div class="home-bottom-grid">
+    <section class="home-projects panel" aria-labelledby="home-projects-heading">
+      <div class="home-section-heading"><div><h2 id="home-projects-heading">Tus proyectos recientes.</h2><p>Ordenados por fecha de creación.</p></div><ac-icon name="folder" /></div>
+      @for (project of vm.projects().slice(0,4); track project.id) { <a class="home-project-row" [routerLink]="['/app/projects',project.id]"><span class="home-project-symbol"><ac-icon name="film" /></span><div><h3>{{ project.name }}</h3><p>Creado {{ project.createdAt | date:'mediumDate' }} · Versión {{ project.version }}</p></div><ac-icon name="arrow" /></a> }
+      @empty { <div class="home-project-empty"><ac-icon name="folder" /><p>{{ vm.loading() ? 'Consultando proyectos…' : vm.error() ? 'Lista no disponible. Reintenta desde el aviso superior.' : design ? 'Tus proyectos aparecerán al conectar la cuenta.' : 'Aún no hay proyectos consultados en este espacio.' }}</p></div> }
+      <a class="text-link" [routerLink]="base + '/projects'">Abrir biblioteca de proyectos<ac-icon name="arrow" /></a>
+    </section>
+    <section class="home-material panel" aria-labelledby="home-material-heading">
+      <div class="home-section-heading"><div><h2 id="home-material-heading">Material de tus borradores.</h2><p>Hasta tres fuentes vinculadas a los cortes consultados.</p></div><ac-icon name="upload" /></div>
+      @if (vm.sourcesError()) { <p class="alert" role="status">{{ vm.sourcesError() }}</p> }
+      @for (source of vm.sources(); track source.id) {
+        <a class="home-source-row" [routerLink]="['/app/projects',source.projectId]"><span class="home-source-symbol"><ac-icon name="film" /></span><div><h3>{{ source.projectName }}</h3><span class="home-source-state">{{ sourceLabel(source) }}</span><p>{{ source.bytes / 1024 / 1024 | number:'1.1-1' }} MiB @if (source.inspection?.result; as metadata) { @if (source.inspection.status === 'succeeded') { · {{ metadata.durationSeconds | number:'1.1-1' }} s } }</p></div><ac-icon name="arrow" /></a>
+      } @empty { <div class="home-project-empty"><ac-icon name="upload" /><p>{{ vm.loading() ? 'Consultando fuentes…' : 'Las fuentes se muestran cuando un borrador consultado tiene material confirmado. Puedes cargar un video desde su proyecto.' }}</p></div> }
+    </section>
+  </div>
+  <nav class="home-next-steps" aria-label="Próximos pasos de creación">
+    <a [routerLink]="base + '/projects'" [queryParams]="canCreate() ? {new:'1'} : null"><ac-icon name="upload" /><div><strong>Trae tu grabación</strong><span>Elige un proyecto y carga tu video.</span></div><ac-icon name="arrow" /></a>
+    <a [routerLink]="resumeDraft() ? ['/app/edits',resumeDraft()!.id] : base + '/projects'"><ac-icon name="captions" /><div><strong>Encuentra tu siguiente corte</strong><span>Continúa una revisión o prepara un intervalo.</span></div><ac-icon name="arrow" /></a>
+    <a [routerLink]="base + '/team'"><ac-icon name="users" /><div><strong>Revisa con tu equipo</strong><span>Consulta quién puede crear y revisar.</span></div><ac-icon name="arrow" /></a>
+  </nav>
 }
+</div>

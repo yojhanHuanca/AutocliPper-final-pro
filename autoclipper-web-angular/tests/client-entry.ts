@@ -46,3 +46,5 @@ export { HttpErrorResponse } from '@angular/common/http';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';
 
 export { changesPage, focusMain, containTab } from '../src/app/core/a11y/navigation-focus';
+
+export { DashboardState } from '../src/app/features/dashboard/state/dashboard.state';
