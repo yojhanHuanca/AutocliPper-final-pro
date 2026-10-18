@@ -1,26 +1,49 @@
 <span class="eyebrow">EXPORTACIONES</span>
 <h2>Una versión concreta.</h2>
 <p>Cada exportación está ligada a una revisión guardada.</p>
+<section class="export-summary" aria-labelledby="current-export-title">
+  <h3 id="current-export-title">@if (vm.draft(); as draft) { Revisión guardada {{ draft.version }} } @else { Sin revisión cargada }</h3>
+  @if (vm.dirty()) {
+    <p>Hay cambios sin guardar. Los archivos disponibles conservan los subtítulos de sus propias revisiones.</p>
+    <button class="button primary" type="button" (click)="vm.saveAndRender()" [disabled]="!vm.canSaveRevision()">Guardar y exportar</button>
+  } @else if (vm.currentRenderPending()) {
+    <p>Esta revisión ya tiene una solicitud. Consulta su estado antes de solicitar otra exportación.</p>
+  } @else if (vm.draft()) {
+    @if (vm.exportsLoaded()) { <p>En la última consulta: {{ vm.currentRevisionExports().length }} exportaciones de esta revisión.</p> }
+    @else { <p>La lista de exportaciones aún no está disponible.</p> }
+    <button class="button" type="button" (click)="vm.render()" [disabled]="!vm.canEditCollaboration() || vm.busy()">Exportar esta revisión</button>
+  } @else { <p>Abre un borrador autorizado para consultar sus exportaciones.</p> }
+  @if (vm.renderReceipt(); as receipt) {
+    <p role="status">Solicitud recibida para la revisión {{ receipt.version }}.
+      @if (vm.receiptExport(); as exported) { Estado: {{ vm.exportStatusLabel(exported.status) }}. }
+      @else { Todavía no aparece en la lista consultada. Actualiza para comprobar su estado. }
+    </p>
+  }
+</section>
 <button
   class="button full"
   type="button"
   (click)="vm.loadExports()"
-  [disabled]="vm.design || vm.busy()"
+  [disabled]="vm.design || vm.busy() || vm.exportsLoading()"
+  [attr.aria-busy]="vm.exportsLoading()"
 >
-  Actualizar exportaciones
+  {{ vm.exportsLoading() ? 'Consultando exportaciones…' : 'Actualizar exportaciones' }}
 </button>
 @if (vm.exportsError()) {
   <div class="alert error" role="alert">
     {{ vm.exportsError() }}
-    <button class="button small" type="button" (click)="vm.loadExports()">Reintentar consulta</button>
+    <button class="button small" type="button" (click)="vm.loadExports()" [disabled]="vm.busy() || vm.exportsLoading()">Reintentar consulta</button>
   </div>
 }
 @for (item of vm.exports(); track item.id) {
   <article class="export-item">
     <strong>{{ vm.exportStatusLabel(item.status) }}</strong
-    ><small>Revisión: {{ vm.revisionLabel(item.editorRevisionId) }}</small>
+    ><small [class.current-revision]="!!item.editorRevisionId && item.editorRevisionId === vm.draft()?.revision?.id">Revisión: {{ vm.revisionLabel(item.editorRevisionId) }}@if (!!item.editorRevisionId && item.editorRevisionId === vm.draft()?.revision?.id) { · Actual }</small>
     @if (item.errorCode) {
       <p class="muted">Código de error: {{ item.errorCode }}</p>
+    }
+    @if ((item.status === 'failed' || item.status === 'cancelled') && item.editorRevisionId === vm.draft()?.revision?.id && !!item.editorRevisionId) {
+      <button class="button small" type="button" (click)="vm.render()" [disabled]="!vm.canEditCollaboration() || vm.busy() || vm.dirty() || vm.currentRenderPending()">Volver a exportar esta revisión</button>
     }
     @if (item.status === "succeeded") {
       @if (vm.hasVideoArtifact(item)) {
@@ -34,8 +57,10 @@
             class="button small"
             type="button"
             (click)="vm.download(item.id, artifact.kind)"
+            [disabled]="vm.busy()"
+            [attr.aria-label]="'Descargar ' + vm.artifactLabel(artifact.kind) + ' de la revisión ' + vm.revisionLabel(item.editorRevisionId)"
           >
-            {{ artifact.kind }}<ac-icon name="download" />
+            {{ vm.artifactLabel(artifact.kind) }}<ac-icon name="download" />
           </button>
         }
       </div>
@@ -55,6 +80,12 @@
     <ac-icon name="download" />
     @if (vm.design) {
       <p>Las exportaciones reales aparecerán al abrir una edición guardada.</p>
+    } @else if (vm.renderReceipt()) {
+      <p>La solicitud fue recibida. Actualiza la lista para comprobar el resultado y sus archivos.</p>
+    } @else if (vm.exportsLoading()) {
+      <p>Consultando las exportaciones de esta edición…</p>
+    } @else if (vm.exportsError()) {
+      <p>La lista no está disponible. Reintenta la consulta para conocer las exportaciones existentes.</p>
     } @else if (vm.exportsLoaded()) {
       <p>Esta edición todavía no tiene exportaciones.</p>
     } @else if (!vm.exportsError()) {

@@ -9,6 +9,7 @@ export { playbackWindow, renderedCaptionCues } from '../src/app/features/editor/
 export { fetchPrivateArtifact } from '../src/app/core/http/artifact-download';
 export { EditorState } from '../src/app/features/editor/state/editor.state';
 export { EditorApi } from '../src/app/features/editor/data-access/editor-api.service';
+export { EDITOR_ARTIFACT_DOWNLOAD } from '../src/app/features/editor/state/editor-artifact-download.token';
 export { DESIGN_MODE } from '../src/app/core/config/design-mode.token';
 export { createAccentCycle, LANDING_ACCENTS } from '../src/app/features/landing/landing-accent';
 export { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from '../src/app/features/auth/pages/auth-story';

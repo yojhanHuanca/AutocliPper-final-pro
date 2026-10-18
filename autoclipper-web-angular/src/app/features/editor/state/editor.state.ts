@@ -8,10 +8,10 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import type { Response } from "../../../core/contracts/api-types";
 import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
-import { captionCueIssues, validateCaptionCues } from '../models/caption-cues';
+import { captionListIssues, validateCaptionCues } from '../models/caption-cues';
 import { copyTranscriptCues, layoutCaptionCues } from '../models/caption-timeline';
 import { playbackWindow, renderedCaptionCues } from '../models/caption-playback';
-import { downloadPrivateArtifact } from '../../../core/http/artifact-download';
+import { EDITOR_ARTIFACT_DOWNLOAD } from './editor-artifact-download.token';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
 import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
@@ -20,6 +20,7 @@ import { ProjectsApi } from "../../projects/data-access/projects-api.service";
 @Injectable()
 export class EditorState {
   private readonly api = inject(EditorApi);
+  private readonly artifactDownload = inject(EDITOR_ARTIFACT_DOWNLOAD);
   private readonly collaboration = inject(CollaborationApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -57,6 +58,15 @@ export class EditorState {
   readonly nextComment = signal<string | null>(null);
   readonly exports = signal<Schema<"EditorExportDto">[]>([]);
   readonly exportsError = signal("");
+  readonly exportsLoading = signal(false);
+  private exportsGeneration = 0;
+  readonly renderReceipt = signal<{ id: string; revisionId: string; version: number } | null>(null);
+  private receiptLookups = 0;
+  readonly exportPhase = signal<'idle' | 'saving' | 'requesting'>('idle');
+  readonly currentRevisionExports = computed(() => this.exports().filter(item => !!item.editorRevisionId && item.editorRevisionId === this.draft()?.revision.id));
+  readonly currentRenderPending = computed(() => this.currentRevisionExports().some(item => item.status === 'queued' || item.status === 'running') ||
+    (this.renderReceipt()?.revisionId === this.draft()?.revision.id && !!this.renderReceipt() && !this.exports().some(item => item.id === this.renderReceipt()?.id)));
+  readonly receiptExport = computed(() => this.exports().find(item => item.id === this.renderReceipt()?.id) ?? null);
   readonly tab = signal("composition");
   readonly busy = signal(false);
   readonly error = signal("");
@@ -105,7 +115,7 @@ export class EditorState {
   readonly clipRangeUsable = computed(() => {
     const { startSeconds: start, endSeconds: end, sourceDuration: duration } = this.timeline();
     return Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end - start >= 0.1 &&
-      end - start <= 120 && (duration === null || end <= duration);
+      end - start <= 120 && end <= 14400 && (duration === null || end <= duration);
   });
   readonly captionEntries = computed(() => {
     this.formVersion();
@@ -122,7 +132,7 @@ export class EditorState {
   });
   readonly selectedCuePosition = computed(() => this.captionEntries().findIndex(cue => cue.index === this.selectedCue()?.index));
   readonly selectedCueIssues = computed(() => this.selectedCue() && this.timeline().captionSource === 'user'
-    ? captionCueIssues(this.selectedCue()!, this.timeline().startSeconds, this.timeline().endSeconds) : { times: '', text: '' });
+    ? this.captionIssues()[this.selectedCue()!.index] ?? { times: '', text: '' } : { times: '', text: '' });
   readonly timelineCues = computed(() => this.clipRangeUsable() ? layoutCaptionCues(this.captionEntries(), this.timeline().startSeconds, this.timeline().endSeconds) : []);
   readonly timelineCueRows = computed(() => Math.max(1, ...this.timelineCues().map(cue => cue.row + 1)));
   touchForm(): void { this.formVersion.update(version => version + 1); }
@@ -181,12 +191,29 @@ export class EditorState {
   readonly captionIssues = computed(() => {
     this.formVersion();
     return this.captionSource === 'user'
-      ? this.cues.map(cue => captionCueIssues(cue, this.spec.startSeconds, this.spec.endSeconds)) : [];
+      ? captionListIssues(this.cues, this.spec.startSeconds, this.spec.endSeconds) : [];
   });
   readonly invalidCaptions = computed(() => {
     this.formVersion();
     return this.captionSource === 'user' && (!this.cues.length || this.cues.length > 200 || this.captionIssues().some(issue => issue.times || issue.text));
   });
+  readonly captionStyleError = computed(() => {
+    this.formVersion();
+    return this.captionSource !== 'none' && (!Number.isInteger(this.fontSize) || this.fontSize < 12 || this.fontSize > 40)
+      ? 'El tamaño de subtítulo debe ser un número entero entre 12 y 40.' : '';
+  });
+  readonly compositionError = computed(() => {
+    this.formVersion();
+    if (!['source', 'vertical', 'square', 'horizontal'].includes(this.spec.aspect)) return 'Elige un formato de salida válido.';
+    if (this.spec.aspect !== 'source' && [this.cropX, this.cropY].some(value => !Number.isFinite(value) || value < 0 || value > 1)) return 'El encuadre debe quedar entre 0 y 1.';
+    if (!this.splitEnabled) return '';
+    if (this.spec.aspect === 'source') return 'La pantalla dividida necesita un formato vertical, cuadrado u horizontal.';
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(this.secondaryUploadId.trim())) return 'Indica el UUID de una segunda carga autorizada.';
+    if (!Number.isFinite(this.primaryRatio) || this.primaryRatio < 0.2 || this.primaryRatio > 0.8) return 'La proporción principal debe quedar entre 20 % y 80 %.';
+    if (!Number.isFinite(this.secondaryStart) || this.secondaryStart < 0 || this.secondaryStart > 14400) return 'El inicio del secundario debe quedar entre 0 y 14400 segundos.';
+    return '';
+  });
+  readonly canSaveRevision = computed(() => this.canChangeCaptions() && this.dirty() && this.clipRangeUsable() && !this.invalidCaptions() && !this.captionStyleError() && !this.compositionError());
   readonly tabs = [
     { id: "composition", label: "Composición", icon: "settings" },
     { id: "captions", label: "Subtítulos", icon: "captions" },
@@ -221,7 +248,7 @@ export class EditorState {
   readonly replyTarget = signal<Schema<"EditorCommentDto"> | null>(null);
   private etag: string | null = null;
   private initialForm = "";
-  private renderKey = "";
+  private renderAttempt: { revisionId: string; version: number; key: string } | null = null;
   private commentKey = "";
   private commentBody = "";
   private timer?: ReturnType<typeof setTimeout>;
@@ -273,6 +300,11 @@ export class EditorState {
     this.exports.set([]);
     this.exportsLoaded.set(false);
     this.exportsError.set("");
+    this.exportsLoading.set(false);
+    this.exportsGeneration++;
+    this.renderReceipt.set(null);
+    this.receiptLookups = 0;
+    this.exportPhase.set('idle');
     this.tab.set("composition");
     this.busy.set(false);
     this.error.set("");
@@ -309,7 +341,7 @@ export class EditorState {
     this.replyTarget.set(null);
     this.etag = null;
     this.initialForm = "";
-    this.renderKey = "";
+    this.renderAttempt = null;
     this.commentKey = "";
     this.commentBody = "";
     this.touchForm();
@@ -508,19 +540,20 @@ export class EditorState {
     });
   }
   private buildSpec(): Schema<"EditorSpecDto"> {
+    if (this.compositionError()) throw new Error(this.compositionError());
+    if (this.captionStyleError()) throw new Error(this.captionStyleError());
     if (
       !Number.isFinite(this.spec.startSeconds) ||
       !Number.isFinite(this.spec.endSeconds) ||
       this.spec.startSeconds < 0 ||
       this.spec.endSeconds - this.spec.startSeconds < 0.1 ||
-      this.spec.endSeconds - this.spec.startSeconds > 120
+      this.spec.endSeconds - this.spec.startSeconds > 120 || this.spec.endSeconds > 14400
     )
       throw new Error("El intervalo debe durar entre 0,1 y 120 segundos.");
     if (this.sourceRangeInvalid()) throw new Error("El final del intervalo supera la duración medida de la fuente.");
-    const result: Schema<"EditorSpecDto"> = {
-      ...this.spec,
-      framing: { x: Number(this.cropX), y: Number(this.cropY) },
-    };
+    const result: Schema<"EditorSpecDto"> = { ...this.spec };
+    if (result.aspect === 'source') delete result.framing;
+    else result.framing = { x: Number(this.cropX), y: Number(this.cropY) };
     delete result.splitScreen;
     if (this.splitEnabled)
       result.splitScreen = {
@@ -547,24 +580,46 @@ export class EditorState {
               style,
             }
           : { source: "none" };
+    if (new TextEncoder().encode(JSON.stringify(result)).byteLength > 65000)
+      throw new Error('La revisión supera 65 000 bytes. Reduce el texto de los subtítulos o el intervalo antes de guardar.');
     return result;
   }
   async save(): Promise<void> {
     if (!this.canEditCollaboration()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
-      const draft = this.draft();
-      if (!draft) return;
-      const body: Schema<"UpdateEditDto"> = {
-        version: draft.version,
-        spec: this.buildSpec(),
-      };
-      const saved = await this.api.save(this.id, body, this.etag ?? undefined);
-      if (!this.isCurrentEdit(generation)) return;
-      this.accept(saved.draft, saved.etag, true);
-      this.message.set(`Revisión ${saved.draft.version} guardada.`);
-      this.renderKey = "";
-      await this.refreshRevisionMetadata();
+      if (await this.saveRevision(generation)) await this.refreshRevisionMetadata(generation);
+    });
+  }
+  private async saveRevision(generation: number): Promise<Schema<'EditorDraftDto'> | null> {
+    const draft = this.draft();
+    if (!draft || !this.dirty()) return null;
+    const saved = await this.api.save(this.id, { version: draft.version, spec: this.buildSpec() }, this.etag ?? undefined);
+    if (!this.isCurrentEdit(generation)) return null;
+    this.accept(saved.draft, saved.etag, true);
+    this.message.set(`Revisión ${saved.draft.version} guardada.`);
+    return saved.draft;
+  }
+  async saveAndRender(): Promise<void> {
+    if (!this.canSaveRevision()) return;
+    const generation = this.editGeneration;
+    await this.run(async () => {
+      this.exportPhase.set('saving');
+      let saved: Schema<'EditorDraftDto'> | null = null;
+      try {
+        saved = await this.saveRevision(generation);
+        if (!saved || !this.isCurrentEdit(generation)) return;
+        if (!this.canEditCollaboration()) {
+          this.loadNotice.set('La revisión se guardó. Tu rol actual no permite solicitar su exportación.');
+          return;
+        }
+        this.exportPhase.set('requesting');
+        await this.requestRender(saved, generation);
+        if (this.isCurrentEdit(generation)) this.message.set(`Revisión ${saved.version} guardada y exportación solicitada.`);
+      } finally {
+        if (saved && this.isCurrentEdit(generation)) await this.refreshRevisionMetadata(generation);
+        if (this.isCurrentEdit(generation)) this.exportPhase.set('idle');
+      }
     });
   }
   async loadHistory(append = false): Promise<void> {
@@ -602,12 +657,13 @@ export class EditorState {
       await this.refreshRevisionMetadata();
     });
   }
-  private async refreshRevisionMetadata(): Promise<void> {
+  private async refreshRevisionMetadata(generation = this.editGeneration): Promise<void> {
     const [history, review] = await Promise.allSettled([
       this.loadHistory(),
       this.loadReview(),
       this.loadTranscript(),
     ]);
+    if (!this.isCurrentEdit(generation)) return;
     const unavailable = [
       ...(history.status === "rejected" ? ["historial"] : []),
       ...(review.status === "rejected" ? ["estado de revisión"] : []),
@@ -722,24 +778,26 @@ export class EditorState {
   async loadExports(): Promise<boolean> {
     if (this.design) return true;
     const generation = this.editGeneration;
+    const request = ++this.exportsGeneration;
+    const current = () => this.isCurrentEdit(generation) && request === this.exportsGeneration;
     clearTimeout(this.timer);
+    this.exportsLoading.set(true);
     try {
       const result = await this.api.exports(this.id);
-      if (!this.isCurrentEdit(generation)) return false;
+      if (!current()) return false;
       this.exports.set(result.items);
       this.exportsLoaded.set(true);
       this.exportsError.set("");
-      if (
-        !this.disposed &&
-        result.items.some((e) => ["queued", "running"].includes(e.status))
-      )
+      const receiptMissing = !!this.renderReceipt() && !result.items.some(item => item.id === this.renderReceipt()?.id);
+      if (receiptMissing) this.receiptLookups++;
+      if (result.items.some((e) => ["queued", "running"].includes(e.status)) || (receiptMissing && this.receiptLookups < 5))
         this.timer = setTimeout(() => void this.loadExports(), 4000);
       return true;
     } catch (error) {
-      if (!this.isCurrentEdit(generation)) return false;
+      if (!current()) return false;
       this.exportsError.set(`No se pudieron cargar las exportaciones: ${errorMessage(error)}`);
       return false;
-    }
+    } finally { if (current()) this.exportsLoading.set(false); }
   }
   exportStatusLabel(status: Schema<"EditorExportDto">["status"]): string {
     return { queued: "En cola", running: "Procesando", succeeded: "Lista", failed: "Fallida", cancelled: "Cancelada" }[status];
@@ -750,14 +808,28 @@ export class EditorState {
     await this.run(async () => {
       const draft = this.draft();
       if (!draft || this.dirty()) return;
-      this.renderKey ||= crypto.randomUUID();
-      await this.api.render(this.id, draft.version, this.renderKey);
-      if (!this.isCurrentEdit(generation)) return;
-      this.renderKey = "";
-      this.tab.set("exports");
-      await this.loadExports();
-      this.message.set("Exportación solicitada para la revisión guardada.");
+      if (this.currentRenderPending()) {
+        this.tab.set('exports');
+        this.message.set('Ya hay una solicitud de esta revisión. Consulta su estado en Exportaciones.');
+        return;
+      }
+      this.exportPhase.set('requesting');
+      try { await this.requestRender(draft, generation); }
+      finally { if (this.isCurrentEdit(generation)) this.exportPhase.set('idle'); }
     });
+  }
+  private async requestRender(draft: Schema<'EditorDraftDto'>, generation: number): Promise<void> {
+    if (!this.isCurrentEdit(generation) || this.dirty() || this.draft()?.revision.id !== draft.revision.id) return;
+    if (this.renderAttempt?.revisionId !== draft.revision.id || this.renderAttempt.version !== draft.version)
+      this.renderAttempt = { revisionId: draft.revision.id, version: draft.version, key: crypto.randomUUID() };
+    const accepted = await this.api.render(this.id, draft.version, this.renderAttempt.key);
+    if (!this.isCurrentEdit(generation)) return;
+    this.renderAttempt = null;
+    this.renderReceipt.set({ id: accepted.id, revisionId: draft.revision.id, version: draft.version });
+    this.receiptLookups = 0;
+    this.tab.set('exports');
+    await this.loadExports();
+    if (this.isCurrentEdit(generation)) this.message.set(`Exportación solicitada para la revisión ${draft.version}.`);
   }
   async cancelRender(id: string): Promise<void> {
     if (!this.canEditCollaboration()) return;
@@ -769,6 +841,7 @@ export class EditorState {
     });
   }
   revisionLabel(id: string | undefined): string {
+    if (id && id === this.draft()?.revision.id) return String(this.draft()!.version);
     return id
       ? String(this.history().find((r) => r.id === id)?.version ?? id)
       : "No informada";
@@ -825,10 +898,21 @@ export class EditorState {
     }
     await this.preview(item);
   }
-  async download(id: string, kind: string): Promise<void> {
+  artifactLabel(kind: Schema<'ProcessingArtifactDto'>['kind']): string {
+    return { video: 'Video', audio: 'Audio', srt: 'Subtítulos SRT', vtt: 'Subtítulos VTT' }[kind];
+  }
+  async download(id: string, kind: Schema<'ProcessingArtifactDto'>['kind']): Promise<void> {
+    const item = this.exports().find(item => item.id === id && item.status === 'succeeded');
+    const artifact = item?.artifacts.find(artifact => artifact.kind === kind);
+    if (!item || !artifact) return;
+    const generation = this.editGeneration;
+    const revision = this.revisionLabel(item.editorRevisionId);
+    const extension = kind === 'video' && artifact.contentType === 'video/mp4' ? 'mp4' : kind === 'audio' && ['audio/wav', 'audio/x-wav'].includes(artifact.contentType) ? 'wav' : kind;
     await this.run(async () => {
       const result = await this.api.download(id, kind);
-      await downloadPrivateArtifact(result.url, `autoclipper-${id}.${kind === 'video' ? 'mp4' : kind}`);
+      if (!this.isCurrentEdit(generation)) return;
+      await this.artifactDownload(result.url, `autoclipper-revision-${revision}-${id}.${extension}`);
+      if (this.isCurrentEdit(generation)) this.message.set(`${this.artifactLabel(kind)} de la revisión ${revision} descargado.`);
     });
   }
   private safeUrl(value: string): string {

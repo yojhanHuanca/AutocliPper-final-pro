@@ -1,5 +1,6 @@
 import { Injectable, inject } from "@angular/core";
 import type { Schema, Response } from "../../../core/contracts/api-types";
+import type { paths } from '../../../core/contracts/gateway.generated';
 import { ApiTransport } from "../../../core/http/api-transport.service";
 import type { HttpResponse } from "@angular/common/http";
 
@@ -65,7 +66,7 @@ export class EditorApi {
     );
   }
   render(id: string, version: number, key: string) {
-    return this.api.post(
+    return this.api.post<paths['/v1/edits/{id}/renders']['post']['responses'][201]['content']['application/json']>(
       `/edits/${encodeURIComponent(id)}/renders`,
       { revisionVersion: version },
       key,
@@ -74,7 +75,7 @@ export class EditorApi {
   cancelRender(id: string) {
     return this.api.delete(`/processing/${encodeURIComponent(id)}`);
   }
-  download(id: string, kind: string) {
+  download(id: string, kind: Schema<'ProcessingArtifactDto'>['kind']) {
     return this.api.get<Response<"/v1/processing/{id}/download">>(
       `/processing/${encodeURIComponent(id)}/download?kind=${encodeURIComponent(kind)}`,
     );

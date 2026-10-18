@@ -27,11 +27,13 @@
   .cue-read-text { color: var(--text); font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .cue-save { border-top: 1px solid var(--border); margin-top: 17px; padding-top: 8px; }
   .cue-save .button { min-height: 44px; width: 100%; font-size: 13px; }
+  .cue-save-actions { display: flex; flex-direction: column; gap: 8px; }
   :is(button,input,textarea,select,[tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
   @container cue-editor (min-width: 650px) {
     .cue-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 0 24px; }
     .cue-save { display: flex; gap: 24px; align-items: center; justify-content: space-between; }
     .cue-save .button { width: auto; flex-shrink: 0; }
+    .cue-save-actions { flex-shrink: 0; }
   }
   @media (max-width: 560px) { .selected-cue { padding: 14px 12px; }.cue-navigation .button { min-height: 44px; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

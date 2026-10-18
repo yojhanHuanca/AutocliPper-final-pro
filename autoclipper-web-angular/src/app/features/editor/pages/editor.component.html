@@ -30,13 +30,30 @@
     <button
       class="button primary"
       type="button"
-      (click)="vm.render()"
-      [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || vm.dirty() || !vm.draft()"
+      (click)="vm.dirty() ? vm.saveAndRender() : vm.render()"
+      [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || !vm.draft() || (vm.dirty() && !vm.canSaveRevision())"
+      [attr.aria-busy]="vm.exportPhase() !== 'idle'"
+      [attr.aria-describedby]="vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy() ? 'export-validation-help' : null"
     >
-      Exportar revisión<ac-icon name="download" />
+      @if (vm.exportPhase() === 'saving') { Guardando revisión… }
+      @else if (vm.exportPhase() === 'requesting') { Solicitando exportación… }
+      @else if (vm.dirty()) { Guardar y exportar }
+      @else if (vm.currentRenderPending()) { Ver exportación }
+      @else { Exportar revisión }
+      <ac-icon name="download" />
     </button>
   </div>
 </section>
+@if (vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy()) {
+  <div id="export-validation-help" class="alert">
+    @if (vm.compositionError()) { {{ vm.compositionError() }} }
+    @else if (!vm.clipRangeUsable()) { Corrige el intervalo del clip antes de guardar y exportar. }
+    @else if (vm.captionStyleError()) { {{ vm.captionStyleError() }} }
+    @else if (vm.invalidCaptions()) { Corrige las frases con errores. Deben tener texto simple y seguir el orden de tiempo, sin superponerse. }
+    @else { Tu rol actual no permite guardar y exportar. }
+    <button type="button" class="button small" (click)="vm.tab.set(vm.invalidCaptions() || vm.captionStyleError() ? 'captions' : 'composition')">Revisar ajustes</button>
+  </div>
+}
 @if (!vm.design && vm.collaborationRole() === "loading") {
   <div class="alert" role="status">Comprobando el rol del espacio antes de habilitar cambios…</div>
 } @else if (!vm.design && vm.collaborationRole() === "unavailable") {

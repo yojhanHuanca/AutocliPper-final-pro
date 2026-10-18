@@ -14,7 +14,7 @@
             step="0.1"
             required
             [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1"
-            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
+            [disabled]="!vm.canChangeCaptions()" /></label
         ><label
           >Fin (s)<input
             type="number"
@@ -25,7 +25,7 @@
             step="0.1"
             required
             [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1 || vm.spec.endSeconds - vm.spec.startSeconds > 120"
-            [disabled]="vm.design || !vm.canEditCollaboration()"
+            [disabled]="!vm.canChangeCaptions()"
         /></label>
       </div>
       @if (vm.sourceDuration(); as duration) {
@@ -40,7 +40,7 @@
         >Formato<select
           name="aspect"
           [(ngModel)]="vm.spec.aspect" (ngModelChange)="vm.touchForm()"
-          [disabled]="vm.design || !vm.canEditCollaboration()"
+          [disabled]="!vm.canChangeCaptions()"
         >
           <option value="vertical">Vertical · 9:16</option>
           <option value="square">Cuadrado · 1:1</option>
@@ -55,7 +55,7 @@
           min="0"
           max="1"
           step="0.01"
-          [disabled]="vm.design || !vm.canEditCollaboration()" /></label
+          [disabled]="!vm.canChangeCaptions() || vm.spec.aspect === 'source'" /></label
       ><label
         >Encuadre vertical<input
           type="range"
@@ -64,13 +64,13 @@
           min="0"
           max="1"
           step="0.01"
-          [disabled]="vm.design || !vm.canEditCollaboration()" /></label
+          [disabled]="!vm.canChangeCaptions() || vm.spec.aspect === 'source'" /></label
       ><label class="checkbox"
         ><input
           type="checkbox"
           name="split"
           [(ngModel)]="vm.splitEnabled" (ngModelChange)="vm.touchForm()"
-          [disabled]="vm.design || !vm.canEditCollaboration()"
+          [disabled]="!vm.canChangeCaptions()"
         />Pantalla dividida</label
       >
       @if (vm.splitEnabled) {
@@ -79,13 +79,13 @@
             name="secondary"
             [(ngModel)]="vm.secondaryUploadId" (ngModelChange)="vm.touchForm()"
             required
-            [disabled]="vm.design || !vm.canEditCollaboration()"
+            [disabled]="!vm.canChangeCaptions()"
             placeholder="UUID de carga del mismo espacio" /><small>Por seguridad, el editor solo permite cargar el UUID; el contrato aún no ofrece una lista de fuentes del espacio. Usa una carga confirmada e inspeccionada del mismo espacio.</small></label
         ><label
           >Distribución<select
             name="layout"
             [(ngModel)]="vm.splitLayout" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design || !vm.canEditCollaboration()"
+            [disabled]="!vm.canChangeCaptions()"
           >
             <option value="stacked">Arriba / abajo</option>
             <option value="side_by_side">Lado a lado</option>
@@ -99,7 +99,7 @@
             min="0.2"
             max="0.8"
             step="0.01"
-            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
+            [disabled]="!vm.canChangeCaptions()" /></label
         ><label
           >Inicio del secundario (s)<input
             type="number"
@@ -107,12 +107,12 @@
             [(ngModel)]="vm.secondaryStart" (ngModelChange)="vm.touchForm()"
             min="0"
             max="14400"
-            [disabled]="vm.design || !vm.canEditCollaboration()" /></label
+            [disabled]="!vm.canChangeCaptions()" /></label
         ><label
           >Al terminar el secundario<select
             name="shortInput"
             [(ngModel)]="vm.shortInput" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design || !vm.canEditCollaboration()"
+            [disabled]="!vm.canChangeCaptions()"
           >
             <option value="freeze">Congelar último frame</option>
             <option value="reject">Rechazar si es más corto</option>
@@ -121,7 +121,7 @@
           >Fuente de audio<select
             name="audio"
             [(ngModel)]="vm.splitAudio" (ngModelChange)="vm.touchForm()"
-            [disabled]="vm.design || !vm.canEditCollaboration()"
+            [disabled]="!vm.canChangeCaptions()"
           >
             <option value="primary">Principal</option>
             <option value="secondary">Secundario</option>
@@ -136,7 +136,7 @@
           vm.design ||
           !vm.canEditCollaboration() ||
           vm.busy() ||
-          vm.sourceRangeInvalid() ||
+          !vm.canSaveRevision() ||
           specForm.invalid ||
           !vm.dirty() ||
           !vm.draft()
@@ -145,6 +145,8 @@
         Guardar revisión<ac-icon name="check" />
       </button>
     </form>
+    @if (vm.compositionError()) { <p class="field-error" role="alert">{{ vm.compositionError() }}</p> }
+    @if (vm.spec.aspect === 'source') { <p class="source-duration-note">El formato original conserva el encuadre de la fuente. Elige un formato fijo para ajustar el recorte.</p> }
   }
   @if (vm.tab() === "captions") {
     <ac-editor-captions />

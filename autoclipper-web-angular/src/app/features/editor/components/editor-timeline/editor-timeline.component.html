@@ -51,7 +51,7 @@
       </div>
     </div>
     @if (vm.clipRangeUsable()) { <div class="clip-caption-labels"><span>{{ vm.timeline().startSeconds | number: '1.1-3' }} s</span><span>{{ vm.timeline().endSeconds | number: '1.1-3' }} s</span></div> }
-    <p id="caption-track-help" class="timeline-help">Selecciona una frase. Usa ←/→, Inicio y Fin para recorrer la pista, o el selector para acceder a frases cortas o fuera del intervalo. Las frases superpuestas ocupan filas separadas.</p>
+    <p id="caption-track-help" class="timeline-help">Selecciona una frase. Usa ←/→, Inicio y Fin para recorrer la pista, o el selector para acceder a frases cortas o fuera del intervalo. Las superposiciones se muestran en filas separadas para corregirlas antes de guardar.</p>
     @if (vm.previewSyncReady()) { <p class="timeline-help">La línea y el borde inferior indican la reproducción del render actual. Tu selección para editar se mantiene.</p> }
   } @else {
     <div class="caption-lane">

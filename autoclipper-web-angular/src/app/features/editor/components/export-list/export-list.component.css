@@ -1,0 +1,17 @@
+@layer components {
+  :host { display: block; min-width: 0; }
+  .export-summary { margin: 16px 0; padding: 14px; border: 1px solid #c8d4ec; border-radius: 8px; background: #f4f7fd; }
+  .export-summary h3 { margin: 0; font-size: 14px; }
+  .export-summary p, .export-summary small { font-size: 12px; line-height: 1.6; }
+  .export-summary p { margin: 8px 0 0; }
+  .export-summary .button { margin-top: 12px; width: 100%; }
+  .export-item { padding: 15px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+  .export-item strong, .export-item small { display: block; overflow-wrap: anywhere; }
+  .export-item strong { font-size: 14px; }
+  .export-item small { margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .export-item .current-revision { color: var(--accent); font-weight: 600; }
+  .export-item .button { min-height: 44px; font-size: 12px; margin-top: 8px; }
+  .export-item .button-row { flex-wrap: wrap; gap: 7px; }
+  .export-item p { font-size: 12px; line-height: 1.6; }
+  :is(button,a):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+}

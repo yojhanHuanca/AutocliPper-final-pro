@@ -26,3 +26,14 @@ test('editor save and restore keep If-Match and derive the version ETag when res
     ]);
   } finally { TestBed.resetTestingModule(); }
 });
+
+test('revision exports and artifact grants use the documented routes, versions and idempotency key',async()=>{
+  const calls=[];
+  const transport={post:async(path,body,key)=>{calls.push({path,body,key});return{id:'processing-fixture',status:'queued'};},get:async(path)=>{calls.push({path});return{url:'https://media.example.test/fixture'};}};
+  TestBed.configureTestingModule({providers:[EditorApi,{provide:ApiTransport,useValue:transport},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  try {
+    const api=TestBed.inject(EditorApi);assert.equal((await api.render('edit-fixture',3,'request-key')).id,'processing-fixture');
+    await api.exports('edit-fixture');await api.download('processing-fixture','srt');
+    assert.deepEqual(calls,[{path:'/edits/edit-fixture/renders',body:{revisionVersion:3},key:'request-key'},{path:'/edits/edit-fixture/exports'},{path:'/processing/processing-fixture/download?kind=srt'}]);
+  } finally {TestBed.resetTestingModule();}
+});

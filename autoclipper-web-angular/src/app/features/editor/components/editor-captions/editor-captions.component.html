@@ -43,19 +43,26 @@
       <option value="top">Superior</option>
     </select></label
   ><label
-    >Tamaño<input
+    >Tamaño (12–40)<input
+      id="caption-style-size"
       type="number"
       [(ngModel)]="vm.fontSize" (ngModelChange)="vm.touchForm()"
       min="12"
       max="40"
+      step="1"
+      [attr.aria-invalid]="!!vm.captionStyleError()"
+      [attr.aria-describedby]="vm.captionStyleError() ? 'caption-style-error' : null"
       [disabled]="!vm.canChangeCaptions()"
   /></label>
+  @if (vm.captionStyleError()) { <p id="caption-style-error" class="cue-error">{{ vm.captionStyleError() }}</p> }
 }
 <button
   class="button primary full"
   type="button"
   (click)="vm.save()"
-  [disabled]="!vm.canChangeCaptions() || !vm.dirty() || vm.invalidCaptions() || !vm.clipRangeUsable()"
+  [disabled]="!vm.canSaveRevision()"
 >
   Guardar ajustes de subtítulos<ac-icon name="check" />
 </button>
+<button class="button full" type="button" (click)="vm.saveAndRender()" [disabled]="!vm.canSaveRevision()">Guardar y exportar<ac-icon name="download" /></button>
+<p class="muted">La exportación usa la revisión recién guardada. Si falla, podrás volver a solicitarla sin guardar otra revisión.</p>

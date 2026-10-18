@@ -53,10 +53,15 @@
         <button type="button" class="button small" (click)="remove(cue.index)">Retirar esta frase</button>
         </div>
       </fieldset>
-      @if (vm.invalidCaptions()) { <p class="cue-error">Revisa las frases con errores antes de guardar. El selector incluye también las que están fuera del clip.</p> }
+      @if (vm.invalidCaptions()) { <p class="cue-error">Revisa las frases con errores antes de guardar. Deben seguir el orden de tiempo, sin superponerse. El selector incluye también las que están fuera del clip.</p> }
       <div class="cue-save">
-        <p class="cue-help">Los cambios se guardan en una revisión. El video mostrado no cambia hasta exportarla.</p>
-        <button class="button primary" type="button" (click)="vm.save()" [disabled]="!vm.canChangeCaptions() || !vm.dirty() || vm.invalidCaptions() || !vm.clipRangeUsable()">Guardar revisión<ac-icon name="check" /></button>
+        @if (vm.compositionError()) { <p class="cue-error">{{ vm.compositionError() }} <button class="button small" type="button" (click)="vm.tab.set('composition')">Revisar composición</button></p> }
+        @if (vm.captionStyleError()) { <p class="cue-error">{{ vm.captionStyleError() }} Revisa el tamaño en el panel de Subtítulos.</p> }
+        <p class="cue-help">Guarda los cambios o guarda y solicita un video nuevo de esa revisión. Si la exportación falla, la revisión guardada se conserva.</p>
+        <div class="cue-save-actions">
+          <button class="button" type="button" (click)="vm.save()" [disabled]="!vm.canSaveRevision()">Guardar revisión<ac-icon name="check" /></button>
+          <button class="button primary" type="button" (click)="vm.saveAndRender()" [disabled]="!vm.canSaveRevision()">Guardar y exportar<ac-icon name="download" /></button>
+        </div>
       </div>
     } @else {
       <p class="cue-source-time">{{ cue.startSeconds | number: '1.1-3' }}–{{ cue.endSeconds | number: '1.1-3' }} s · Fuente original</p>
