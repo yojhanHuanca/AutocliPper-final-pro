@@ -95,6 +95,39 @@ export class ProjectComponent {
   private activeUploadController?: AbortController;
   private activeUploadId = "";
   readonly cancellingUpload = signal(false);
+  readonly workbench = signal<"source" | "processing" | "drafts">("source");
+  readonly workbenchTabs = [
+    { id: "source", label: "Video de origen", step: "source", icon: "upload" },
+    { id: "processing", label: "Procesar clip", step: "render", icon: "scissors" },
+    { id: "drafts", label: "Borradores", step: "draft", icon: "film" },
+  ] as const;
+  showWorkbench(section: "source" | "processing" | "drafts", focus = false): void {
+    this.workbench.set(section);
+    if (focus && typeof requestAnimationFrame === "function") requestAnimationFrame(() => { if (!this.disposed) document.getElementById(`project-${section}-panel`)?.focus(); });
+  }
+  onWorkbenchKey(event: KeyboardEvent, index: number): void {
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % this.workbenchTabs.length;
+    else if (event.key === "ArrowLeft") next = (index + this.workbenchTabs.length - 1) % this.workbenchTabs.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = this.workbenchTabs.length - 1;
+    else return;
+    event.preventDefault();
+    this.workbench.set(this.workbenchTabs[next].id);
+    requestAnimationFrame(() => document.getElementById(`project-tab-${this.workbenchTabs[next].id}`)?.focus());
+  }
+  continueLabel(): string {
+    if (this.createdDraft()) return "Abrir borrador guardado";
+    if (this.edits().length) return "Abrir un borrador";
+    return this.inspected() ? "Preparar el corte" : "Elegir mi video";
+  }
+  async continueProject(): Promise<void> {
+    if (this.disposed || this.design || !this.project() || this.busy()) return;
+    if (this.createdDraft()) { await this.openCreatedDraft(); return; }
+    const draft = this.edits()[0];
+    if (draft) { await this.router.navigateByUrl(`/app/edits/${encodeURIComponent(draft.id)}`); return; }
+    this.showWorkbench(this.inspected() ? "processing" : "source", true);
+  }
   hasActiveUpload(): boolean { return !!this.activeUploadId; }
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
@@ -171,6 +204,7 @@ export class ProjectComponent {
     this.handoffNotice.set('');
   }
   private switchProject(id: string): void {
+    this.workbench.set("source");
     if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
     this.activeUploadController?.abort();
     this.activeUploadController = undefined;

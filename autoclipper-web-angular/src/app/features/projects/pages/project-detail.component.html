@@ -1,27 +1,30 @@
 <a class="text-link back-link" [routerLink]="design ? '/design/projects' : '/app/projects'"
   >← Volver a proyectos</a
 >
-<section class="page-heading">
-  <div>
-    <span class="eyebrow">TU HISTORIA, EN PROCESO</span>
-    <h1>{{ project()?.name ?? (design ? 'Detalle del proyecto' : error() ? 'Proyecto no disponible' : 'Cargando proyecto…') }}</h1>
-    <p>Prepara un MP4 desde un intervalo elegido por ti y abre un borrador para seguir editándolo.</p>
+<section class="project-hero" aria-labelledby="project-heading">
+  <div class="project-hero-copy">
+    <span class="eyebrow">TU MESA DE TRABAJO</span>
+    <h1 id="project-heading">{{ project()?.name ?? (design ? 'Detalle del proyecto' : error() ? 'Proyecto no disponible' : 'Cargando proyecto…') }}</h1>
+    <p>Un lugar para tu video, tus cortes y lo que viene después.</p>
+    <div class="project-hero-meta">
+      <span><ac-icon name="shield" />{{ design ? 'Vista de estructura' : canEdit() ? 'Puedes crear y editar' : 'Acceso según tu rol' }}</span>
+      @if (project(); as current) { <span>Versión del proyecto {{ current.version }}</span> }
+    </div>
   </div>
-  <button class="button" type="button" (click)="reload()" [disabled]="design || busy()">
-    Actualizar<ac-icon name="arrow" />
-  </button>
+  <div class="project-hero-actions">
+    <button class="button primary" type="button" (click)="continueProject()" [disabled]="design || !project() || busy()">{{ continueLabel() }}<ac-icon name="arrow" /></button>
+    <button class="project-refresh" type="button" (click)="reload()" [disabled]="design || busy()"><ac-icon name="refresh" />Actualizar proyecto</button>
+  </div>
 </section>
-<ol class="creator-route" aria-label="Estado del recorrido para crear tu clip">
-  <li [class.route-complete]="inspected()" [class.route-current]="!inspected()">
-    <span class="route-index">1</span><div><strong>Video de origen</strong><span>{{ workflowStatus('source') }}</span></div>
-  </li>
-  <li [class.route-complete]="pipeline()?.status === 'succeeded' && pipelineMatchesSelectedUpload()" [class.route-current]="pipelineBlocksSelectedUpload()" [class.route-ready]="inspected() && !pipelineBlocksSelectedUpload() && !(pipeline()?.status === 'succeeded' && pipelineMatchesSelectedUpload())">
-    <span class="route-index">2</span><div><strong>Procesar intervalo</strong><span>{{ workflowStatus('render') }}</span></div>
-  </li>
-  <li [class.route-complete]="hasDraftForSelectedUpload()" [class.route-ready]="inspected() && !hasDraftForSelectedUpload()">
-    <span class="route-index">3</span><div><strong>Editar borrador</strong><span>{{ workflowStatus('draft') }}</span></div>
-  </li>
-</ol>
+<nav class="project-workbench-tabs" role="tablist" aria-label="Herramientas del proyecto">
+  @for (item of workbenchTabs; track item.id; let index = $index) {
+    <button type="button" role="tab" [id]="'project-tab-' + item.id" [attr.aria-selected]="workbench() === item.id" [attr.aria-controls]="'project-' + item.id + '-panel'" [attr.tabindex]="workbench() === item.id ? 0 : -1" [class.active]="workbench() === item.id" (click)="showWorkbench(item.id)" (keydown)="onWorkbenchKey($event, index)">
+      <span class="project-tab-icon"><ac-icon [name]="item.icon" /></span>
+      <span><strong>{{ item.label }}</strong><small>{{ workflowStatus(item.step) }}</small></span>
+      @if (item.id === 'drafts' && editsLoaded()) { <span class="project-tab-count">{{ edits().length }}</span> }
+    </button>
+  }
+</nav>
 @if (!project() && busy()) {
   <div class="loading-state" role="status"><span class="spinner"></span>Consultando el proyecto y sus permisos…</div>
 }
@@ -37,8 +40,8 @@
 @if (message()) {
   <div class="alert" role="status">{{ message() }}</div>
 }
-<div class="project-workflow">
-  <section class="panel">
+<div class="project-workbench"><div class="project-workbench-main"><div class="project-workflow">
+  <section id="project-source-panel" class="panel project-source-panel" role="tabpanel" tabindex="0" aria-labelledby="project-tab-source" [hidden]="workbench() !== 'source'">
     <span class="eyebrow">PASO 1 · VIDEO DE ORIGEN</span>
     <h2>Elige tu video.</h2>
     <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
@@ -74,6 +77,7 @@
     @if (uploadError()) {
       <div class="alert error" role="alert">No se pudo consultar esta carga: {{ uploadError() }} <button type="button" (click)="inspect()" [disabled]="inspecting()">Reintentar</button></div>
     }
+    @if (inspected()) { <div class="project-next-step"><ac-icon name="check" /><div><strong>Tu video está listo.</strong><p>Ya puedes elegir el intervalo de tu próximo clip.</p></div><button class="button" type="button" (click)="showWorkbench('processing', true)">Elegir intervalo<ac-icon name="arrow" /></button></div> }
     <details class="resume-details">
       <summary>Consultar una carga existente</summary>
       <p>
@@ -132,7 +136,7 @@
       </div>
     }
   </section>
-  <section class="panel">
+  <section id="project-processing-panel" class="panel" role="tabpanel" tabindex="0" aria-labelledby="project-tab-processing" [hidden]="workbench() !== 'processing'">
     <span class="eyebrow">PASO 2 · PROCESAMIENTO</span>
     <h2>Elige el intervalo.</h2>
     <p>Selecciona a mano el fragmento que quieres convertir en un MP4. El servicio genera subtítulos cuando termina la transcripción local; no elige momentos por ti.</p>
@@ -276,7 +280,7 @@
     </details>
   </section>
 </div>
-<section class="panel">
+<section id="project-drafts-panel" class="panel project-drafts" role="tabpanel" tabindex="0" aria-labelledby="project-tab-drafts" [hidden]="workbench() !== 'drafts'">
   <div class="panel-heading">
     <div>
       <span class="eyebrow">PASO 3 · EDITOR</span>
@@ -339,3 +343,24 @@
     }
   </div>
 </section>
+
+</div>
+<aside class="project-context" aria-label="Resumen del proyecto">
+  <section class="project-source-summary">
+    <div class="project-source-symbol"><ac-icon name="film" /><span>{{ uploadStatus() ? 'ORIGEN DEL PROYECTO' : 'AQUÍ EMPIEZA TU CLIP' }}</span></div>
+    <h2>{{ file?.name ?? 'Tu video de origen' }}</h2>
+    <p>{{ inspected() ? 'Inspección completada. Conservamos el material original como referencia.' : uploading() ? 'Tu archivo se está transfiriendo. Puedes consultar el progreso en Video de origen.' : 'Carga un archivo propio y comprueba sus datos antes de crear el corte.' }}</p>
+    <dl>
+      <div><dt>Archivo</dt><dd>{{ uploadStatus() ? uploadStateLabel(uploadStatus()!.state) : file ? 'Elegido, sin cargar' : 'Sin archivo confirmado' }}</dd></div>
+      <div><dt>Duración medida</dt><dd>{{ sourceDurationSeconds() !== null ? (sourceDurationSeconds() | number: '1.1-1') + ' s' : 'Pendiente' }}</dd></div>
+      @if (uploadStatus()?.inspection?.result; as source) { <div><dt>Resolución</dt><dd>{{ source.width }} × {{ source.height }}</dd></div> }
+    </dl>
+  </section>
+  <section class="project-continuity">
+    <div><span class="project-context-dot"></span><h2>El proyecto sigue contigo.</h2></div>
+    <p>Cada borrador guarda su revisión. Volver a abrirlo no vuelve a procesar tu video.</p>
+    <button type="button" class="text-link" (click)="showWorkbench('drafts', true)">Ver mis borradores<ac-icon name="arrow" /></button>
+  </section>
+  @if (pipeline()) { <section class="project-running-summary" role="status"><span class="eyebrow">PROCESAMIENTO CONSULTADO</span><strong>{{ workflowStatus('render') }}</strong><button class="text-link" type="button" (click)="showWorkbench('processing', true)">Ver estado y descargas<ac-icon name="arrow" /></button></section> }
+</aside>
+</div>

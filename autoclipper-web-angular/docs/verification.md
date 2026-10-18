@@ -1,5 +1,13 @@
 # Evidencia de la primera entrega
 
+## Mesa de trabajo del proyecto — 2026-10-18
+
+Entrega visible en /app/projects/:id y su vista pública de estructura /design/projects/structure. Sustituye la página simultánea de carga/procesamiento/borradores por tres paneles seleccionables con teclado, un encabezado para retomar el trabajo y un lateral de fuente/continuidad. Ocultar un panel conserva los campos, consultas y estados existentes; no crea pipelines ni descargas al cambiar de pestaña. La acción principal abre el DTO recién guardado o un borrador listado; sin borradores dirige al video o intervalo según la inspección real. Diseño/sin proyecto/carga/destrucción bloquean la navegación de reanudación.
+
+Duración/resolución/estado provienen únicamente del UploadStatusDto inspeccionado y los contadores de la lista consultada. Sin datos, se muestran pendientes y no se inventa fuente, miniatura, fechas ni cifras. Se usa la versión real de ProjectResponseDto: el typecheck detectó que ese contrato no contiene updatedAt y se retiró esa suposición antes del build aprobado. No se agregaron endpoints ni se alteró la procedencia de transcripción, el orden de guardado/render o los permisos. El botón de siguiente paso es navegación local; la creación de borrador sigue siendo explícita.
+
+125 pruebas aprobadas, incluidas las tres regresiones de continuar con borrador existente, elegir panel por inspección y bloqueo diseño/sin acceso/busy/destrucción. Typecheck y build de producción aprobados al cierre. Una pasada final confirmó pestañas con flechas, panel Borradores visible y ancho móvil 375/375; consola final sin errores/advertencias. Las capturas son de estructura, sin datos de cuenta: C:/Users/USER/Documents/Codex/artifacts/autoclipper-project-workbench-2026-10-18/before-desktop.jpg, after-desktop.jpg y after-mobile.jpg. La visita de lectura al proyecto QA autenticado remitió al login al no poder consultar sus espacios; no se reintentó login ni se recreó cuenta/material. No se repitió procesamiento E2E ni se modificó backend.
+
 ## Teclado y accesibilidad de los recorridos críticos — 2026-10-18
 
 Revisión de código de login/registro, shell, proyecto/carga, editor, cuenta y administración: se conservaron las etiquetas nativas, permisos, estados de carga/error y reglas existentes de movimiento reducido. Se corrigió el foco de navegación entre páginas (main; sin robar foco a filtros/query o anclas), el menú móvil como diálogo con fondo inert, Tab/Shift+Tab contenidos y Escape/cierre con retorno al botón. La capa de fondo es ahora un control real de cierre; el contenido recibe margen de scroll para no quedar bajo cabeceras fijas. El selector de archivo conserva entrada nativa y ayuda asociada.
