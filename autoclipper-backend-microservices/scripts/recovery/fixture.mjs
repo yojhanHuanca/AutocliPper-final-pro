@@ -11,6 +11,7 @@ import { S3Client, CreateBucketCommand, PutObjectCommand, CreateMultipartUploadC
 import { Queue } from 'bullmq';
 import { INSPECTION_QUEUE } from '@autoclipper/event-contracts';
 import { InspectionRuntime } from '../../apps/autoclipper-media-processing-service/dist/application/inspection-runtime.js';
+import { verifyPrivacyProfileExports } from './privacy-fixture.mjs';
 
 const services = ['media', 'identity', 'workspace', 'project', 'analysis', 'billing'];
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -133,9 +134,12 @@ try {
     report.crossDatabaseDenials = 30;
     report.runtimeDdlDenials = 6;
     report.adminGrantWriteDenied = true;
+    checkpoint = 'PRIVACY_PROFILE_EXPORT';
+    report.privacyProfileExport = await verifyPrivacyProfileExports(config);
   }
   process.stdout.write(JSON.stringify(report) + '\n');
 } catch (error) {
+  if(typeof error.privacyCheckpoint==='string'&&/^[A-Z_]+$/u.test(error.privacyCheckpoint))checkpoint=`${checkpoint}_${error.privacyCheckpoint}`;
   process.stdout.write(JSON.stringify({ errorCode: /^[A-Z_0-9]+$/.test(error.code ?? '') ? error.code : 'FIXTURE_FAILED', checkpoint }) + '\n');
   process.exitCode = 1;
 } finally { s3.destroy(); }

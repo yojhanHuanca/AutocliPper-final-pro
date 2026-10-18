@@ -22,6 +22,8 @@ El login con 2FA exige `factor`, que admite TOTP o un código de recuperación. 
 
 **Registrar una solicitud no ejecuta una exportación ni elimina los datos.** Faltan el proceso entre servicios, los archivos de exportación, la transferencia de propiedad cuando corresponda, la revocación integral y la purga de objetos. No se anuncia cumplimiento normativo ni eliminación concluida.
 
+El incremento posterior [inventaría las seis bases y ofrece un aporte del perfil propio](privacy-lifecycle.md) mediante `POST /v1/auth/privacy-requests/{id}/identity-export`, con nueva comprobación sensible e idempotencia. Es `identity-profile-v1`, `fulfillment=partial` y `globalFulfillment=pending`: no completa la solicitud global ni exporta contenido de otros servicios. Solo persisten recibos/hash/auditoría, sin otra copia del JSON personal y sin inventar un plazo de retención.
+
 `GET /v1/auth/security-events` muestra hasta cien eventos propios. Se registran login, reutilización de refresh, cambio de contraseña, alta/confirmación/desactivación de 2FA, rotación de recuperación y primeras solicitudes de privacidad. Los eventos contienen acción, fecha e identificador de correlación; no incluyen contraseñas, tokens, factores ni secretos. No constituyen todavía una auditoría exhaustiva de toda la plataforma.
 
 ## Evidencia y límites

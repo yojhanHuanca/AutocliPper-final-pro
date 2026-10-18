@@ -39,6 +39,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Sesiones/refresh/reutilización/revocación, Argon2id, CSRF | IV | Cookies HttpOnly, rotación, revocación de familia, origen y token CSRF comprobados |
 | 2FA/códigos, perfil/preferencias, solicitudes de privacidad | IV | TOTP/recovery reales, revocación de sesiones, CAS y aislamiento; ver identity-security.md |
 | Ejecución de exportación/eliminación integral de datos | PD | Solo se registran solicitudes con fulfillment=pending; falta coordinación entre servicios |
+| Aporte exportable del perfil propio e inventario de privacidad | En verificación | [Alcance acotado](privacy-lifecycle.md): catálogo de 55 tablas/6 dueños, endpoint sensible con snapshot/hash/idempotencia y recibos/auditoría sin payload personal persistido. No completa la solicitud global; activación del runtime compartido y cierre CI pendientes |
 | Workspaces/equipos/invitaciones/roles/propiedad | IV | Comprobación servidor, invitación ligada a email, transferencia y restricciones en PostgreSQL |
 | Proyectos CRUD, búsqueda y concurrencia | IV | Acceso denegado a otro usuario y versión contra sobrescritura |
 | Carpetas/etiquetas/favoritos y paginación por cursor completa | PD | Listado actual acotado a 100 y búsqueda; capacidades adicionales pendientes |

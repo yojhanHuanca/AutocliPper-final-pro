@@ -100,7 +100,7 @@ jobs:
         if: failure()
         working-directory: autoclipper-infrastructure
         run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app ps --all
-      - name: Verify encrypted cold recovery in independent volumes and network
+      - name: Verify encrypted recovery and partial privacy export in independent volumes
         run: node autoclipper-infrastructure/scripts/recovery-drill.mjs
       - name: Show dependency state after recovery failure
         if: failure()

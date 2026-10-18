@@ -37,8 +37,9 @@ import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
 import { GoogleIdentityAdapter } from "../infrastructure/google.js";
 import { googleProof } from "../domain/google-identity.js";
-import {adminReauth} from "@autoclipper/api-contracts";
+import {adminReauth,privacyProfileProof} from "@autoclipper/api-contracts";
 import {AdminManager} from "./admin.manager.js";
+import {preparePrivacyProfile} from "./privacy-exports.js";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -574,6 +575,16 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         fulfillment: "pending",
       };
     });
+  }
+  async privacyProfileExport(req:Request,requestId:string,input:unknown,correlationId:string){
+    requireCsrf(req,this.config);
+    const data=body(privacyProfileProof,input),key=body(z.uuid(),req.headers['idempotency-key']);
+    const result=await this.sensitive(req,data.password,async(client,user)=>{
+      await this.mfa.verify(client,user.id,data.factor);
+      return preparePrivacyProfile(client,user.id,requestId,key,correlationId);
+    });
+    if(result.changed)throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
+    return result.value;
   }
   async privacyRequests(req: Request) {
     const user = await this.me(req);

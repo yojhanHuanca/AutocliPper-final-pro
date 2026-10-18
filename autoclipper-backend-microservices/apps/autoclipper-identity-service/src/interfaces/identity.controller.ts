@@ -20,6 +20,7 @@ import {
   ApiExcludeEndpoint,
   ApiOkResponse,
   ApiAcceptedResponse,
+  ApiHeader,
 } from "@nestjs/swagger";
 import { issueCsrf, uuid } from "@autoclipper/http-security";
 import { IdentityService } from "../application/identity.service.js";
@@ -37,6 +38,8 @@ import {
   SessionListResponseDto,
   SecurityEventListResponseDto,
   PrivacyListResponseDto,
+  PrivacyProfileProofDto,
+  PrivacyProfileExportDto,
 } from "@autoclipper/api-contracts";
 class RegistrationDto {
   @ApiProperty({ format: "email" }) email!: string;
@@ -184,6 +187,15 @@ export class IdentityController {
   @ApiAcceptedResponse({ type: PrivacyRequestResponseDto })
   privacy(@Req() req: Request, @Body() input: PrivacyRequestDto) {
     return this.service.privacy(req, input);
+  }
+  @Post('auth/privacy-requests/:id/identity-export')
+  @HttpCode(200)
+  @ApiHeader({name:'Idempotency-Key',required:true,description:'UUID for this profile snapshot; replay requires unchanged profile data.'})
+  @ApiBody({type:PrivacyProfileProofDto})
+  @ApiOkResponse({type:PrivacyProfileExportDto,description:'Partial Identity profile contribution. Global privacy request remains pending.'})
+  privacyProfileExport(@Req()req:Request,@Param('id')id:string,@Body()input:PrivacyProfileProofDto,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyProfileExport(req,uuid(id),input,String(res.locals['correlationId']));
   }
   @Get("auth/privacy-requests")
   @ApiOkResponse({ type: PrivacyListResponseDto })

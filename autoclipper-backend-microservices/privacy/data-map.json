@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "scope": "account-privacy-inventory",
+  "source": "Versioned SQL migrations; no shared-stack data read",
+  "retentionPolicy": "undecided",
+  "deletionExecutor": "not-implemented",
+  "services": [
+    {"application":"autoclipper-identity-service","database":"autoclipper_identity","groups":[
+      {"tables":["users","external_identities"],"subjectPath":"users.id and external_identities.user_id","projection":"identity-profile-v1 partial contribution implemented","blocker":"Global account export remains pending; provider subject is personal data, not a provider deletion command"},
+      {"tables":["sessions","access_tokens","refresh_tokens","verification_tokens","user_mfa","recovery_codes"],"subjectPath":"user_id or token.session_id -> sessions.user_id","projection":"Only MFA enabled flag in profile; other safe metadata pending, credential material excluded","blocker":"Revoke sessions/tokens; never export password hashes, token hashes, MFA ciphertext or recovery hashes as a profile"},
+      {"tables":["mail_outbox"],"subjectPath":"Encrypted payload contains destination; no relational user_id","projection":"pending","blocker":"Add authoritative subject linkage before selective purge/export; do not decrypt all users mail indiscriminately"},
+      {"tables":["privacy_requests","security_audit"],"subjectPath":"user_id, security_audit FK SET NULL","projection":"pending beyond existing own-request/event APIs","blocker":"Request CASCADE alone cannot coordinate other services; audit retention/anonymization undecided"},
+      {"tables":["admin_grants","admin_elevations","admin_access_audit"],"subjectPath":"grant.user_id; elevation.session_id; audit actor_user_id/subject_user_id","projection":"pending","blocker":"Revoke grants/elevations and preserve scoped immutable audit according to an approved policy"},
+      {"tables":["privacy_export_receipts","privacy_export_audit"],"subjectPath":"receipt.request_id -> privacy_requests.user_id; audit.actor_user_id","projection":"Metadata only; no exported profile payload stored","blocker":"Receipt/audit immutable, request FK restricts parent deletion; retention/redaction requires a separate approved operation"}
+    ]},
+    {"application":"autoclipper-workspace-service","database":"autoclipper_workspace","groups":[
+      {"tables":["workspaces","memberships"],"subjectPath":"creator_id and memberships.user_id; current owner is memberships.role=owner","projection":"pending","blocker":"creator_id is not current ownership after a transfer; do not remove a team or peers assets by historical creator"},
+      {"tables":["invitations","invitation_outbox"],"subjectPath":"invitation.email; outbox.id -> invitations.id","projection":"pending; exclude invite bearer/hash and encrypted mail payload","blocker":"Invitation recipient can exist without membership; reconcile pending delivery before revoke/purge"},
+      {"tables":["workspace_audit"],"subjectPath":"actor_id and subject_id within shared workspace","projection":"pending","blocker":"Peer information and retention/anonymization policy require explicit treatment"}
+    ]},
+    {"application":"autoclipper-project-service","database":"autoclipper_project","groups":[
+      {"tables":["projects","uploads","upload_parts","inspection_requests"],"subjectPath":"project/upload.creator_id; inspection_requests and upload_parts via upload_id -> uploads.id","projection":"pending","blocker":"Workspace owns shared content; uploads reference source S3 objects, multipart state and storage reservations"},
+      {"tables":["workspace_storage"],"subjectPath":"workspace_id aggregate, not exclusive user ownership","projection":"pending","blocker":"Cannot zero a workspace quota when one member leaves; reconcile the exact owned reservations/objects"},
+      {"tables":["processing_requests","analysis_requests","pipelines","pipeline_events","pipeline_usage_outbox"],"subjectPath":"request/pipeline.creator_id; events/outbox.pipeline_id","projection":"pending","blocker":"Stop new dispatch, cancel active children and settle storage/consumption before purge; references connect to other owners"},
+      {"tables":["editor_drafts","editor_revisions","editor_comments","editor_approvals","editor_review_links","editor_audit"],"subjectPath":"creator_id, author_id, approver_id and actor_id; local draft/revision FKs","projection":"pending","blocker":"Shared text/revisions, immutable history and review grants need a policy; revoke grants before content removal"}
+    ]},
+    {"application":"autoclipper-media-processing-service","database":"autoclipper_media","groups":[
+      {"tables":["inspection_tasks","inspection_outbox","processing_tasks","processing_outbox"],"subjectPath":"No creator_id; resolve authoritative task/upload references from Project, not every job in a workspace","projection":"pending","blocker":"Contains source/spec/result object references; worker cancellation, cleanup and outbox recovery must not recreate purged content"}
+    ]},
+    {"application":"autoclipper-content-analysis-service","database":"autoclipper_analysis","groups":[
+      {"tables":["analysis_jobs","analysis_outbox"],"subjectPath":"analysis_jobs.creator_id and source; outbox.job_id","projection":"pending","blocker":"Cancel stages/dispatch and validate authoritative Project reference before deleting source or derivative"},
+      {"tables":["transcripts","segment_selections"],"subjectPath":"job_id -> analysis_jobs.creator_id","projection":"pending; private speech/text can mention several people","blocker":"Shared-content decisions and downstream editor/review references precede erasure"},
+      {"tables":["provider_attempts","analysis_phase_attempts"],"subjectPath":"job_id -> analysis_jobs.creator_id","projection":"pending","blocker":"Reconcile started/unknown external effects before removing evidence; provider retention not decided"}
+    ]},
+    {"application":"autoclipper-billing-service","database":"autoclipper_billing","groups":[
+      {"tables":["plan_versions"],"subjectPath":"Global development configuration; no account subject column","projection":"not an account-owned record","blocker":"Do not delete a shared plan for an account request"},
+      {"tables":["workspace_entitlements","usage_periods"],"subjectPath":"workspace_id aggregate","projection":"pending","blocker":"Team consumption is shared; no approved personal/financial retention duration"},
+      {"tables":["usage_reservations","usage_admissions","usage_inbox","usage_stage_settlements","usage_ledger"],"subjectPath":"reservation.creator_id; other records via pipeline_id","projection":"pending","blocker":"Settle open reservations, preserve deduplication and decide immutable ledger retention/anonymization before erasure"}
+    ]}
+  ],
+  "outsideSql": [
+    {"system":"S3/RustFS and future R2","subjectPath":"Project uploads and Media/Analysis result references","blocker":"Sources, MP4/WAV/SRT/VTT, split-screen secondary references and multipart parts; delete by authoritative manifest, not bucket-wide or workspace-only prefix"},
+    {"system":"Redis/BullMQ","subjectPath":"Job identifiers and owning SQL outboxes","blocker":"Deleting Redis alone allows outbox replay; preserve terminal/tombstone semantics and disable resurrection before queue cleanup"},
+    {"system":"Review grants and issued URLs","subjectPath":"Project review links and authorized object references","blocker":"Revoke grants and prevent new URLs; account for already issued URLs and in-flight streams without inventing a new retention period"},
+    {"system":"Temporary files, logs and mail/providers","subjectPath":"Task IDs/correlation IDs or encrypted delivery payloads","blocker":"Temporary cleanup is not deletion of SQL, logs or delivered mail; external provider retention and attribution remain pending"},
+    {"system":"Backups and restores","subjectPath":"Checkpoint copies of all owners, objects and secrets","blocker":"Live erasure does not erase prior backups; approved retention/custody and replay of deletion tombstones after restore are required"}
+  ]
+}

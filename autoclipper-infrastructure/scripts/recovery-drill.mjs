@@ -19,7 +19,7 @@ const images = {
   postgres: 'postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c',
   storage: 'rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c',
   redis: 'redis:8.2.10-bookworm@sha256:47670742d7924adbcdb404d1288b6327815b23141969c0939b8e5d61f78c2634',
-  verifier: 'autoclipper-backend:0.2.0',
+  verifier: process.env.RECOVERY_VERIFIER_IMAGE ?? 'autoclipper-backend:0.2.0',
 };
 const containers = [], volumes = [];
 let createdNetwork = false;
@@ -45,7 +45,7 @@ function child(args, input) {
 async function command(args, input = '') {
   const running = child(args, input);
   running.process.stdout.on('data', chunk => running.chunks.push(chunk));
-  await running.done;
+  try{await running.done;}catch(error){error.commandOutput=Buffer.concat(running.chunks).toString();throw error;}
   return Buffer.concat(running.chunks).toString().trim();
 }
 async function waitReady(name) {
@@ -77,7 +77,9 @@ async function fixture(config) {
   const name = `${prefix}-fixture-${config.phase}`;
   await command(['create', '-i', '--pull=never', '--name', name, '--label', label, '--network', network, '--memory', '384m', '--cpus', '1', '--pids-limit', '128', '--read-only', '--tmpfs', '/tmp:rw,noexec,nosuid,size=96m,uid=1000,gid=1000', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', '--mount', `type=bind,source=${join(root, 'autoclipper-backend-microservices', 'scripts', 'recovery')},target=/app/scripts/recovery,readonly`, images.verifier, 'node', 'scripts/recovery/fixture.mjs']);
   containers.push(name);
-  const output = await command(['start', '-a', '-i', name], JSON.stringify(config));
+  let output;
+  try{output=await command(['start','-a','-i',name],JSON.stringify(config));}
+  catch(error){output=error.commandOutput??'';}
   const state = await assertOwned('container', name);
   if (state.State.ExitCode !== 0) {
     const diagnostic = output.split(/\r?\n/).findLast(line => line.startsWith('{"errorCode":'));
@@ -148,6 +150,7 @@ async function clean() {
 
 const started = Date.now();
 let result, failure;
+let stage='PREFLIGHT';
 try {
   const info = JSON.parse(await command(['info', '--format', '{{json .}}']));
   assert.ok(info.NCPU >= 2 && info.MemTotal >= 3 * 1024 ** 3, 'requires Docker Linux, 2 CPUs and 3 GiB; no image downloads or shared service stops');
@@ -165,11 +168,14 @@ try {
   await command(['network', 'create', '--internal', '--label', label, network]); createdNetwork = true;
   for (const role of ['source-pg', 'source-storage', 'target-pg', 'target-storage']) await volume(`${prefix}-${role}`);
   const sourcePg = `${prefix}-source-pg`, sourceStorage = `${prefix}-source-storage`;
+  stage='SOURCE_START';
   const sourcePgVolume = `${prefix}-source-pg`, sourceStorageVolume = `${prefix}-source-storage`;
   await run(sourcePg, ['--network-alias', 'source-pg', '--memory', '384m', '--cpus', '0.5', '--env-file', envPath, '--mount', `type=volume,source=${sourcePgVolume},target=/var/lib/postgresql`, ...['media', 'business'].flatMap((name, index) => ['--mount', `type=bind,source=${join(root, 'autoclipper-infrastructure', 'postgres', `init-${name}.sh`)},target=/docker-entrypoint-initdb.d/${index + 1}-${name}.sh,readonly`]), images.postgres]);
   await run(sourceStorage, ['--network-alias', 'source-storage', '--memory', '640m', '--cpus', '0.5', '--env-file', envPath, '--mount', `type=volume,source=${sourceStorageVolume},target=/data`, images.storage, '/data']);
   await waitReady(sourcePg);
+  stage='SOURCE_FIXTURE';
   const expected = await fixture({ phase: 'seed', pgHost: 'source-pg', storageHost: 'source-storage', password, accessKey, secretKey, internalToken });
+  stage='COLD_BACKUP';
   const backupStarted = Date.now();
   for (const name of [sourcePg, sourceStorage]) { await assertOwned('container', name); await command(['stop', '-t', '60', name]); }
   const postgresArchive = await coldArchive(sourcePg, sourcePgVolume, 'postgres', key);
@@ -178,6 +184,7 @@ try {
   await encryptArchive(Readable.from(privateConfig), join(directory, 'configuration.enc'), key, `${id}:configuration`);
   const backupSeconds = (Date.now() - backupStarted) / 1000;
   const restoreStarted = Date.now();
+  stage='RESTORE';
   // Prove wrong-key rejection without creating an extraction process.
   await assert.rejects(verifyArchive(postgresArchive.path, randomBytes(32), postgresArchive.context));
   await restoreArchive(postgresArchive, `${prefix}-target-pg`, 'postgres', key);
@@ -193,8 +200,9 @@ try {
   await run(`${prefix}-target-storage`, ['--network-alias', 'target-storage', '--memory', '640m', '--cpus', '0.5', '--env-file', restoredEnvPath, '--mount', `type=volume,source=${prefix}-target-storage,target=/data`, images.storage, '/data']);
   await run(`${prefix}-target-redis`, ['--network-alias', 'target-redis', '--memory', '128m', '--cpus', '0.25', images.redis, 'redis-server', '--save', '', '--appendonly', 'no']);
   await waitReady(`${prefix}-target-pg`);
+  stage='VERIFY_FIXTURE';
   const verified = await fixture({ ...restoredConfig, phase: 'verify', pgHost: 'target-pg', storageHost: 'target-storage' });
-  result = { runId: id, status: 'passed', checkpointAt: expected.checkpointAt, backupSeconds, restoreAndVerifySeconds: (Date.now() - restoreStarted) / 1000, elapsedSeconds: (Date.now() - started) / 1000, databaseCount: verified.databases.length, objectCount: verified.objects.length, crossDatabaseDenials: verified.crossDatabaseDenials, runtimeDdlDenials: verified.runtimeDdlDenials, adminGrantWriteDenied: verified.adminGrantWriteDenied, replayedInspection: verified.replayedInspection, images, archiveContexts: { postgres: postgresArchive.context, storage: storageArchive.context }, productionRpoRtoValidated: false };
+  result = { runId: id, status: 'passed', checkpointAt: expected.checkpointAt, backupSeconds, restoreAndVerifySeconds: (Date.now() - restoreStarted) / 1000, elapsedSeconds: (Date.now() - started) / 1000, databaseCount: verified.databases.length, objectCount: verified.objects.length, crossDatabaseDenials: verified.crossDatabaseDenials, runtimeDdlDenials: verified.runtimeDdlDenials, adminGrantWriteDenied: verified.adminGrantWriteDenied, replayedInspection: verified.replayedInspection, privacyProfileExport: verified.privacyProfileExport, images, archiveContexts: { postgres: postgresArchive.context, storage: storageArchive.context }, productionRpoRtoValidated: false };
 } catch (error) { failure = error; }
 const cleanupErrors = await clean();
 for (const filename of ['fixture.env', 'restored-storage.env']) {
@@ -203,7 +211,7 @@ for (const filename of ['fixture.env', 'restored-storage.env']) {
 if (cleanupErrors.length) failure = new Error(`ISOLATED_RESOURCE_CLEANUP_FAILED_${cleanupErrors.join('_')}`);
 if (failure) {
   // Do not print Docker stderr, env, URLs or SQL exception payloads.
-  console.error(JSON.stringify({ status: 'failed', runId: id, code: failure instanceof assert.AssertionError ? 'RECOVERY_ASSERTION_FAILED' : failure.message.match(/^[A-Z_0-9]+$/)?.[0] ?? 'RECOVERY_DRILL_FAILED', cleanupErrors }));
+  console.error(JSON.stringify({ status: 'failed', runId: id, stage, code: failure instanceof assert.AssertionError ? 'RECOVERY_ASSERTION_FAILED' : failure.message.match(/^[A-Z_0-9]+$/)?.[0] ?? 'RECOVERY_DRILL_FAILED', cleanupErrors }));
   process.exitCode = 1;
 } else {
   await writeFile(join(directory, 'report.json'), JSON.stringify(result, null, 2), { flag: 'wx', mode: 0o600 });

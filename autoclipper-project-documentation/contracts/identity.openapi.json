@@ -446,6 +446,55 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/identity-export": {
+      "post": {
+        "operationId": "IdentityController_privacyProfileExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this profile snapshot; replay requires unchanged profile data.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Identity profile contribution. Global privacy request remains pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyProfileExportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
     "/v1/auth/security-events": {
       "get": {
         "operationId": "IdentityController_securityEvents",
@@ -1463,6 +1512,217 @@
           "kind",
           "state",
           "fulfillment"
+        ]
+      },
+      "PrivacyProfileProofDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "factor": {
+            "type": "string",
+            "description": "Fresh TOTP or one-use recovery code when MFA is enabled."
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "PrivacyProfilePreferencesDto": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "es",
+              "en"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "emailNotifications": {
+            "type": "boolean"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "system",
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "locale",
+          "timezone",
+          "emailNotifications",
+          "theme"
+        ]
+      },
+      "PrivacyProfileUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "profileVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/PrivacyProfilePreferencesDto"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "createdAt",
+          "verifiedAt",
+          "profileVersion",
+          "preferences",
+          "mfaEnabled"
+        ]
+      },
+      "PrivacyExternalIdentityDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "providerEmail": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "subject",
+          "providerEmail",
+          "linkedAt"
+        ]
+      },
+      "PrivacyIdentityProfileDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/PrivacyProfileUserDto"
+          },
+          "externalIdentities": {
+            "maxItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyExternalIdentityDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "user",
+          "externalIdentities"
+        ]
+      },
+      "PrivacyProfileExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "identity-profile-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyIdentityProfileDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "sha256",
+          "data"
         ]
       },
       "PrivacyStatusResponseDto": {
