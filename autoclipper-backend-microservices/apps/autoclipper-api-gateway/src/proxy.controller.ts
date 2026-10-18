@@ -12,6 +12,8 @@ import type { Request, Response } from "express";
 @Controller()
 export class ProxyController {
   @All([
+    "admin",
+    "admin/*path",
     "auth",
     "auth/*path",
     "workspaces",
@@ -33,7 +35,7 @@ export class ProxyController {
       throw new BadRequestException();
     const root = segments[0];
     const base =
-      root === "auth"
+      root === "auth" || root === "admin"
         ? process.env["IDENTITY_URL"]
         : root === "consumption"
           ? process.env["BILLING_URL"]

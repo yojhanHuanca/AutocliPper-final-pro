@@ -4,7 +4,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {mkdtemp,readFile,writeFile,rm,mkdir} from 'node:fs/promises';
-import {join} from 'node:path';
+import {join,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {eventually} from '@autoclipper/testing';
 import {account} from '../helpers/accounts.mjs';
@@ -16,6 +16,7 @@ test('REAL local ASR: account → upload → audio → whisper.cpp → manual ex
   const workspace=await alice.c.request('/workspaces','POST',{kind:'personal',name:'Real ASR acceptance'},{'idempotency-key':randomUUID()});assert.equal(workspace.status,201);
   const project=await alice.c.request('/projects','POST',{workspaceId:workspace.value.id,name:'Synthetic Spanish speech with real inference'},{'idempotency-key':randomUUID()});assert.equal(project.status,201);
   const root=process.env.TEST_TEMP_DIR??'.local';await mkdir(root,{recursive:true});const directory=await mkdtemp(join(root,'real-asr-'));
+  if(!resolve(directory).startsWith(resolve(root)+sep))throw Error('Acceptance cleanup must stay inside its fixture root');
   const ffmpeg=process.env.FFMPEG_PATH??'ffmpeg';let uploadId,audioId,analysisId,transcript,clipId;
   async function wait(path,timeout=90000){let value;await eventually(async()=>{const response=await alice.c.request(path);value=response.value;return response.status===200&&['succeeded','failed','cancelled'].includes(value.status);},timeout);assert.equal(value.status,'succeeded',JSON.stringify(value));return value;}
   try{

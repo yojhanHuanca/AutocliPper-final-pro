@@ -11,6 +11,8 @@
     },
     {"idx":1,"version":"7","when":1791951000000,"tag":"0001_identity_security","breakpoints":true},
     {"idx":2,"version":"7","when":1791952000000,"tag":"0002_security_audit","breakpoints":true},
-    {"idx":3,"version":"7","when":1791954000000,"tag":"0003_google_identities","breakpoints":true}
+    {"idx":3,"version":"7","when":1791954000000,"tag":"0003_google_identities","breakpoints":true},
+    {"idx":4,"version":"7","when":1792119000000,"tag":"0004_administration","breakpoints":true},
+    {"idx":5,"version":"7","when":1792119001000,"tag":"0005_admin_audit_grant_context","breakpoints":true}
   ]
 }

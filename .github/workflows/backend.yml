@@ -78,6 +78,9 @@ jobs:
       - name: Test real accounts, permissions and uploads
         working-directory: autoclipper-infrastructure
         run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app run --rm business-verification
+      - name: Verify read-only administration with real grants MFA scopes and audit
+        working-directory: autoclipper-infrastructure
+        run: docker compose -f compose.yaml -f compose.business.yaml -f compose.business-tests.yaml --profile app run --rm admin-verification
       - name: Verify persistent analysis with explicit test providers
         working-directory: autoclipper-infrastructure
         run: |

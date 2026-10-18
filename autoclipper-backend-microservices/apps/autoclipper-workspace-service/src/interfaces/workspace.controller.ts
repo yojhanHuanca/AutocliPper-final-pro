@@ -48,6 +48,7 @@ class AcceptInvitationDto {
 @ApiTags("workspaces")
 @Controller()
 export class WorkspaceController {
+  @Post("internal/admin-workspaces")@HttpCode(200)@ApiExcludeEndpoint() adminWorkspaces(@Req()req:Request,@Body()input:unknown){return this.service.adminWorkspaces(req,input);}
   constructor(@Inject(WorkspaceService) readonly service: WorkspaceService) {}
   @Post("workspaces/:id/invitations")
   @ApiHeader({ name: "Idempotency-Key", required: true })

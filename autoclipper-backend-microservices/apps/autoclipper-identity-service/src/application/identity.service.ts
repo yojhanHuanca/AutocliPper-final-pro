@@ -37,6 +37,8 @@ import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
 import { GoogleIdentityAdapter } from "../infrastructure/google.js";
 import { googleProof } from "../domain/google-identity.js";
+import {adminReauth} from "@autoclipper/api-contracts";
+import {AdminManager} from "./admin.manager.js";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -64,6 +66,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly transport = mailTransport();
   readonly encryptionKey = process.env["AUTH_ENCRYPTION_KEY"] ?? "";
   readonly mfa = new MfaManager(this.encryptionKey);
+  readonly admin = new AdminManager(this.pool,this.config,this.redis);
   readonly google = new GoogleIdentityAdapter();
   private dummyHash = "";
   private timer: NodeJS.Timeout | undefined;
@@ -318,6 +321,11 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   }
   async me(req: Request) {
     return this.authenticate(cookie(req, "access"));
+  }
+  async adminAccess(req:Request,input:unknown,correlationId:string){
+    requireCsrf(req,this.config);await this.admin.boundary(req);const data=body(adminReauth,input),user=await this.me(req);
+    try{return await this.sensitive(req,data.password,(client,actor)=>this.admin.elevate(client,req,actor.id,data.factor,this.mfa,correlationId));}
+    catch(error){await this.admin.audit(this.pool,user.id,null,undefined,"reauth_denied",correlationId);throw error;}
   }
   private async sensitive<T>(
     req: Request,

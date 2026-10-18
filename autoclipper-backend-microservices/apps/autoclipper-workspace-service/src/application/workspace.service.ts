@@ -22,12 +22,20 @@ import {
   seal,
   unseal,
   internalJson,
+  adminAuthorization,
 } from "@autoclipper/http-security";
 import { permits, type Role } from "../domain/permissions.js";
 import { logger } from "@autoclipper/observability";
+import {adminOwnerRequest,adminAuthority,adminWorkspacesPage} from "@autoclipper/api-contracts";
 
 @Injectable()
 export class WorkspaceService implements OnModuleInit, OnModuleDestroy {
+  async adminWorkspaces(req:Request,input:unknown){
+    requireInternal(req,this.config);const {token,query,correlationId}=body(adminOwnerRequest,input);
+    const authority=body(adminAuthority,await adminAuthorization(this.config,{token,permission:"workspaces.read",correlationId,workspaceId:query.workspaceId}));
+    const rows=(await this.pool.query<{id:string;kind:string;created_at:Date;member_count:string}>("SELECT w.id,w.kind,w.created_at,(SELECT count(*) FROM memberships m WHERE m.workspace_id=w.id) AS member_count FROM workspaces w WHERE ($1::uuid IS NULL OR w.id=$1) AND ($2::uuid[] IS NULL OR w.id=ANY($2)) AND ($3::uuid IS NULL OR w.id<$3) ORDER BY w.id DESC LIMIT $4",[query.workspaceId??null,authority.workspaceIds,query.beforeId??null,query.limit+1])).rows;
+    const items=rows.slice(0,query.limit).map(row=>({id:row.id,kind:row.kind,memberCount:Number(row.member_count),createdAt:row.created_at.toISOString()}));return body(adminWorkspacesPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
+  }
   readonly config = loadServiceConfig();
   readonly pool = new pg.Pool({
     connectionString: this.config.DATABASE_URL,

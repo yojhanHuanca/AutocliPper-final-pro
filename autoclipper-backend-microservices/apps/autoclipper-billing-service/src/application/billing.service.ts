@@ -4,7 +4,8 @@ import {randomUUID} from "node:crypto";
 import pg from "pg";
 import {z} from "zod";
 import {usageReservation,usageReport,usageBudgets,type UsageStage} from "@autoclipper/api-contracts";
-import {authenticatedUser,body,digest,loadServiceConfig,workspaceAccess} from "@autoclipper/http-security";
+import {authenticatedUser,body,digest,loadServiceConfig,workspaceAccess,requireInternal,adminAuthorization} from "@autoclipper/http-security";
+import {adminOwnerRequest,adminAuthority,adminConsumptionPage} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
 
 type Plan={id:string;version:string;kind:"development";label:string;processing_seconds_per_month:number;active_pipelines:number};
@@ -13,6 +14,12 @@ type Admission={request_hash:string;admitted:boolean;code:string|null};
 export function consumptionPeriod(now=new Date()){return{start:new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)),end:new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1))};}
 @Injectable()
 export class BillingService implements OnModuleInit,OnModuleDestroy {
+  async adminConsumption(req:Request,input:unknown){
+    requireInternal(req,this.config);const {token,query,correlationId}=body(adminOwnerRequest,input);
+    const authority=body(adminAuthority,await adminAuthorization(this.config,{token,permission:"consumption.read",correlationId,workspaceId:query.workspaceId})),period=consumptionPeriod();
+    const rows=(await this.pool.query<{workspace_id:string;kind:string;version:string;budget:number;consumed:number;reserved:number}>("SELECT e.workspace_id,p.kind,p.version,COALESCE(u.budget_seconds,p.processing_seconds_per_month) AS budget,COALESCE(u.consumed_seconds,0) AS consumed,COALESCE(u.reserved_seconds,0) AS reserved FROM workspace_entitlements e JOIN plan_versions p ON p.id=e.plan_version_id LEFT JOIN usage_periods u ON u.workspace_id=e.workspace_id AND u.period_start=$1 WHERE ($2::uuid IS NULL OR e.workspace_id=$2) AND ($3::uuid[] IS NULL OR e.workspace_id=ANY($3)) AND ($4::uuid IS NULL OR e.workspace_id<$4) ORDER BY e.workspace_id DESC LIMIT $5",[period.start,query.workspaceId??null,authority.workspaceIds,query.beforeId??null,query.limit+1])).rows;
+    const items=rows.slice(0,query.limit).map(row=>({id:row.workspace_id,unit:"material_seconds_per_stage",planKind:row.kind,planVersion:row.version,periodStart:period.start.toISOString(),periodEnd:period.end.toISOString(),budgetSeconds:row.budget,consumedSeconds:row.consumed,reservedSeconds:row.reserved}));return body(adminConsumptionPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
+  }
   readonly config=loadServiceConfig();
   readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:2000,statement_timeout:5000});
   private plan:Plan|undefined;

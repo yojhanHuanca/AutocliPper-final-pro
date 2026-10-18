@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
       target: verification
     command: ['node','--test','--test-concurrency=1','tests/business/*.test.mjs','tests/acceptance/*.test.mjs']
-    environment:
+    environment: &business-test-environment
       NODE_ENV: development
       API_BASE_URL: http://gateway:3000
       MAILPIT_URL: http://mailpit:8025
@@ -33,6 +33,25 @@ services:
       renderer: {condition: service_healthy}
       analysis: {condition: service_healthy}
     mem_limit: 512m
+    cpus: 1
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+
+  admin-verification:
+    profiles: ['test']
+    image: autoclipper-verification:0.2.0
+    command: ['node','--test','--test-concurrency=1','tests/admin-integration/*.test.mjs']
+    environment:
+      <<: *business-test-environment
+      IDENTITY_OWNER_DATABASE_URL: postgresql://autoclipper_identity_owner:${IDENTITY_OWNER_PASSWORD}@postgres:5432/autoclipper_identity
+      ADMIN_ACCEPTANCE: 'true'
+    depends_on:
+      gateway: {condition: service_healthy}
+      identity: {condition: service_healthy}
+      workspace: {condition: service_healthy}
+      project: {condition: service_healthy}
+      billing: {condition: service_healthy}
+    mem_limit: 384m
     cpus: 1
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']

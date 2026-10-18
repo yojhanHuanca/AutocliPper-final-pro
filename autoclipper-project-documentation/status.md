@@ -68,7 +68,8 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Bloqueo de creación manual fuera del ledger por modo de admisión | IV | Configuración server development/commercial; audio/análisis/render/editor export denegados en commercial, incluidas variantes/replay/owner/editor/cabeceras. Lecturas/descargas/cancelación/legacy conservadas, pipeline whisper.cpp real con ledger aprobado; [inventario, pruebas y límites](stage-6-commercial-admission.md). No equivale a lanzamiento comercial |
 | Proveedor de pagos | PC | Selección requiere entidad, país y necesidades comerciales |
 | Notificaciones/correo/preferencias/soporte | PD + PC | SMTP local y preferencia de correo verificados; entrega externa, eventos y soporte pendientes |
-| Administración autorizada/ajustes auditados | PD | Ninguna ruta global sin permisos |
+| Administración mínima de solo lectura | IV | Grants por operador CLI owner, separados de workspace; MFA/reauth de sesión 5m, cuatro permisos/scope, consultas paginadas/redactadas por sus dueños, revisión/revocación y auditoría inmutable. Diez pruebas de integración aprobadas; [alcance y evidencia](stage-7-administration-read-only.md). No otorga acceso al contenido privado mediante APIs normales |
+| Acciones administrativas/ajustes/tickets/soporte | PD | Suspender/borrar/asignar créditos, configuración global y soporte requieren flujos/autorización/auditoría específicos; no implementados por esta entrega read-only |
 | Fairness y workers separados por etapa | IV parcial + PD | Inspector, renderer y análisis separados; cuatro análisis activos/workspace y concurrencia uno. STT/selección comparten worker/cola; fairness completo pendiente |
 | Dump y restore PostgreSQL en base temporal | IV | pg_dump/pg_restore y comprobación de migración restaurada; base temporal retirada |
 | Restore integral/PITR/retención de negocio | PD | Procedimiento y políticas propuestas, ensayo completo pendiente |

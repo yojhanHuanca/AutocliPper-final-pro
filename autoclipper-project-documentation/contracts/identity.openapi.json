@@ -847,6 +847,257 @@
           "identity"
         ]
       }
+    },
+    "/v1/admin/access": {
+      "get": {
+        "operationId": "AdminController_access",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccessDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      },
+      "post": {
+        "operationId": "AdminController_elevate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminReauthDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminElevatedDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "AdminController_users",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUsersPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/workspaces": {
+      "get": {
+        "operationId": "AdminController_workspaces",
+        "parameters": [
+          {
+            "description": "Exclusive UUID keyset cursor, in descending ID order.",
+            "required": false,
+            "name": "beforeId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional exact workspace filter; the server enforces the operator grant scope.",
+            "required": false,
+            "name": "workspaceId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminWorkspacesPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/jobs": {
+      "get": {
+        "operationId": "AdminController_jobs",
+        "parameters": [
+          {
+            "description": "Exclusive UUID keyset cursor, in descending ID order.",
+            "required": false,
+            "name": "beforeId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional exact workspace filter; the server enforces the operator grant scope.",
+            "required": false,
+            "name": "workspaceId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminJobsPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/consumption": {
+      "get": {
+        "operationId": "AdminController_consumption",
+        "parameters": [
+          {
+            "description": "Exclusive UUID keyset cursor, in descending ID order.",
+            "required": false,
+            "name": "beforeId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional exact workspace filter; the server enforces the operator grant scope.",
+            "required": false,
+            "name": "workspaceId",
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminConsumptionPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
     }
   },
   "info": {
@@ -1476,6 +1727,333 @@
         "required": [
           "token",
           "password"
+        ]
+      },
+      "AdminAccessDto": {
+        "type": "object",
+        "properties": {
+          "granted": {
+            "type": "boolean"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "users.read",
+                "workspaces.read",
+                "jobs.read",
+                "consumption.read"
+              ]
+            }
+          },
+          "workspaceIds": {
+            "nullable": true,
+            "description": "Null means explicitly global. An empty array with granted=false grants nothing.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "elevatedUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "granted",
+          "mfaEnabled",
+          "permissions",
+          "workspaceIds",
+          "elevatedUntil"
+        ]
+      },
+      "AdminReauthDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "factor": {
+            "type": "string",
+            "description": "Fresh TOTP or one-use recovery code; MFA must be enabled."
+          }
+        },
+        "required": [
+          "password",
+          "factor"
+        ]
+      },
+      "AdminElevatedDto": {
+        "type": "object",
+        "properties": {
+          "elevatedUntil": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "elevatedUntil"
+        ]
+      },
+      "AdminUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "verified",
+          "mfaEnabled",
+          "createdAt"
+        ]
+      },
+      "AdminUsersPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminWorkspaceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "team"
+            ]
+          },
+          "memberCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "memberCount",
+          "createdAt"
+        ]
+      },
+      "AdminWorkspacesPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminWorkspaceDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "render",
+              "analysis",
+              "pipeline"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "transcribing",
+              "selecting",
+              "audio",
+              "analysis",
+              "render",
+              "stopping",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Classified code only; no provider response, source, transcript or payload."
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "kind",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode"
+        ]
+      },
+      "AdminJobsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminJobDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminConsumptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Workspace ID."
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "material_seconds_per_stage"
+            ]
+          },
+          "planKind": {
+            "type": "string",
+            "enum": [
+              "development"
+            ]
+          },
+          "planVersion": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "budgetSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "consumedSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reservedSeconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "unit",
+          "planKind",
+          "planVersion",
+          "periodStart",
+          "periodEnd",
+          "budgetSeconds",
+          "consumedSeconds",
+          "reservedSeconds"
+        ]
+      },
+      "AdminConsumptionPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminConsumptionDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
         ]
       }
     }

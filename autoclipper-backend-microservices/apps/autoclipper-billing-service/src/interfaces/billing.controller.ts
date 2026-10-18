@@ -6,6 +6,7 @@ import {requireInternal,uuid} from "@autoclipper/http-security";
 import {BillingService} from "../application/billing.service.js";
 @ApiTags("consumption")@Controller()
 export class BillingController {
+  @Post("internal/admin-consumption")@HttpCode(200)@ApiExcludeEndpoint() adminConsumption(@Req()req:Request,@Body()input:unknown){return this.service.adminConsumption(req,input);}
   constructor(@Inject(BillingService)readonly service:BillingService){}
   @Get("health/live") live(){return{status:"ok"};}
   @Get("health/ready") async ready(){await this.service.pool.query("SELECT 1 FROM plan_versions LIMIT 1");return{status:"ok"};}

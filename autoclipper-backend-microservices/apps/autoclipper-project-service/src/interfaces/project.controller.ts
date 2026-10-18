@@ -23,6 +23,7 @@ import {
   ApiExtraModels,
   getSchemaPath,
   ApiQuery,
+  ApiExcludeEndpoint,
 } from "@nestjs/swagger";
 import {
   CreatedProjectDto,
@@ -61,6 +62,7 @@ class PartDto {
 @ApiExtraModels(PutUploadIntentDto, MultipartUploadIntentDto)
 @Controller()
 export class ProjectController {
+  @Post("internal/admin-jobs")@HttpCode(200)@ApiExcludeEndpoint() adminJobs(@Req()req:Request,@Body()input:unknown){return this.service.adminJobs(req,input);}
   constructor(@Inject(ProjectService) readonly service: ProjectService) {}
   @Get('projects/storage')@ApiOkResponse({schema:{type:'object',required:['workspaceId','usedBytes','reservedBytes','limitBytes'],properties:{workspaceId:{type:'string',format:'uuid'},usedBytes:{type:'integer'},reservedBytes:{type:'integer'},limitBytes:{type:'integer'}}}})
   storage(@Req()req:Request,@Query('workspaceId')workspaceId:string){return this.service.storage(req,uuid(workspaceId));}

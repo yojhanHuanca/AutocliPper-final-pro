@@ -36,6 +36,7 @@ import {
   ForbiddenException,
   UnauthorizedException,
   ServiceUnavailableException,
+  HttpException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { z } from "zod";
@@ -149,6 +150,7 @@ export async function internalJson<T>(
   path: string,
   config: Pick<ServiceConfig, "INTERNAL_TOKEN">,
   data: unknown,
+  preserveRateLimit = false,
 ): Promise<T> {
   let response: globalThis.Response;
   try {
@@ -167,6 +169,7 @@ export async function internalJson<T>(
   if (response.status === 401) throw new UnauthorizedException();
   if (response.status === 403 || response.status === 404)
     throw new ForbiddenException();
+  if (preserveRateLimit && response.status === 429)throw new HttpException("Rate limited",429);
   if (!response.ok) throw new ServiceUnavailableException();
   return (await response.json()) as T;
 }
@@ -182,6 +185,9 @@ export async function authenticatedUser(
     config,
     { token },
   );
+}
+export async function adminAuthorization(config:ServiceConfig,input:{token:string;permission:string;correlationId:string;workspaceId?:string|undefined}):Promise<unknown>{
+  return internalJson(config.IDENTITY_URL,"/v1/internal/admin-authorize",config,input,true);
 }
 export async function workspaceAccess(
   config: ServiceConfig,

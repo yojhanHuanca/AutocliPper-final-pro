@@ -20,3 +20,4 @@ export * from "./editor.js";
 export * from "./collaboration.js";
 export * from "./pipeline.js";
 export * from "./consumption.js";
+export * from "./administration.js";
