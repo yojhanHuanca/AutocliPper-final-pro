@@ -2,6 +2,8 @@
 
 Privacidad: nuevo [aporte del perfil propio de Identity](autoclipper-project-documentation/privacy-lifecycle.md) mediante API, con contraseña/MFA, CSRF, idempotencia y recibos auditables sin guardar otra copia del JSON personal. Es una exportación parcial; la solicitud global sigue pendiente. El inventario versionado cubre las 55 tablas de seis bases y sus dependencias con objetos/grants/backups; eliminación coordinada y política de retención pendientes. Este incremento se verifica en un laboratorio aislado y su activación en el runtime compartido requiere una ventana coordinada.
 
+[CI de privacidad 39170681668](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39170681668) aprobó los tres jobs para `b50850a`: 34 unitarias/HTTP, 34 infraestructura, regresión de negocio y aceptación aislada del aporte mediante 26 peticiones HTTP, sin fallos ni omisiones.
+
 Primera presentación: [arquitectura y entrada pública Cloudflare](autoclipper-project-documentation/cloudflare-architecture.md), con contexto, servicios, seis bases, procesamiento y despliegue previsto. La propuesta separa Tunnel web/API de medios privados mediante R2/Worker; implementación y aceptación de nube pendientes. [Ensayo de recuperación cifrada](autoclipper-project-documentation/recovery-drill.md): restauración aislada local verificada con seis bases, objetos y replay de inspección; no acredita RPO/RTO de producción.
 
 [CI final del ensayo 39158379956](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39158379956) aprobó quality/infrastructure/business para `7f86090`: 31 unitarias/HTTP, 34 infraestructura y todas las suites de negocio, administración, análisis, orquestación y admisión, sin fallos ni omisiones; restore cifrado remoto aprobado.
