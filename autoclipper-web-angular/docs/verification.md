@@ -1,5 +1,19 @@
 # Evidencia de la primera entrega
 
+## Del proyecto al borrador guardado — 2026-10-17
+
+El resultado real de crear un borrador se conserva en el componente del proyecto. Si el router cancela o falla al abrir el editor, se muestra «Abrir borrador guardado»; repetir la misma solicitud abre el mismo resultado, sin otro POST. Una solicitud incierta conserva su clave y un intervalo/carga/transcripción diferente obtiene otra. La respuesta debe corresponder al proyecto y a la carga solicitados. Un resultado tardío de otra carga se conserva identificado, sin navegar automáticamente; el de otro proyecto se descarta.
+
+La lista de borradores distingue carga inicial, consulta fallida, lista vacía confirmada y filas de una consulta anterior. Su actualización independiente no recarga la fuente ni el pipeline. Un 403/404 de proyecto o lista limpia metadatos anteriores, resultado de creación, fuentes y referencias, invalidando las consultas de inspección/pipeline pendientes. Las mutaciones comprueban el rol dentro del componente; lector conserva consulta. La vista de diseño no solicita datos ni permite mutaciones, conserva el regreso a /design/projects y no muestra tiempos predeterminados como si fueran de una fuente inspeccionada.
+
+La carga comprueba AbortSignal antes y después del hash y antes de confirmar. Si la intención llega después de cancelar, se intenta liberar esa carga antes del PUT; un fallo de liberación informa su ID y permite consultar/reintentar. No se afirma cancelación exitosa ante un fallo del servidor. El componente mantiene su cancelación existente para una transferencia ya iniciada. Los grants tardíos de otro proyecto/pipeline no inician descargas.
+
+100 pruebas pasan con Node 24.19.0, incluidas reapertura tras navegación cancelada/fallida, idempotencia, cambio de fuente/proyecto, error/reintento independiente de lista, denegación de acceso, permisos reader/design y cancelación antes/durante hash o intención. La suite también conserva las comprobaciones de registro privado, retorno seguro de login, guard de sesión y permisos de workspace; no equivale a una aceptación integrada de todo ese recorrido. Typecheck y build aprobados.
+
+Se volvió a consultar GET http://localhost:3000/v1/health/ready: ECONNREFUSED. No se inició runtime ni se editó backend, migraciones o contratos; no se afirma haber probado un arranque del stack. La prueba con cuenta/workspace/proyecto/video reales continúa bloqueada por la API apagada. Las confirmaciones QA existentes siguen vigentes. No se presentan precios o suscripciones como activos.
+
+Una única revisión visual de cierre de /design/projects/structure a 1440×1000 y 390×844 confirmó ausencia de overflow horizontal, campos de tiempo vacíos y cero borradores/recibos ficticios; consola sin errores/advertencias. Capturas: C:/Users/USER/Documents/Codex/artifacts/autoclipper-project-handoff-2026-10-17/desktop-empty.jpg y mobile-empty.jpg. El resultado poblado se valida solo con fixtures de DTO en tests mientras la API está apagada.
+
 ## Guardar subtítulos y exportar la revisión — 2026-10-17
 
 La acción explícita «Guardar y exportar» realiza PATCH con la versión/If-Match actual, conserva el borrador devuelto y solo entonces solicita POST /edits/{id}/renders con revisionVersion de esa nueva revisión. Una validación fallida o un 412 no solicita render. Si el render se rechaza, la revisión guardada permanece limpia y visible; se puede reintentar la exportación sin crear otra revisión. El rol se comprueba de nuevo después de guardar y los controles de composición se deshabilitan durante la operación.

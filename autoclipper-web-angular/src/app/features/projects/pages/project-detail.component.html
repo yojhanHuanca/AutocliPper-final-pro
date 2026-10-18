@@ -1,13 +1,13 @@
-<a class="text-link back-link" routerLink="/app/projects"
+<a class="text-link back-link" [routerLink]="design ? '/design/projects' : '/app/projects'"
   >← Volver a proyectos</a
 >
 <section class="page-heading">
   <div>
     <span class="eyebrow">TU HISTORIA, EN PROCESO</span>
-    <h1>{{ project()?.name ?? "Cargando proyecto…" }}</h1>
+    <h1>{{ project()?.name ?? (design ? 'Detalle del proyecto' : error() ? 'Proyecto no disponible' : 'Cargando proyecto…') }}</h1>
     <p>Prepara un MP4 desde un intervalo elegido por ti y abre un borrador para seguir editándolo.</p>
   </div>
-  <button class="button" type="button" (click)="reload()" [disabled]="busy()">
+  <button class="button" type="button" (click)="reload()" [disabled]="design || busy()">
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
@@ -81,14 +81,14 @@
       </p>
       <label
         >ID de carga<input
-          [ngModel]="uploadId" (ngModelChange)="selectUpload($event)" [disabled]="busy()"
+          [ngModel]="uploadId" (ngModelChange)="selectUpload($event)" [disabled]="design || busy()"
           placeholder="UUID de la carga"
           autocomplete="off" /></label
       ><button
         class="button small"
         type="button"
         (click)="inspect()"
-        [disabled]="busy() || !uploadId"
+        [disabled]="design || busy() || !uploadId"
       >
         Consultar
       </button>
@@ -144,7 +144,7 @@
           >Inicio (segundos)<input
             type="number"
             name="start"
-            [(ngModel)]="startSeconds"
+            [ngModel]="inspected() ? startSeconds : null" (ngModelChange)="setIntervalField('startSeconds', $event)"
             min="0"
             [max]="sourceSelectionLimitSeconds()"
             step="0.1"
@@ -153,7 +153,7 @@
           >Fin (segundos)<input
             type="number"
             name="end"
-            [(ngModel)]="endSeconds"
+            [ngModel]="inspected() ? endSeconds : null" (ngModelChange)="setIntervalField('endSeconds', $event)"
             min="0.1"
             [max]="sourceSelectionLimitSeconds()"
             step="0.1"
@@ -262,13 +262,13 @@
       <summary>Retomar un procesamiento existente</summary>
       <label
         >ID del pipeline<input
-          [ngModel]="pipelineId" (ngModelChange)="selectPipeline($event)" [disabled]="busy()"
+          [ngModel]="pipelineId" (ngModelChange)="selectPipeline($event)" [disabled]="design || busy()"
           autocomplete="off" /></label
       ><button
         type="button"
         class="button small"
         (click)="pollPipeline()"
-        [disabled]="busy() || !pipelineId"
+        [disabled]="design || busy() || !pipelineId"
       >
         Consultar estado
       </button>
@@ -287,7 +287,7 @@
       (click)="createEdit()"
       [disabled]="busy() || !inspected() || !canEdit()"
     >
-      Crear borrador y abrir editor<ac-icon name="scissors" />
+      {{ hasReusableDraft() ? 'Abrir borrador creado' : 'Crear borrador y abrir editor' }}<ac-icon name="scissors" />
     </button>
   </div>
   <p>
@@ -299,6 +299,20 @@
       El borrador usará el intervalo y formato anteriores. Sin una transcripción completada para esta carga, se abrirá sin subtítulos.
     }
   </p>
+  @if (createdDraft(); as draft) {
+    <section class="draft-handoff" aria-labelledby="draft-handoff-title">
+      <div><h3 id="draft-handoff-title">Borrador guardado: {{ draft.name }}</h3>
+      <p>Revisión {{ draft.version }} · {{ draft.revision.spec.startSeconds }}–{{ draft.revision.spec.endSeconds }} s de su video de origen.</p>
+      @if (handoffNotice()) { <p role="status">{{ handoffNotice() }}</p> }
+      </div>
+      <button class="button primary" type="button" (click)="openCreatedDraft()" [disabled]="busy()">Abrir borrador guardado<ac-icon name="arrow" /></button>
+    </section>
+  }
+  <div class="draft-list-status">
+    <h3>Borradores del proyecto</h3>
+    <button type="button" class="button small" (click)="reloadEdits()" [disabled]="design || busy() || editsLoading() || !project()" [attr.aria-busy]="editsLoading()">{{ editsLoading() ? 'Consultando borradores…' : 'Actualizar borradores' }}</button>
+  </div>
+  @if (editsError()) { <p class="alert error" role="alert">{{ editsError() }} Se conservan los borradores de la última consulta correcta, si había alguno.</p> }
   <div class="edit-list">
     @for (edit of edits(); track edit.id) {
       <a [routerLink]="['/app/edits', edit.id]" class="edit-card"
@@ -314,8 +328,11 @@
       <div class="empty-inline">
         <ac-icon name="scissors" />
         <div>
-          <h3>Tu próximo corte tiene un lugar aquí.</h3>
-          <p>{{ inspected() ? "Aún no hay borradores. Crea el primero con el intervalo de arriba y continúa en el editor." : "Carga e inspecciona un video para crear tu primer borrador." }}</p>
+          @if (design) { <h3>Los borradores aparecerán aquí.</h3><p>Abre un proyecto autorizado para consultar sus revisiones y continuar en el editor.</p> }
+          @else if (editsLoading()) { <p role="status">Consultando los borradores de este proyecto…</p> }
+          @else if (editsError()) { <h3>Lista de borradores no disponible.</h3><p>Reintenta la consulta para ver los borradores existentes.</p> }
+          @else if (editsLoaded()) { <h3>Tu próximo corte tiene un lugar aquí.</h3><p>{{ createdDraft() ? 'La última consulta no incluía el borrador recién guardado. Puedes abrirlo desde su resultado o actualizar la lista.' : inspected() ? 'Aún no hay borradores. Crea el primero con el intervalo de arriba y continúa en el editor.' : 'Carga e inspecciona un video para crear tu primer borrador.' }}</p> }
+          @else { <p>Los borradores aún no se consultaron.</p> }
         </div>
       </div>
     }

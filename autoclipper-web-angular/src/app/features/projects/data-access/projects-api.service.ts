@@ -65,12 +65,14 @@ export class ProjectsApi {
     remember: (id: string) => void,
     signal?: AbortSignal,
   ): Promise<Schema<"UploadStatusDto">> {
+    signal?.throwIfAborted();
     const contentType = uploadContentType(file);
     progress("Calculando SHA-256 del archivo…");
     const digest = await crypto.subtle.digest(
       "SHA-256",
       await file.arrayBuffer(),
     );
+    signal?.throwIfAborted();
     const sha256 = Array.from(new Uint8Array(digest), (b) =>
       b.toString(16).padStart(2, "0"),
     ).join("");
@@ -86,6 +88,11 @@ export class ProjectsApi {
       crypto.randomUUID(),
     );
     remember(intent.id);
+    if (signal?.aborted) {
+      try { await this.abortUpload(intent.id); }
+      catch { throw new Error(`Se canceló la transferencia, pero no pudimos liberar la carga ${intent.id}. Consulta su estado para reintentar la cancelación.`); }
+      signal.throwIfAborted();
+    }
     progress("Enviando archivo al almacenamiento privado…");
     // Native fetch deliberately avoids API credentials, CSRF, and Angular interceptors.
     const result = await fetch(intent.url, {
@@ -100,6 +107,7 @@ export class ProjectsApi {
       throw new Error(
         `La carga falló (${result.status}). Puedes consultar o abortar la intención creada.`,
       );
+    signal?.throwIfAborted();
     progress("Confirmando archivo e iniciando inspección…");
     await this.api.post(`/uploads/${intent.id}/confirm`, {});
     return this.api.get<Schema<"UploadStatusDto">>(`/uploads/${intent.id}`);

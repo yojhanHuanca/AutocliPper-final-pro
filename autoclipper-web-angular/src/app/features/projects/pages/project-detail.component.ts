@@ -31,6 +31,7 @@ type EditList = Response<"/v1/projects/{id}/edits">;
 })
 export class ProjectComponent {
   readonly workspace = inject(WorkspaceStore);
+  readonly design = inject(DESIGN_MODE);
 
   private readonly api = inject(ProjectsApi);
   private readonly route = inject(ActivatedRoute);
@@ -41,6 +42,13 @@ export class ProjectComponent {
   get id(): string { return this.activeId(); }
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
   readonly edits = signal<EditList["items"]>([]);
+  readonly editsLoaded = signal(false);
+  readonly editsLoading = signal(false);
+  readonly editsError = signal('');
+  private editsGeneration = 0;
+  readonly createdDraft = signal<Schema<'EditorDraftDto'> | null>(null);
+  readonly handoffNotice = signal('');
+  private createdDraftRequest = '';
   readonly uploadStatus = signal<Schema<"UploadStatusDto"> | null>(null);
   readonly pipeline = signal<Schema<"PipelineStatusDto"> | null>(null);
   readonly busy = signal(false);
@@ -137,6 +145,12 @@ export class ProjectComponent {
     }
   }
   private clearResumeReferences(): void {
+    this.uploadGeneration++;
+    this.pipelineGeneration++;
+    clearTimeout(this.timer);
+    clearTimeout(this.inspectionTimer);
+    this.inspecting.set(false);
+    this.pollingPipeline.set(false);
     try { const key = this.storageKey(); if (key) sessionStorage.removeItem(key); } catch { /* Storage is optional. */ }
     this.uploadId = "";
     this.pipelineId = "";
@@ -146,6 +160,15 @@ export class ProjectComponent {
   }
   private isAccessFailure(error: unknown): boolean {
     return error instanceof HttpErrorResponse && (error.status === 403 || error.status === 404);
+  }
+  private clearProjectAccess(): void {
+    this.clearResumeReferences();
+    this.project.set(null);
+    this.edits.set([]);
+    this.editsLoaded.set(false);
+    this.createdDraft.set(null);
+    this.createdDraftRequest = '';
+    this.handoffNotice.set('');
   }
   private switchProject(id: string): void {
     if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
@@ -162,6 +185,13 @@ export class ProjectComponent {
     this.activeId.set(id);
     this.project.set(null);
     this.edits.set([]);
+    this.editsGeneration++;
+    this.editsLoaded.set(false);
+    this.editsLoading.set(false);
+    this.editsError.set('');
+    this.createdDraft.set(null);
+    this.createdDraftRequest = '';
+    this.handoffNotice.set('');
     this.uploadStatus.set(null);
     this.pipeline.set(null);
     this.busy.set(false);
@@ -190,7 +220,7 @@ export class ProjectComponent {
     void this.reload();
   }
   canEdit(): boolean {
-    if (!this.workspace.loaded()) return false;
+    if (this.design || !this.workspace.loaded()) return false;
     return ["owner", "admin", "editor"].includes(
       this.workspace
         .workspaces()
@@ -202,6 +232,8 @@ export class ProjectComponent {
     return status?.id === this.uploadId.trim() && status?.projectId === this.id && status.state === "confirmed" && status?.inspection?.status === 'succeeded';
   }
   roleNotice(): string {
+    if (this.design) return 'Vista de estructura. Abre un proyecto de tu cuenta para cargar material y crear un borrador.';
+    if (!this.project() && !this.busy() && this.error()) return 'No se pudo confirmar el acceso al proyecto. Vuelve a consultarlo antes de continuar.';
     const role = this.projectRole();
     if (role === "loading" || role === "loading-project") return "Comprobando el rol del espacio antes de habilitar cambios…";
     if (role === "unavailable") return "No se pudo confirmar tu rol en este espacio. Las acciones de edición permanecen deshabilitadas.";
@@ -299,9 +331,16 @@ export class ProjectComponent {
   choose(event: Event): void {
     this.file = (event.target as HTMLInputElement).files?.[0] ?? null;
   }
+  setIntervalField(field: 'startSeconds' | 'endSeconds', value: number | null): void {
+    if (this.busy() || !this.canEdit() || !this.inspected()) return;
+    this[field] = typeof value === 'number' ? value : Number.NaN;
+  }
   async reload(): Promise<void> {
+    if (this.design || this.busy()) return;
     const generation = this.projectGeneration;
+    const editsRequest = ++this.editsGeneration;
     const projectId = this.id;
+    this.editsLoading.set(true);
     await this.run(async () => {
       this.loadNotice.set("");
       const [projectResult, editsResult] = await Promise.allSettled([
@@ -310,27 +349,50 @@ export class ProjectComponent {
       ]);
       if (!this.isCurrentProject(generation)) return;
       if (projectResult.status === "rejected") {
-        if (this.isAccessFailure(projectResult.reason)) this.clearResumeReferences();
+        if (this.isAccessFailure(projectResult.reason)) this.clearProjectAccess();
+        this.editsError.set('No se pudo confirmar el acceso al proyecto para mostrar sus borradores.');
         throw projectResult.reason;
       }
       if (projectResult.value.id !== projectId) throw new Error("La respuesta no corresponde al proyecto solicitado.");
       this.project.set(projectResult.value);
       this.restoreReferences();
+      if (editsRequest !== this.editsGeneration) return;
       if (editsResult.status === "fulfilled") {
         this.edits.set(editsResult.value.items);
+        this.editsLoaded.set(true);
+        this.editsError.set('');
       } else {
-        this.loadNotice.set(
-          `El proyecto está disponible, pero no se pudieron cargar sus revisiones: ${errorMessage(editsResult.reason)}`,
-        );
+        this.editsError.set(`No se pudieron cargar los borradores: ${errorMessage(editsResult.reason)}`);
       }
     });
+    if (this.isCurrentProject(generation) && editsRequest === this.editsGeneration) this.editsLoading.set(false);
     if (!this.isCurrentProject(generation)) return;
     if (this.uploadId) await this.inspect();
     if (!this.isCurrentProject(generation)) return;
     if (this.pipelineId) await this.pollPipeline();
   }
+  async reloadEdits(): Promise<void> {
+    if (this.design || this.busy() || this.editsLoading() || !this.project()) return;
+    const generation = this.projectGeneration;
+    const request = ++this.editsGeneration;
+    this.editsLoading.set(true);
+    try {
+      const result = await this.api.edits(this.id);
+      if (!this.isCurrentProject(generation) || request !== this.editsGeneration) return;
+      this.edits.set(result.items);
+      this.editsLoaded.set(true);
+      this.editsError.set('');
+    } catch (error) {
+      if (this.isCurrentProject(generation) && request === this.editsGeneration) {
+        if (this.isAccessFailure(error)) this.clearProjectAccess();
+        this.editsError.set(`No se pudieron cargar los borradores: ${errorMessage(error)}`);
+      }
+    } finally {
+      if (this.isCurrentProject(generation) && request === this.editsGeneration) this.editsLoading.set(false);
+    }
+  }
   async upload(): Promise<void> {
-    if (!this.file || this.busy()) return;
+    if (!this.file || this.busy() || !this.canEdit()) return;
     const generation = this.projectGeneration;
     const file = this.file;
     const controller = new AbortController();
@@ -369,7 +431,7 @@ export class ProjectComponent {
   }
   async inspect(): Promise<void> {
     clearTimeout(this.inspectionTimer);
-    if (!this.uploadId) return;
+    if (this.design || !this.uploadId) return;
     const projectGeneration = this.projectGeneration;
     const id = this.uploadId.trim(), generation = ++this.uploadGeneration;
     this.inspecting.set(true);
@@ -403,6 +465,7 @@ export class ProjectComponent {
     }
   }
   async abortUpload(): Promise<void> {
+    if (!this.canEdit()) return;
     const generation = this.projectGeneration;
     const id = this.uploadId.trim();
     await this.run(async () => {
@@ -415,6 +478,7 @@ export class ProjectComponent {
     });
   }
   async cancelActiveUpload(): Promise<void> {
+    if (!this.canEdit()) return;
     const id = this.activeUploadId;
     const generation = this.projectGeneration;
     if (!id || this.cancellingUpload()) return;
@@ -444,6 +508,7 @@ export class ProjectComponent {
       throw new Error(`El intervalo debe durar entre 0,1 y 120 segundos y quedar dentro del límite procesable${this.sourceDurationSeconds() ? ` (${this.sourceSelectionLimitSeconds()} s)` : " de 300 segundos"}.`);
   }
   async startPipeline(): Promise<void> {
+    if (!this.canEdit()) return;
     const generation = this.projectGeneration;
     await this.run(async () => {
       if (this.pollingPipeline() || this.pipelineBlocksSelectedUpload()) throw new Error("Ya hay un procesamiento activo para esta carga. Espera a que termine o solicita su cancelación.");
@@ -482,7 +547,7 @@ export class ProjectComponent {
   }
   async pollPipeline(): Promise<void> {
     clearTimeout(this.timer);
-    if (!this.pipelineId) return;
+    if (this.design || !this.pipelineId) return;
     const projectGeneration = this.projectGeneration;
     const id = this.pipelineId.trim(), generation = ++this.pipelineGeneration;
     this.pollingPipeline.set(true);
@@ -507,6 +572,7 @@ export class ProjectComponent {
     }
   }
   async cancelPipeline(): Promise<void> {
+    if (!this.canEdit()) return;
     const generation = this.projectGeneration;
     const id = this.pipelineId.trim();
     await this.run(async () => {
@@ -515,37 +581,30 @@ export class ProjectComponent {
       await this.pollPipeline();
     });
   }
-  async downloadPipeline(artifact: string): Promise<void> {
+  async downloadPipeline(artifact: 'video' | 'srt' | 'vtt'): Promise<void> {
     const id = this.pipelineId.trim();
+    const generation = this.projectGeneration;
+    if (this.pipeline()?.id !== id || this.pipeline()?.status !== 'succeeded') return;
     await this.run(async () => {
       const result = await this.api.pipelineDownload(id, artifact);
+      if (!this.isCurrentProject(generation) || this.pipelineId.trim() !== id) return;
       await downloadPrivateArtifact(result.url, `autoclipper-${id}.${artifact === 'video' ? 'mp4' : artifact}`);
     });
   }
   async createEdit(): Promise<void> {
+    if (!this.canEdit()) return;
     const generation = this.projectGeneration;
     await this.run(async () => {
       if (!this.inspected()) throw new Error('Consulta una carga inspeccionada de este proyecto antes de crear el borrador.');
       const uploadId = this.uploadId.trim();
       this.validateInterval();
-      const analysisId =
-        this.hasLinkedTranscript()
-          ? this.pipeline()?.analysisId
-          : null;
-      const body: Schema<"CreateEditDto"> = {
-        name: `Clip ${this.startSeconds}–${this.endSeconds}s`,
-        spec: {
-          version: 1,
-          kind: "clip",
-          startSeconds: this.startSeconds,
-          endSeconds: this.endSeconds,
-          aspect: this.aspect,
-          subtitles: analysisId
-            ? { source: "transcript", analysisId }
-            : { source: "none" },
-        },
-      };
+      const body = this.draftRequestBody();
       const serialized = JSON.stringify({ uploadId, body });
+      const existing = this.createdDraft();
+      if (existing && serialized === this.createdDraftRequest) {
+        await this.navigateToDraft(existing, generation);
+        return;
+      }
       if (serialized !== this.editBody) {
         this.editBody = serialized;
         this.editKey = crypto.randomUUID();
@@ -556,13 +615,49 @@ export class ProjectComponent {
         this.editKey,
       );
       if (!this.isCurrentProject(generation)) return;
+      if (result.projectId !== this.id || result.uploadId !== uploadId)
+        throw new Error('La respuesta no corresponde al proyecto y la carga del borrador solicitado.');
+      this.createdDraft.set(result);
+      this.createdDraftRequest = serialized;
       this.editKey = "";
       this.editBody = "";
-      await this.router.navigate(["/app/edits", result.id]);
+      this.message.set(`Borrador «${result.name}» creado. Revisión ${result.version} guardada.`);
+      if (this.uploadId.trim() !== uploadId) {
+        this.handoffNotice.set('El borrador se creó para la carga anterior. Puedes abrirlo desde el resultado guardado de abajo.');
+        return;
+      }
+      await this.navigateToDraft(result, generation);
     });
   }
+  private draftRequestBody(): Schema<'CreateEditDto'> {
+    const analysisId = this.hasLinkedTranscript() ? this.pipeline()?.analysisId : null;
+    return { name: `Clip ${this.startSeconds}–${this.endSeconds}s`, spec: {
+      version: 1, kind: 'clip', startSeconds: this.startSeconds, endSeconds: this.endSeconds, aspect: this.aspect,
+      subtitles: analysisId ? { source: 'transcript', analysisId } : { source: 'none' },
+    } };
+  }
+  hasReusableDraft(): boolean {
+    return !!this.createdDraft() && this.createdDraftRequest === JSON.stringify({ uploadId: this.uploadId.trim(), body: this.draftRequestBody() });
+  }
+  async openCreatedDraft(): Promise<void> {
+    const draft = this.createdDraft();
+    if (!draft || !this.project() || draft.projectId !== this.id) return;
+    const generation = this.projectGeneration;
+    await this.run(() => this.navigateToDraft(draft, generation));
+  }
+  private async navigateToDraft(draft: Schema<'EditorDraftDto'>, generation: number): Promise<void> {
+    this.handoffNotice.set('');
+    try {
+      const navigated = await this.router.navigate(['/app/edits', draft.id]);
+      if (this.isCurrentProject(generation) && !navigated)
+        this.handoffNotice.set('El borrador está guardado, pero no se abrió el editor. Puedes volver a abrirlo sin crear otro.');
+    } catch {
+      if (this.isCurrentProject(generation))
+        this.handoffNotice.set('El borrador está guardado. No pudimos abrir el editor; vuelve a intentarlo con «Abrir borrador guardado».');
+    }
+  }
   private async run(action: () => Promise<void>): Promise<void> {
-    if (this.busy()) return;
+    if (this.design || this.busy()) return;
     const generation = this.projectGeneration;
     this.busy.set(true);
     this.error.set("");
