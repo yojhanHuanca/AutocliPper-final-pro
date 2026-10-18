@@ -26,10 +26,14 @@ let createdNetwork = false;
 function child(args, input) {
   const process = spawn(docker, args, { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   process.stdin.on('error', () => {});
-  const timer = setTimeout(() => process.kill(), args[0] === 'info' ? 15000 : 180000);
   const chunks = [], errors = [];
   process.stderr.on('data', chunk => { if (Buffer.concat(errors).length < 65536) errors.push(chunk); });
   const done = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      process.kill();
+      process.stdin.destroy(); process.stdout.destroy(); process.stderr.destroy();
+      reject(new Error('DOCKER_COMMAND_TIMEOUT'));
+    }, args[0] === 'info' ? 15000 : 180000);
     process.on('error', () => { clearTimeout(timer); reject(new Error('DOCKER_UNAVAILABLE')); });
     process.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`DOCKER_COMMAND_FAILED_${code}`)); });
   });
@@ -106,18 +110,32 @@ async function coldArchive(name, volumeName, kind, key) {
 async function restoreArchive(archive, volumeName, kind, key) {
   await verifyArchive(archive.path, key, archive.context);
   const helper = `${prefix}-restore-${kind}`;
-  await command(['create', '-i', '--pull=never', '--name', helper, '--label', label, '--network', 'none', '--read-only', '--memory', '96m', '--cpus', '0.5', '--cap-drop', 'ALL', '--cap-add', 'DAC_OVERRIDE', '--cap-add', 'CHOWN', '--cap-add', 'FOWNER', '--mount', `type=volume,source=${volumeName},target=/restore`, '--entrypoint', 'bash', images.postgres, '-ceu', 'test -z "$(find /restore -mindepth 1 -print -quit)"; tar --numeric-owner -C /restore -xf -']);
+  // Keep binary plaintext piping inside Linux. Docker Desktop attach stdin is
+  // not used as a transport for a 100+ MiB tar from Windows.
+  const script = `
+    import { spawn } from 'node:child_process';
+    import { readdir } from 'node:fs/promises';
+    import { verifyArchive, decryptArchive } from './scripts/recovery/archive.mjs';
+    const chunks=[]; for await (const chunk of process.stdin) chunks.push(chunk);
+    const config=JSON.parse(Buffer.concat(chunks).toString());
+    if((await readdir('/restore')).length) throw Error('RESTORE_NOT_EMPTY');
+    const key=Buffer.from(config.key,'hex');
+    await verifyArchive('/backup.enc',key,config.context);
+    const tar=spawn('tar',['--numeric-owner','-C','/restore','-xf','-'],{stdio:['pipe','ignore','ignore']});
+    const done=new Promise((resolve,reject)=>{tar.on('error',reject);tar.on('close',code=>code===0?resolve():reject(Error('RESTORE_TAR_FAILED')));});
+    done.catch(()=>{});
+    try { await decryptArchive('/backup.enc',key,config.context,tar.stdin); await done; }
+    catch { tar.kill(); await done.catch(()=>{}); process.exitCode=1; }
+  `;
+  await command(['create', '-i', '--pull=never', '--name', helper, '--label', label, '--network', 'none', '--read-only', '--user', '0:0', '--memory', '128m', '--cpus', '0.5', '--cap-drop', 'ALL', '--cap-add', 'DAC_OVERRIDE', '--cap-add', 'CHOWN', '--cap-add', 'FOWNER', '--mount', `type=volume,source=${volumeName},target=/restore`, '--mount', `type=bind,source=${archive.path},target=/backup.enc,readonly`, '--mount', `type=bind,source=${join(root, 'autoclipper-backend-microservices', 'scripts', 'recovery')},target=/app/scripts/recovery,readonly`, images.verifier, 'node', '--input-type=module', '-e', script]);
   containers.push(helper);
-  const stream = child(['start', '-a', '-i', helper]);
-  stream.process.stdout.resume();
-  try { await decryptArchive(archive.path, key, archive.context, stream.process.stdin); await stream.done; }
-  catch (error) { stream.process.kill(); await stream.done.catch(() => {}); throw error; }
+  await command(['start', '-a', '-i', helper], JSON.stringify({ key: key.toString('hex'), context: archive.context }));
   assert.equal((await assertOwned('container', helper)).State.ExitCode, 0);
 }
 async function clean() {
   const errors = [];
   for (const name of [...containers].reverse()) {
-    try { await assertOwned('container', name); await command(['rm', '-f', name]); } catch { errors.push('container'); }
+    try { await assertOwned('container', name); await command(['rm', '-f', '-v', name]); } catch { errors.push('container'); }
   }
   for (const name of [...volumes].reverse()) {
     try { await assertOwned('volume', name); await command(['volume', 'rm', name]); } catch { errors.push('volume'); }

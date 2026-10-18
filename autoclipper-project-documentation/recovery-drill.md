@@ -1,6 +1,6 @@
 # Ensayo aislado de recuperación cifrada
 
-Fecha: 18 de octubre de 2026. Incremento de operación, separado de la arquitectura pública [Cloudflare](cloudflare-architecture.md). Estado inicial: implementación y prueba de cifrado verificadas; ejecución completa con Docker/CI pendiente de registrar abajo. No reemplaza un sistema de backup de producción.
+Fecha: 18 de octubre de 2026. Incremento de operación, separado de la arquitectura pública [Cloudflare](cloudflare-architecture.md). El ensayo de restauración local está aprobado con el alcance sintético descrito abajo; su CI se registra por separado. No reemplaza un sistema de backup de producción.
 
 ## Alcance ejecutable
 
@@ -38,8 +38,12 @@ Guardar clave y archivos en el mismo host **no** constituye custodia externa ni 
 ## Resultado registrado
 
 - Prueba local de integridad del sobre: una prueba aprobada, cero fallos/omisiones. Incluye round-trip de más de 1 MiB, rechazo de sobrescritura, clave/contexto incorrectos, corrupción de cabecera/ciphertext/tag y truncamiento; cero bytes emitidos al extractor ante corrupción.
-- Motor Linux local: inaccesible al preparar este incremento después de la reanudación; no se ejecutó ni se anuncia el restore completo local. El driver se incorpora al job business de CI para verificarlo en un Docker independiente.
-- Restore completo: pendiente del resultado CI del commit de implementación. No elevar el estado en `status.md` hasta obtener esa evidencia.
+- `npm run verify`: lint, compilación y 31 pruebas aprobadas, cero fallos/omisiones; contratos públicos sin cambios.
+- Motor Linux local: inicialmente inaccesible tras la reanudación; posteriormente se recuperó y el gateway existente respondió HTTP 200. No se recreó ese stack para ejecutar el ensayo.
+- Primera restauración aprobada: UUID `3fd741aa-bda1-4ca3-85f9-c7969cb246cb`, checkpoint `2026-10-18T19:11:30.198Z`. Seis bases, dos objetos, 30 denegaciones cruzadas, seis DDL runtime denegados, escritura de grants denegada e inspección recuperada `succeeded` en un intento. Backup/parada del fixture: 54.047 s; restore/verificación: 72.926 s; total del ensayo hasta verificar: 166.761 s. No se extrapolan a datos reales.
+- Dos intentos previos quedaron interrumpidos durante el diagnóstico del CLI y sus recursos etiquetados se retiraron selectivamente. Sus errores de EOF no se interpretan como un defecto demostrado de Docker ni como un restore válido. La repetición completa anterior sí terminó sus comprobaciones. El driver posterior mueve descifrado/extracción a un helper Linux, acota comandos y retira volúmenes anónimos de sus propios contenedores con `rm -v`.
+- Repetición con los ajustes finales aprobada: UUID `01ea6672-dbc2-42c3-9f4b-25e7b3a7380f`, checkpoint `2026-10-18T19:15:17.864Z`; mismas comprobaciones de seis bases, dos objetos, roles y replay. Backup/parada: 30.828 s; restore/verificación: 114.651 s; total hasta verificar: 187.782 s. Descifrado/extracción dentro del helper Linux y limpieza final de recursos/archivos env aprobados.
+- CI del incremento `bb53363`: [run 39157441748](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39157441748), tres jobs success: 31 unitarias/HTTP, 34 infraestructura, 62 negocio, 10 administración, 7 Analysis fixtures, 8 orquestación y 8 admisión, cero fallos/omisiones; paso de recuperación cifrada aprobado. El SHA de los ajustes finales tendrá su propio resultado remoto.
 
 ## Uso operativo fuera del fixture
 

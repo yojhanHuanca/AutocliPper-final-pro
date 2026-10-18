@@ -73,7 +73,8 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Acciones administrativas/ajustes/tickets/soporte | PD | Suspender/borrar/asignar créditos, configuración global y soporte requieren flujos/autorización/auditoría específicos; no implementados por esta entrega read-only |
 | Fairness y workers separados por etapa | IV parcial + PD | Inspector, renderer y análisis separados; cuatro análisis activos/workspace y concurrencia uno. STT/selección comparten worker/cola; fairness completo pendiente |
 | Dump y restore PostgreSQL en base temporal | IV | pg_dump/pg_restore y comprobación de migración restaurada; base temporal retirada |
-| Restore integral/PITR/retención de negocio | PD | Procedimiento y políticas propuestas, ensayo completo pendiente |
+| Ensayo de restore cifrado de seis bases/objetos y replay Redis | IV acotado | [Ensayo aislado](recovery-drill.md): seis bases con migraciones y marcadores sintéticos, dos objetos/hash/ETag multipart, roles y replay de inspección real. [CI 39157441748](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39157441748) aprobó los tres jobs para bb53363; no acredita datasets de negocio completos ni caída real del host |
+| Backup operativo de producción/PITR/retención de negocio | PD | Custodia externa, programación/alertas, volumen representativo, recuperación de host/pipelines/efectos externos y política aprobada pendientes |
 | Carga/seguridad avanzada/trazas/SBOM/producción | PD | Sin capacidad de millones ni resultados de carga anunciados |
 | Diagramas, ADR, modelo de amenazas, guía, costos y tesis | IV | Documentación entregada; métricas de tesis sin resultados inventados |
 | Primera aceptación funcional de 8 pasos con IA | IV | Cuenta verificada, proyecto/upload, whisper.cpp real, clip subtitulado, estado/download y otro usuario denegado. Intervalo manual; no acredita selección automática |
