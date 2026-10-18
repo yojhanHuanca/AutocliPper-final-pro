@@ -416,7 +416,7 @@ export class ProjectComponent {
       if (!this.isCurrentProject(generation)) return;
       this.uploadStatus.set(status);
       this.message.set(
-        "Carga confirmada. Esperando el resultado real de la inspección.",
+        "Carga confirmada. Consulta abajo el estado de inspección antes de continuar.",
       );
     });
     if (this.activeUploadController && this.activeUploadController.signal.aborted && !this.cancellingUpload()) {

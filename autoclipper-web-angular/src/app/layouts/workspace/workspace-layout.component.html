@@ -15,7 +15,7 @@
             <option>Vista de estructura</option>
           } @else {
             @for (workspace of workspace.workspaces(); track workspace.id) {
-              <option [value]="workspace.id">{{ workspace.name }}</option>
+              <option [value]="workspace.id">{{ workspaceOptionLabel(workspace) }}</option>
             } @empty {
               <option>Sin espacio disponible</option>
             }

@@ -14,6 +14,7 @@ import { SessionStore } from "../../core/auth/session.store";
 import { errorMessage } from "../../core/http/api-error";
 import { IconComponent } from "../../shared/ui/icon/icon.component";
 import { workspaceRoleLabel } from "../../core/labels/workspace-role-label";
+import type { Schema } from '../../core/contracts/api-types';
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -79,6 +80,10 @@ export class WorkspaceLayoutComponent {
   currentRole(): string {
     const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
     return role ? workspaceRoleLabel(role) : "Cuenta";
+  }
+  workspaceOptionLabel(workspace: Schema<'WorkspaceSummaryDto'>): string {
+    const kind = ({ personal: 'Personal', team: 'Equipo' } as Record<string, string>)[workspace.kind] ?? 'Espacio';
+    return `${kind} · ${workspace.name} · ${workspaceRoleLabel(workspace.role)}`;
   }
   async logout(): Promise<void> {
     try {

@@ -1,5 +1,19 @@
 # Evidencia de la primera entrega
 
+## Ensayo real por interfaz y cierre — 2026-10-18
+
+El 17 de octubre, con los servicios ya disponibles, se completó una única aceptación desde el navegador usando la sesión «QA voz propietario» y un espacio QA existente: creación de proyecto, selección del MP4 sintético propio, carga firmada real, confirmación/inspección y un pipeline de 0–8 s en español. El pipeline alcanzó Completado y sus MP4/SRT se descargaron desde los botones de la UI. FFprobe comprobó H.264, 720×1280, AAC y duración exacta de 8 s.
+
+Desde ese mismo recorrido se creó y abrió el borrador con transcripción vinculada. Se seleccionó una frase, se creó una copia editable explícita y se corrigió su texto. «Guardar y exportar» guardó la revisión 2 y solicitó una sola exportación de esa revisión. La lista pasó de Procesando a Lista, el video cargó metadatos reales (8 s, readyState 4, sin MediaError) y «Ir a esta frase» buscó 4,88 s: video pausado, frase 2 seleccionada/activa y formulario Al día. Los MP4/SRT/VTT descargados llevan revisión 2 en el nombre; los dos sidecars contienen el texto corregido y tres cues. El MP4 resultante mide 419658 bytes y conserva video/audio de 8 s; SRT 244 bytes y VTT 252 bytes. SHA-256 e IDs no secretos están en .local/acceptance/integrated-ui-2026-10-17.json, ignorado por Git. No se guardaron cookies ni URLs firmadas.
+
+La cuenta sintética frontend-qa registrada anteriormente pudo iniciar sesión por API y consultar su propio proyecto (200). Con esa misma sesión separada, el proyecto, editor, pipeline y grant de descarga de «QA voz propietario» devolvieron 403. La sesión de verificación se cerró. Esto comprueba aislamiento entre dos cuentas autenticadas, sin cambiar la sesión del navegador. El ensayo reutilizó cuenta y espacio existentes: no acredita un registro nuevo por UI, aceptación de invitaciones ni el recorrido real de Editor/Lector. Tampoco se repitió procesamiento después de la interrupción por uso.
+
+Se corrigieron los hallazgos frontend del ensayo: el aviso de carga confirmada remite al estado de inspección y ya no dice que sigue esperando cuando la inspección terminó; el selector distingue Personal/Equipo y el rol en los dos espacios QA con el mismo nombre; el resumen muestra «1 exportación». No se modificaron backend, servicios, políticas de admisión, precios o suscripciones.
+
+El cierre del 18 de octubre conserva 100 pruebas aprobadas, typecheck y build de producción. La comprobación de disponibilidad actual volvió a dar ECONNREFUSED en localhost:3000/v1/health/ready; se inició únicamente el servidor frontend para revisar su estado vacío. Por ello la revisión visual final no se presenta como otra aceptación poblada y los bloqueos «API apagada» de los apartados anteriores describen checkpoints históricos, anteriores al ensayo real exitoso.
+
+La revisión visual final de /design/editor a 1440×1000 y 390×844 confirmó el estado vacío, sin desbordamiento horizontal del documento ni errores/advertencias de consola. Capturas locales: C:/Users/USER/Documents/Codex/artifacts/autoclipper-e2e-closure-2026-10-18/desktop-empty.jpg y mobile-empty.jpg. Esta vista de estructura no requiere autenticación y no sustituye la aceptación real del 17 de octubre.
+
 ## Del proyecto al borrador guardado — 2026-10-17
 
 El resultado real de crear un borrador se conserva en el componente del proyecto. Si el router cancela o falla al abrir el editor, se muestra «Abrir borrador guardado»; repetir la misma solicitud abre el mismo resultado, sin otro POST. Una solicitud incierta conserva su clave y un intervalo/carga/transcripción diferente obtiene otra. La respuesta debe corresponder al proyecto y a la carga solicitados. Un resultado tardío de otra carga se conserva identificado, sin navegar automáticamente; el de otro proyecto se descarta.

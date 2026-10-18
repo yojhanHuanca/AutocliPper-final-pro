@@ -9,7 +9,7 @@
   } @else if (vm.currentRenderPending()) {
     <p>Esta revisión ya tiene una solicitud. Consulta su estado antes de solicitar otra exportación.</p>
   } @else if (vm.draft()) {
-    @if (vm.exportsLoaded()) { <p>En la última consulta: {{ vm.currentRevisionExports().length }} exportaciones de esta revisión.</p> }
+    @if (vm.exportsLoaded()) { <p>En la última consulta: {{ vm.currentRevisionExports().length }} {{ vm.currentRevisionExports().length === 1 ? 'exportación' : 'exportaciones' }} de esta revisión.</p> }
     @else { <p>La lista de exportaciones aún no está disponible.</p> }
     <button class="button" type="button" (click)="vm.render()" [disabled]="!vm.canEditCollaboration() || vm.busy()">Exportar esta revisión</button>
   } @else { <p>Abre un borrador autorizado para consultar sus exportaciones.</p> }
