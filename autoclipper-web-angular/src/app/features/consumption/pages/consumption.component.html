@@ -4,7 +4,7 @@
     <h1>Tu consumo, a la vista.</h1>
     <p>Segundos de material procesado por etapa en este espacio.</p>
   </div>
-  <button class="button" type="button" (click)="load()" [disabled]="busy()">
+  <button class="button" type="button" (click)="load()" [disabled]="busy() || !workspace.workspaceId()">
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
@@ -13,6 +13,8 @@
     El resumen de consumo no se pudo cargar: {{ overviewError() }}
   </div>
 }
+@if (busy() && consumption()) { <p class="muted" role="status">Actualizando el resumen; se conserva la última consulta.</p> }
+@if (overviewError() && consumption()) { <p class="muted">Estas cifras corresponden a la última consulta confirmada.</p> }
 @if (consumption(); as usage) {
   <div class="stats-grid">
     <article class="stat-card">
@@ -53,8 +55,8 @@
     <span class="eyebrow">ASIGNACIÓN DEL ESPACIO</span>
     <h2>{{ planLabel(usage.plan) }}</h2>
     <p>
-      Periodo: {{ usage.periodStart | date: "mediumDate" }} —
-      {{ usage.periodEnd | date: "mediumDate" }}
+      Periodo UTC: {{ usage.periodStart | date: "mediumDate": "UTC" }} —
+      {{ usage.periodEnd | date: "mediumDate": "UTC" }}
     </p>
     <div class="quota-meter">
       <div class="quota-meter-label">
@@ -73,7 +75,7 @@
       </p>
     </div>
     <p class="resource-id">
-      Versión del plan: {{ usage.plan?.version ?? "—" }}
+      @if (usage.plan) { <details><summary>Versión del plan</summary>{{ usage.plan!.version }}</details> } @else { Sin plan asignado para este espacio. }
     </p>
   </article>
 } @else {
@@ -88,29 +90,30 @@
 }
 <p class="alert">
       Asignación local de desarrollo: no tiene precios, cobros ni créditos
-  comerciales. El uso suma el material procesado en cada etapa; las APIs manuales
+  comerciales. El uso suma el material procesado en cada etapa; las exportaciones manuales
   y trabajos anteriores pueden seguir otra regla. El saldo mostrado pertenece a
   este espacio y periodo, no a una cuota comercial global.
 </p>
 <section class="panel">
   <div class="panel-heading">
-    <h2>Movimientos del periodo.</h2>
+    <h2>Movimientos del espacio.</h2>
     <span class="muted">Hasta 50 movimientos por página</span>
   </div>
   @if (ledgerError()) {
     <div class="alert error" role="alert">
-      No se pudo cargar el ledger. Los movimientos ya visibles se conservan. {{ ledgerError() }}
+      No se pudieron actualizar los movimientos. {{ ledgerError() }}
     </div>
   }
   <div class="table-scroll">
     <table>
+      <caption>Historial paginado de movimientos; no se limita al periodo del resumen.</caption>
       <thead>
         <tr>
-          <th>Fecha</th>
-          <th>Etapa</th>
-          <th>Movimiento</th>
-          <th>Segundos</th>
-          <th>Pipeline</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Etapa</th>
+          <th scope="col">Movimiento</th>
+          <th scope="col">Segundos</th>
+          <th scope="col">Pipeline</th>
         </tr>
       </thead>
       <tbody>
@@ -126,7 +129,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5">{{ ledgerError() ? "No fue posible consultar los movimientos." : "No hay movimientos consultados en este periodo." }}</td>
+            <td colspan="5">{{ busy() ? "Consultando movimientos…" : accessDenied() ? "Sin acceso confirmado a los movimientos." : ledgerError() ? "No fue posible consultar los movimientos." : "No hay movimientos registrados en este espacio." }}</td>
           </tr>
         }
       </tbody>

@@ -62,7 +62,7 @@
         <div><span class="eyebrow">PERSONAS CON ACCESO</span><h2 id="team-members-heading">Miembros</h2></div>
         <button class="button small" type="button" (click)="refresh()" [disabled]="loading() || mutationBusy()"><ac-icon name="refresh" />{{ loading() ? "Actualizando…" : "Actualizar" }}</button>
       </div>
-      <p class="team-contract-note">El contrato muestra el identificador de cada cuenta, no su nombre ni correo.</p>
+      <p class="team-contract-note">Las cuentas se identifican por su referencia; esta lista no incluye nombres ni correos.</p>
       @if (loading() && !members().length) { <p class="team-state" role="status">Cargando miembros del espacio…</p> }
       @if (!loading() && !error() && !members().length) { <p class="team-state">No hay miembros disponibles para este espacio.</p> }
       @for (member of members(); track member.userId) {
@@ -102,7 +102,7 @@
             <label>Acceso inicial<select name="inviteRole" [(ngModel)]="inviteRole" [disabled]="mutationBusy()"><option value="editor">Editor</option><option value="reader">Lector</option>@if (actorRole() === "owner") { <option value="admin">Administrador</option> }</select></label>
             <button class="button primary" type="submit" [disabled]="inviteForm.invalid || mutationBusy() || !canInviteSelected()">{{ mutationBusy() ? "Enviando…" : "Enviar invitación" }}<ac-icon name="arrow" /></button>
           </form>
-          <p class="team-contract-note team-invitation-limit">Las invitaciones enviadas aún no se listan aquí: el OpenAPI generado no define el esquema de respuesta de esa consulta. No se muestra ni almacena el token del correo.</p>
+          <p class="team-contract-note team-invitation-limit">Las invitaciones enviadas aún no se pueden consultar ni gestionar desde esta pantalla. La aceptación requiere el enlace del correo.</p>
         </section>
       } @else {
         <section class="team-invite-panel panel">
@@ -119,8 +119,8 @@
       <section class="team-transfer panel" aria-labelledby="transfer-heading">
         <div><span class="eyebrow">PROPIEDAD DEL ESPACIO</span><h2 id="transfer-heading">Transferir propiedad.</h2><p>La nueva persona propietaria tendrá control del equipo. Tú conservarás el rol de administrador.</p></div>
         <div class="team-transfer-controls">
-          <label>Elegir nuevo propietario<select [(ngModel)]="transferTarget" name="transferTarget" [disabled]="mutationBusy()"><option value="">Selecciona un miembro</option>@for (member of members(); track member.userId) { @if (member.role !== "owner" && !isCurrentMember(member)) { <option [value]="member.userId">Cuenta …{{ member.userId.slice(-8) }} · {{ roleLabel(member.role) }}</option> } }</select></label>
-          @if (!transferConfirmation()) { <button class="button danger" type="button" (click)="transferConfirmation.set(true)" [disabled]="!transferTarget || mutationBusy()">Continuar</button> }
+          <label>Elegir nuevo propietario<select [ngModel]="transferTarget()" (ngModelChange)="transferTarget.set($event); transferConfirmation.set(false)" name="transferTarget" [disabled]="mutationBusy()"><option value="">Selecciona un miembro</option>@for (member of members(); track member.userId) { @if (member.role !== "owner" && !isCurrentMember(member)) { <option [value]="member.userId">Cuenta …{{ member.userId.slice(-8) }} · {{ roleLabel(member.role) }}</option> } }</select></label>
+          @if (!transferConfirmation()) { <button class="button danger" type="button" (click)="transferConfirmation.set(true)" [disabled]="!transferTarget() || mutationBusy()">Continuar</button> }
           @else { <div class="team-transfer-confirm" role="group" aria-label="Confirmar transferencia de propiedad"><p>Vas a transferir el control permanente de <strong>{{ workspace.name }}</strong>. Revisa el miembro seleccionado antes de continuar.</p><button class="button danger" type="button" (click)="transferOwnership()" [disabled]="mutationBusy()">Confirmar transferencia</button><button class="button" type="button" (click)="transferConfirmation.set(false)" [disabled]="mutationBusy()">Cancelar</button></div> }
         </div>
       </section>

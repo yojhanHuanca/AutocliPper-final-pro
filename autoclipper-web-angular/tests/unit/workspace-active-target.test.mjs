@@ -1,6 +1,7 @@
 import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
@@ -59,4 +60,47 @@ test('a role change response does not refresh another selected workspace', async
     assert.equal(store.loadCalls, 0);
     assert.equal(component.message(), '');
   } finally { TestBed.resetTestingModule(); }
+});
+
+test('design, denied and loading team states cannot invite, change roles, remove or transfer',async()=>{
+  const calls=[];
+  const api={members:async()=>({items:[]}),invite:async()=>calls.push('invite'),setRole:async()=>calls.push('role'),remove:async()=>calls.push('remove'),transfer:async()=>calls.push('transfer')};
+  for(const blocked of ['design','forbidden','loading']) {
+    const {component}=setup(api);
+    try {
+      const member={userId:'guest',role:'editor'};
+      component.members.set([member]); component.roleDrafts.set({guest:'reader'});
+      component.pendingRemoval.set('guest'); component.transferTarget.set('guest'); component.transferConfirmation.set(true);
+      if(blocked==='design') component.design=true; else component[blocked].set(true);
+      await component.invite(); await component.saveRole(member); await component.confirmRemove(member); await component.transferOwnership();
+    } finally {TestBed.resetTestingModule();}
+  }
+  assert.deepEqual(calls,[]);
+});
+
+test('workspace administrator cannot promote another member to administrator through a draft',async()=>{
+  const calls=[];
+  const {component,store}=setup({members:async()=>({items:[]}),setRole:async(...args)=>calls.push(args)});
+  try {
+    store.workspaces.set([{id:'alpha',name:'Alpha',kind:'team',role:'admin'}]);
+    component.roleDrafts.set({guest:'admin'});
+    await component.saveRole({userId:'guest',role:'editor'});
+    assert.deepEqual(calls,[]);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('a denied member refresh clears people, role drafts and destructive confirmations',async()=>{
+  const {component}=setup({members:async()=>{throw new HttpErrorResponse({status:403});}});
+  try {
+    component.members.set([{userId:'former-member',role:'editor'}]);
+    component.roleDrafts.set({'former-member':'reader'});
+    component.pendingRemoval.set('former-member'); component.transferTarget.set('former-member'); component.transferConfirmation.set(true);
+    await component.refresh();
+    assert.deepEqual(component.members(),[]);
+    assert.deepEqual(component.roleDrafts(),{});
+    assert.equal(component.pendingRemoval(),''); assert.equal(component.transferTarget(),'');
+    assert.equal(component.transferConfirmation(),false);
+    assert.equal(component.canManage(),false);
+    assert.equal(component.canTransfer(),false);
+  } finally {TestBed.resetTestingModule();}
 });

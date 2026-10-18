@@ -3,6 +3,7 @@ import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 import {
   ViewEncapsulation,
   Component,
+  DestroyRef,
   effect,
   inject,
   signal,
@@ -48,6 +49,7 @@ export class ConsumptionComponent {
   readonly workspace = inject(WorkspaceStore);
 
   private readonly api = inject(ConsumptionApi);
+  private readonly destroy = inject(DestroyRef);
   readonly session = inject(SessionStore);
   readonly consumption = signal<Schema<"ConsumptionDto"> | null>(null);
   readonly ledger = signal<Schema<"UsageLedgerEntryDto">[]>([]);
@@ -56,16 +58,20 @@ export class ConsumptionComponent {
   readonly ledgerError = signal("");
   readonly busy = signal(false);
   readonly loadingMore = signal(false);
+  readonly accessDenied = signal(false);
   private generation = 0;
   private loadedWorkspaceId = "";
   constructor() {
     effect(() => {
       const id = this.workspace.workspaceId();
-      if (id) void this.load(id);
+      void this.load(id);
     });
+    this.destroy.onDestroy(() => { this.generation += 1; });
   }
   async load(id = this.workspace.workspaceId()): Promise<void> {
     const generation = ++this.generation;
+    this.loadingMore.set(false);
+    this.accessDenied.set(false);
     if (id !== this.loadedWorkspaceId) {
       this.loadedWorkspaceId = id;
       this.loadingMore.set(false);
@@ -75,10 +81,15 @@ export class ConsumptionComponent {
     }
     this.overviewError.set("");
     this.ledgerError.set("");
+    if (!id) { this.busy.set(false); return; }
     this.busy.set(true);
     try {
       const [usage, page] = await loadConsumptionSections(this.api, id);
-      if (generation === this.generation) {
+      if (generation === this.generation && id === this.workspace.workspaceId()) {
+        if ([usage, page].some(result => result.status === "rejected" && this.denied(result.reason))) {
+          this.clearDenied();
+          return;
+        }
         if (usage.status === "fulfilled") this.consumption.set(usage.value);
         else this.overviewError.set(errorMessage(usage.reason));
         if (page.status === "fulfilled") {
@@ -94,18 +105,33 @@ export class ConsumptionComponent {
     if (!this.nextId() || this.busy() || this.loadingMore()) return;
     const generation = this.generation;
     const id = this.workspace.workspaceId();
+    if (!id || id !== this.loadedWorkspaceId) return;
     this.loadingMore.set(true);
     this.ledgerError.set("");
     try {
       const page = await this.api.ledger(id, this.nextId());
-      if (generation === this.generation) {
+      if (generation === this.generation && id === this.workspace.workspaceId()) {
         this.ledger.update((items) => [...items, ...page.items]);
         this.nextId.set(page.nextBeforeId);
       }
     } catch (error) {
-      if (generation === this.generation) this.ledgerError.set(errorMessage(error));
+      if (generation === this.generation && id === this.workspace.workspaceId()) {
+        if (this.denied(error)) this.clearDenied();
+        else this.ledgerError.set(errorMessage(error));
+      }
     } finally {
       if (generation === this.generation) this.loadingMore.set(false);
     }
+  }
+  private denied(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "status" in error && [401, 403, 404].includes(Number(error.status));
+  }
+  private clearDenied(): void {
+    this.consumption.set(null);
+    this.ledger.set([]);
+    this.nextId.set(null);
+    this.accessDenied.set(true);
+    this.overviewError.set("El servidor no confirmó acceso al consumo de este espacio. Actualiza tus espacios o vuelve a iniciar sesión.");
+    this.ledgerError.set("");
   }
 }

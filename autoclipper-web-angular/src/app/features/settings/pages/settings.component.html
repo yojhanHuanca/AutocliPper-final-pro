@@ -29,6 +29,8 @@
 @if (message()) {
   <div class="alert success" role="status">{{ message() }}</div>
 }
+@if (busy() && !profile()) { <p class="muted" role="status">Consultando tu cuenta…</p> }
+@if (profileError()) { <div class="alert error" role="alert">Perfil: {{ profileError() }} <button class="button small" type="button" (click)="load()" [disabled]="busy()">Reintentar carga</button></div> }
 <div class="settings-grid">
   <section
     id="settings-panel"
@@ -51,7 +53,7 @@
               [(ngModel)]="name"
               required
               maxlength="100"
-              [disabled]="design" /></label
+              [disabled]="design || busy()" /></label
           ><label
             >Correo<input
               [value]="profile()?.email ?? ''"
@@ -63,12 +65,12 @@
               [(ngModel)]="timezone"
               (ngModelChange)="error.set(''); message.set('')"
               required
-              [disabled]="design"
+              [disabled]="design || busy()"
               placeholder="America/Lima"
           /></label>
           @if (timezone && !timezoneValid()) { <p class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
-          <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design" /> Recibir notificaciones por correo</label>
-          <p class="muted">Puedes cambiar esta preferencia cuando quieras.</p>
+          <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
+          <p class="muted">Esta preferencia se guarda en tu cuenta. La entrega de notificaciones depende de los servicios habilitados.</p>
           <button
             class="button primary"
             type="submit"
@@ -95,6 +97,7 @@
           Protege el acceso con tu aplicación autenticadora. Los códigos y datos
           de alta solo se muestran en esta sesión de pantalla.
         </p>
+        @if (mfaError()) { <div class="alert error" role="alert">No se confirmó el estado de 2FA: {{ mfaError() }} <button type="button" class="button small" (click)="refreshMfaStatus()" [disabled]="busy() || mfaLoading()">Actualizar estado</button></div> }
         @if (mfa()?.enabled) {
           <p>
             Códigos de recuperación restantes:
@@ -109,7 +112,7 @@
               [(ngModel)]="password"
               autocomplete="current-password"
               required
-              [disabled]="design"
+              [disabled]="design || busy()"
           /></label>
           @if (mfa()?.enabled || setupUri()) {
             <label
@@ -121,11 +124,11 @@
                 name="factor"
                 [(ngModel)]="factor"
                 autocomplete="one-time-code"
-                [disabled]="design"
+                [disabled]="design || busy()"
             /></label>
           }
           <div class="button-row">
-            @if (!mfa()?.enabled && !setupUri()) {
+            @if (mfa() && !mfa()!.enabled && !setupUri()) {
               <button
                 class="button primary"
                 type="button"
@@ -140,7 +143,7 @@
                 class="button primary"
                 type="button"
                 (click)="enableMfa()"
-                [disabled]="design || busy() || !factor || !password"
+                [disabled]="design || busy() || !setupUri() || !factor || !password"
               >
                 Confirmar activación
               </button>
@@ -150,14 +153,14 @@
                 class="button"
                 type="button"
                 (click)="rotateCodes()"
-                [disabled]="design || busy() || !password || !factor"
+                [disabled]="design || busy() || !password || !factorValid()"
               >
                 Renovar códigos</button
               ><button
                 class="button danger"
                 type="button"
                 (click)="disableMfa()"
-                [disabled]="design || busy() || !password || !factor"
+                [disabled]="design || busy() || !password || !factorValid()"
               >
                 Desactivar 2FA
               </button>
@@ -167,7 +170,7 @@
         @if (setupUri()) {
           <div class="sensitive-box">
             <strong>Añade este URI en tu autenticador.</strong>
-            <p role="timer" aria-live="polite">Vence en {{ setupSeconds() }} segundos.</p>
+            <p role="timer" aria-live="off">Vence en {{ setupSeconds() }} segundos.</p>
             <p>
               Dato sensible y temporal. No lo compartas. Confirma con el código
               generado por tu app.
@@ -211,7 +214,7 @@
       </article>
       <article class="panel">
         <div class="panel-heading">
-          <h2>Sesiones activas.</h2>
+          <h2>Sesiones de tu cuenta.</h2>
           <button
             class="button small"
             type="button"
@@ -245,8 +248,8 @@
           <div class="empty-inline">
             <ac-icon name="shield" />
             <p>
-              Las sesiones autorizadas aparecerán aquí. El contrato no
-              identifica dispositivo ni ubicación.
+              Las sesiones autorizadas aparecerán aquí. Esta lista no
+              incluye el dispositivo ni la ubicación.
             </p>
           </div>
           }
@@ -258,10 +261,11 @@
         <span class="eyebrow">PRIVACIDAD Y DATOS</span>
         <h2>Gestiona tus solicitudes.</h2>
         <p>
-          El backend registra solicitudes de exportación o eliminación. Su
+          Puedes registrar solicitudes de exportación o eliminación. Su
           ejecución integral entre servicios está pendiente; registrarlas no
           elimina ni exporta automáticamente tus datos.
         </p>
+        @if (!mfa()) { <p class="alert">Comprueba el estado de 2FA en Seguridad antes de registrar una solicitud.</p> }
         <form
           #privacyForm="ngForm"
           (ngSubmit)="privacyForm.valid && requestPrivacy()"
@@ -270,7 +274,7 @@
             >Tipo de solicitud<select
               name="kind"
               [(ngModel)]="privacyKind"
-              [disabled]="design"
+              [disabled]="design || busy()"
             >
               <option value="export">Exportación de datos</option>
               <option value="deletion">Solicitud de eliminación</option>
@@ -282,17 +286,17 @@
               [(ngModel)]="password"
               autocomplete="current-password"
               required
-              [disabled]="design" /></label
+              [disabled]="design || busy()" /></label
           ><label
             >Código 2FA si está activado<input
               name="privacyFactor"
               [(ngModel)]="factor"
               autocomplete="one-time-code"
-              [disabled]="design" /></label
+              [disabled]="design || busy()" /></label
           ><button
             class="button primary"
             type="submit"
-            [disabled]="design || busy() || privacyForm.invalid"
+            [disabled]="design || busy() || privacyForm.invalid || !mfa() || (mfa()!.enabled && !factorValid())"
           >
             Registrar solicitud
           </button>
@@ -300,6 +304,8 @@
       </article>
       <article class="panel">
         <h2>Solicitudes registradas.</h2>
+        <button type="button" class="button small" (click)="loadPrivacy()" [disabled]="design || busy() || privacyLoading()">{{ privacyLoading() ? "Actualizando…" : "Actualizar solicitudes" }}</button>
+        @if (privacyError()) { <p class="alert error" role="alert">No se pudo actualizar la lista: {{ privacyError() }}</p> }
         @for (item of privacy(); track item.id) {
           <div class="history-row">
             <strong>{{ privacyKindLabel(item.kind) }}</strong
@@ -307,7 +313,7 @@
             ><small>{{ item.createdAt | date: "medium" }}</small>
           </div>
         } @empty {
-          <p class="muted">Aún no has registrado solicitudes.</p>
+          <p class="muted">{{ (busy() || privacyLoading()) ? "Consultando solicitudes…" : privacyError() ? "No hay una lista confirmada de solicitudes." : privacyLoaded() ? "Aún no has registrado solicitudes." : "Conecta tu cuenta para consultar solicitudes." }}</p>
         }
       </article>
     }
@@ -322,7 +328,7 @@
         {{
           design
             ? "Tu nombre aparecerá aquí."
-            : (profile()?.name ?? "Cargando cuenta…")
+            : (profile()?.name ?? (busy() ? "Cargando cuenta…" : "Perfil no disponible"))
         }}
       </h2>
       <p>

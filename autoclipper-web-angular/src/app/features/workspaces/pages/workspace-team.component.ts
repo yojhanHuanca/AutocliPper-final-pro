@@ -27,11 +27,11 @@ export class WorkspaceTeamComponent {
   readonly design = inject(DESIGN_MODE);
   readonly activeWorkspace = computed(() => this.workspaceStore.workspaces().find((workspace) => workspace.id === this.workspaceStore.workspaceId()) ?? null);
   readonly actorRole = computed<WorkspaceRole | null>(() => this.activeWorkspace()?.role ?? null);
-  readonly canManage = computed(() => this.actorRole() !== null && canManageWorkspace(this.actorRole()!));
+  readonly canManage = computed(() => !this.design && !this.forbidden() && !this.loading() && this.actorRole() !== null && canManageWorkspace(this.actorRole()!));
   readonly canTransfer = computed(() => {
     const active = this.activeWorkspace();
     const role = this.actorRole();
-    return !!active && !!role && canTransferOwnership(role, active.kind);
+    return !this.design && !this.forbidden() && !this.loading() && !!active && !!role && canTransferOwnership(role, active.kind);
   });
   readonly members = signal<Schema<"MemberDto">[]>([]);
   readonly loading = signal(false);
@@ -50,6 +50,7 @@ export class WorkspaceTeamComponent {
   inviteKey = "";
   inviteFingerprint = "";
   private requestVersion = 0;
+  private destroyed = false;
 
   readonly capabilities = [
     { role: "Propietario", detail: "Administra el equipo y puede transferir la propiedad." },
@@ -76,7 +77,7 @@ export class WorkspaceTeamComponent {
       }
       void this.loadMembers(workspaceId, version);
     });
-    this.destroy.onDestroy(() => { this.requestVersion += 1; this.inviteEmail = ""; this.inviteKey = ""; });
+    this.destroy.onDestroy(() => { this.destroyed = true; this.requestVersion += 1; this.inviteEmail = ""; this.inviteKey = ""; });
   }
 
   async refresh(): Promise<void> {
@@ -99,6 +100,14 @@ export class WorkspaceTeamComponent {
     } catch (error) {
       if (version !== this.requestVersion || workspaceId !== this.workspaceStore.workspaceId()) return;
       this.forbidden.set(error instanceof HttpErrorResponse && error.status === 403);
+      if (error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status)) {
+        this.forbidden.set(true);
+        this.members.set([]);
+        this.roleDrafts.set({});
+        this.pendingRemoval.set("");
+        this.transferTarget.set("");
+        this.transferConfirmation.set(false);
+      }
       this.error.set(this.forbidden() ? "Tu cuenta ya no tiene acceso a este espacio. Elige otro espacio y vuelve a intentarlo." : errorMessage(error));
     } finally {
       if (version === this.requestVersion && workspaceId === this.workspaceStore.workspaceId()) this.loading.set(false);
@@ -116,23 +125,23 @@ export class WorkspaceTeamComponent {
   }
   canManageMember(member: Schema<"MemberDto">): boolean {
     const actor = this.actorRole();
-    return !!actor && roleCanManageMember(actor, member.role);
+    return this.canManage() && !!actor && roleCanManageMember(actor, member.role);
   }
   roleOptions(member: Schema<"MemberDto">): AssignableWorkspaceRole[] {
     return this.actorRole() === "owner" ? ["admin", "editor", "reader"] : member.role === "admin" ? [] : ["editor", "reader"];
   }
   canInviteSelected(): boolean {
     const actor = this.actorRole();
-    return !!actor && roleCanInviteAs(actor, this.inviteRole);
+    return this.canManage() && !!actor && roleCanInviteAs(actor, this.inviteRole);
   }
   isCurrentMember(member: Schema<"MemberDto">): boolean {
     return member.userId === this.session.user()?.id;
   }
   private isActiveWorkspace(workspaceId: string): boolean {
-    return !!workspaceId && workspaceId === this.workspaceStore.workspaceId();
+    return !this.destroyed && !this.design && !!workspaceId && workspaceId === this.workspaceStore.workspaceId();
   }
   async createTeam(): Promise<void> {
-    if (this.createBusy || !this.teamName.trim()) return;
+    if (this.design || this.destroyed || this.createBusy || !this.teamName.trim()) return;
     this.createBusy = true;
     this.error.set(""); this.message.set("");
     try {
@@ -144,7 +153,7 @@ export class WorkspaceTeamComponent {
   }
   async invite(): Promise<void> {
     const workspace = this.activeWorkspace();
-    if (!workspace || !this.canManage() || !roleCanInviteAs(this.actorRole()!, this.inviteRole) || this.mutationBusy()) return;
+    if (this.design || !workspace || workspace.kind !== "team" || !this.canManage() || !roleCanInviteAs(this.actorRole()!, this.inviteRole) || this.mutationBusy()) return;
     const email = this.inviteEmail.trim().toLowerCase();
     const fingerprint = `${workspace.id}|${email}|${this.inviteRole}`;
     if (fingerprint !== this.inviteFingerprint || !this.inviteKey) {
@@ -156,14 +165,14 @@ export class WorkspaceTeamComponent {
       await this.api.invite(workspace.id, { email, role: this.inviteRole }, this.inviteKey);
       if (!this.isActiveWorkspace(workspace.id)) return;
       this.inviteKey = ""; this.inviteFingerprint = ""; this.inviteEmail = "";
-      this.message.set(`Invitación enviada a ${email}. La persona debe abrir el correo e iniciar sesión con esa misma dirección para aceptar.`);
+      this.message.set(`Invitación registrada para ${email}. La persona debe aceptar el enlace con esa misma cuenta. La entrega del correo depende del servicio de envío.`);
     } catch (error) { if (this.isActiveWorkspace(workspace.id)) this.error.set(errorMessage(error)); }
     finally { this.mutationBusy.set(false); }
   }
   async saveRole(member: Schema<"MemberDto">): Promise<void> {
     const workspaceId = this.workspaceStore.workspaceId();
     const role = this.roleDraft(member);
-    if (!workspaceId || !this.canManageMember(member) || role === member.role || this.mutationBusy()) return;
+    if (this.design || !workspaceId || !this.canManageMember(member) || !roleCanInviteAs(this.actorRole()!, role) || role === member.role || this.mutationBusy()) return;
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.setRole(workspaceId, member.userId, role);
@@ -174,7 +183,7 @@ export class WorkspaceTeamComponent {
   }
   async confirmRemove(member: Schema<"MemberDto">): Promise<void> {
     const workspaceId = this.workspaceStore.workspaceId();
-    if (!workspaceId || !this.canManageMember(member) || this.pendingRemoval() !== member.userId || this.mutationBusy()) return;
+    if (this.design || !workspaceId || !this.canManageMember(member) || this.pendingRemoval() !== member.userId || this.mutationBusy()) return;
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.remove(workspaceId, member.userId);
@@ -187,7 +196,7 @@ export class WorkspaceTeamComponent {
   async transferOwnership(): Promise<void> {
     const workspaceId = this.workspaceStore.workspaceId();
     const target = this.members().find((member) => member.userId === this.transferTarget());
-    if (!workspaceId || !target || !this.canTransfer() || !this.transferConfirmation() || this.mutationBusy()) return;
+    if (this.design || !workspaceId || !target || target.role === "owner" || this.isCurrentMember(target) || !this.canTransfer() || !this.transferConfirmation() || this.mutationBusy()) return;
     this.mutationBusy.set(true); this.error.set(""); this.message.set("");
     try {
       await this.api.transfer(workspaceId, target.userId);
