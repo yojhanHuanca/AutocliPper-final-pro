@@ -102,5 +102,24 @@ test('a denied member refresh clears people, role drafts and destructive confirm
     assert.equal(component.transferConfirmation(),false);
     assert.equal(component.canManage(),false);
     assert.equal(component.canTransfer(),false);
+    assert.equal(component.membersLoaded(),false);
+  } finally {TestBed.resetTestingModule();}
+});
+
+
+test('member count is only confirmed after a successful response and is unknown during refresh failure',async()=>{
+  const pending=deferred();
+  const api={members:()=>pending.promise};
+  const {component}=setup(api);
+  try {
+    const request=component.refresh();
+    assert.equal(component.membersLoaded(),false);
+    pending.resolve({items:[{userId:'actor',role:'owner',createdAt:'2026-10-18T00:00:00.000Z'}]});
+    await request;
+    assert.equal(component.membersLoaded(),true); assert.equal(component.members().length,1);
+    api.members=async()=>{throw new Error('temporarily unavailable');};
+    await component.refresh();
+    assert.equal(component.membersLoaded(),false);
+    assert.equal(component.members().length,1,'previous rows remain qualified by the error, without a current count');
   } finally {TestBed.resetTestingModule();}
 });

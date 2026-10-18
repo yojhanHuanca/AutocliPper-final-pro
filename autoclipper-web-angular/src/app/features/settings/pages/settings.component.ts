@@ -15,11 +15,12 @@ import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { isValidIanaTimezone } from '../models/timezone';
+import { AccountSectionNavComponent } from '../../../shared/ui/account-section-nav/account-section-nav.component';
 
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-settings",
-  imports: [FormsModule, DatePipe, IconComponent, RouterLink],
+  imports: [FormsModule, DatePipe, IconComponent, RouterLink, AccountSectionNavComponent],
   templateUrl: "./settings.component.html",
   styleUrl: "./settings.component.css",
 })
@@ -143,8 +144,8 @@ export class SettingsComponent {
   }
   onTabKeydown(event: KeyboardEvent, index: number): void {
     let next = index;
-    if (event.key === "ArrowRight") next = (index + 1) % this.tabItems.length;
-    else if (event.key === "ArrowLeft")
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % this.tabItems.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp")
       next = (index + this.tabItems.length - 1) % this.tabItems.length;
     else if (event.key === "Home") next = 0;
     else if (event.key === "End") next = this.tabItems.length - 1;

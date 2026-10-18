@@ -2,6 +2,8 @@ import { DatePipe } from "@angular/common";
 import { HttpErrorResponse } from "@angular/common/http";
 import { Component, DestroyRef, ViewEncapsulation, computed, effect, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { RouterLink } from "@angular/router";
+import { AccountSectionNavComponent } from '../../../shared/ui/account-section-nav/account-section-nav.component';
 import { DESIGN_MODE } from "../../../core/config/design-mode.token";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
@@ -15,7 +17,7 @@ import { workspaceRoleLabel } from "../../../core/labels/workspace-role-label";
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-workspace-team",
-  imports: [FormsModule, DatePipe, IconComponent],
+  imports: [FormsModule, DatePipe, IconComponent, RouterLink, AccountSectionNavComponent],
   templateUrl: "./workspace-team.component.html",
   styleUrl: "./workspace-team.component.css",
 })
@@ -35,6 +37,7 @@ export class WorkspaceTeamComponent {
   });
   readonly members = signal<Schema<"MemberDto">[]>([]);
   readonly loading = signal(false);
+  readonly membersLoaded = signal(false);
   readonly error = signal("");
   readonly forbidden = signal(false);
   readonly message = signal("");
@@ -64,6 +67,7 @@ export class WorkspaceTeamComponent {
       const workspaceId = this.workspaceStore.workspaceId();
       const version = ++this.requestVersion;
       this.members.set([]);
+      this.membersLoaded.set(false);
       this.roleDrafts.set({});
       this.error.set("");
       this.message.set("");
@@ -91,10 +95,12 @@ export class WorkspaceTeamComponent {
 
   private async loadMembers(workspaceId: string, version: number): Promise<void> {
     this.loading.set(true);
+    this.membersLoaded.set(false);
     try {
       const result = await this.api.members(workspaceId);
       if (version !== this.requestVersion || workspaceId !== this.workspaceStore.workspaceId()) return;
       this.members.set(result.items);
+      this.membersLoaded.set(true);
       this.roleDrafts.set(Object.fromEntries(result.items.map((member) => [member.userId, member.role === "owner" ? "reader" : member.role])));
       this.forbidden.set(false);
     } catch (error) {
@@ -136,6 +142,14 @@ export class WorkspaceTeamComponent {
   }
   isCurrentMember(member: Schema<"MemberDto">): boolean {
     return member.userId === this.session.user()?.id;
+  }
+  memberDisplayName(member: Schema<"MemberDto">): string {
+    return this.isCurrentMember(member) ? this.session.user()?.name || "Tu cuenta" : `Cuenta …${member.userId.slice(-8)}`;
+  }
+  focusSection(id: "team-invite-email" | "team-members-section"): void {
+    const target = document.getElementById(id);
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "center", behavior: "instant" });
   }
   private isActiveWorkspace(workspaceId: string): boolean {
     return !this.destroyed && !this.design && !!workspaceId && workspaceId === this.workspaceStore.workspaceId();

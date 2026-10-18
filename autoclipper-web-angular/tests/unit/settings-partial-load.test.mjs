@@ -120,3 +120,23 @@ test('leaving Security discards late recovery codes without repeating a complete
     } finally {TestBed.resetTestingModule();}
   }
 });
+
+
+test('account rail accepts vertical arrows and clears sensitive proof when leaving Security',()=>{
+  const state=securitySubject({});
+  const previous=globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame=()=>1;
+  try {
+    state.recoveryCodes.set(['synthetic-visible-code']);
+    let prevented=0;
+    state.onTabKeydown({key:'ArrowDown',preventDefault(){prevented++;}},1);
+    assert.equal(state.tab(),'Privacidad'); assert.equal(state.password,''); assert.equal(state.factor,''); assert.deepEqual(state.recoveryCodes(),[]);
+    state.onTabKeydown({key:'ArrowDown',preventDefault(){prevented++;}},2);
+    assert.equal(state.tab(),'Perfil');
+    state.onTabKeydown({key:'ArrowUp',preventDefault(){prevented++;}},0);
+    assert.equal(state.tab(),'Privacidad'); assert.equal(prevented,3);
+  } finally {
+    if(previous)globalThis.requestAnimationFrame=previous;else delete globalThis.requestAnimationFrame;
+    TestBed.resetTestingModule();
+  }
+});

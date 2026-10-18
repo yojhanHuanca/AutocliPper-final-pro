@@ -1,5 +1,15 @@
 # Evidencia de la primera entrega
 
+## Configuración y equipo como espacio de trabajo — 2026-10-18
+
+Rediseño completo de presentación en /app/settings y /app/team: navegación compartida entre cuenta y espacio, rail de Perfil/Seguridad/Privacidad con identidad real, formularios agrupados y acciones separadas, estados claros de 2FA y sesiones, y solicitudes de privacidad con su alcance existente. Equipo prioriza miembros e invitación, con contexto de tipo/rol y cantidad de miembros consultados solo tras respuesta confirmada; guía de permisos y transferencia de propiedad quedan desplegables. El nombre propio viene de SessionStore; otras cuentas mantienen referencia opaca sin nombres/correos inventados. La invitación y transferencia conservan sus permisos, confirmaciones y restricciones.
+
+AccountSectionNavComponent en shared/ui solo presenta dos enlaces y su estado activo; no hace HTTP ni almacena negocio. Los métodos de escritura y los contratos no se reescribieron. Se añadió navegación con flechas verticales al rail conservando limpieza de pruebas/códigos sensibles al salir de Seguridad. El conteo de miembros se invalida durante carga/error, aunque se conserven filas anteriores tras fallo transitorio.
+
+132 pruebas aprobadas; dos regresiones nuevas verifican flechas/limpieza sensible y contador confirmado/desconocido. Typecheck y build de producción aprobados. Una única pasada visual final con la sesión QA verificó Perfil, Seguridad y Privacidad, miembro propietario real y formulario vacío de invitación; el acceso rápido enfoca team-invite-email, y ArrowDown selecciona/enfoca settings-tab-1. Se guardaron capturas de escritorio y móvil 390×844; ambos documentos móviles midieron 375/375 sin overflow horizontal. No se guardó perfil, registró privacidad, activó/desactivó MFA, cerró sesión ni envió invitación/transferencia.
+
+Evidencia en C:/Users/USER/Documents/Codex/artifacts/autoclipper-account-studio-2026-10-18/: settings-before.jpg, team-before.jpg, settings-profile-desktop.jpg, settings-security-desktop.jpg, settings-privacy-desktop.jpg, team-desktop.jpg, settings-profile-mobile.jpg, settings-security-mobile.jpg y team-mobile.jpg. Sigue pendiente la aceptación de escrituras sensibles y del correo real. No se añadieron planes, facturación, listas de invitaciones sin contrato ni cambios de backend.
+
 ## Inicio del creador con continuidad real — 2026-10-18
 
 El dashboard /app deja de componer las tarjetas generales y el recorrido informativo del inicio anterior. Ahora ofrece continuidad al borrador consultado con actualización más reciente, o al proyecto creado más recientemente si no hay borrador disponible; lista hasta seis borradores, cuatro proyectos y tres fuentes vinculadas, junto al resumen real de consumo del periodo UTC. Los destinos usan IDs de respuestas autorizadas. No se infiere última sesión, último upload global, éxito de render, estado de publicación, alcance o viralidad. «Nuevo proyecto» abre /app/projects?new=1 con el formulario existente, sin crear nada al navegar.

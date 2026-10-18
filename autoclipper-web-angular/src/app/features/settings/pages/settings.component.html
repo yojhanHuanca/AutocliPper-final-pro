@@ -1,28 +1,6 @@
-<section class="page-heading">
-  <div>
-    <span class="eyebrow">A TU MANERA</span>
-    <h1>Tu cuenta. Tu espacio.</h1>
-    <p>Perfil, acceso y preferencias en un mismo lugar.</p>
-  </div>
-  <ac-icon class="heading-icon" name="settings" />
-</section>
-<div class="tab-bar" role="tablist" aria-label="Secciones de configuración">
-  @for (item of tabItems; track item; let index = $index) {
-    <button
-      type="button"
-      role="tab"
-      [id]="'settings-tab-' + index"
-      aria-controls="settings-panel"
-      [attr.aria-selected]="tab() === item"
-      [attr.tabindex]="tab() === item ? 0 : -1"
-      [class.active]="tab() === item"
-      (keydown)="onTabKeydown($event, index)"
-      (click)="selectTab(item)"
-    >
-      {{ item }}
-    </button>
-  }
-</div>
+<div class="account-studio">
+<header class="account-heading"><div><span class="eyebrow">CONFIGURACIÓN DEL ESTUDIO</span><h1>Tu cuenta, a tu manera.</h1><p>Tu identidad, el acceso a tu trabajo y el control de tus datos.</p></div><span class="account-heading-symbol"><ac-icon name="settings" /></span></header>
+<ac-account-section-nav [design]="design" section="account" />
 @if (error()) {
   <div class="alert error" role="alert">{{ error() }}</div>
 }
@@ -31,8 +9,21 @@
 }
 @if (busy() && !profile()) { <p class="muted" role="status">Consultando tu cuenta…</p> }
 @if (profileError()) { <div class="alert error" role="alert">Perfil: {{ profileError() }} <button class="button small" type="button" (click)="load()" [disabled]="busy()">Reintentar carga</button></div> }
-<div class="settings-grid">
+<div class="account-layout">
+  <aside class="account-rail" aria-label="Resumen y secciones de la cuenta">
+    <section class="account-identity"><span class="account-identity-avatar">{{ design ? 'AC' : (profile()?.name ?? '…').slice(0,2).toUpperCase() }}</span><div><strong>{{ design ? 'Tu perfil de creador' : profile()?.name ?? (busy() ? 'Consultando cuenta…' : 'Perfil no disponible') }}</strong><p>{{ design ? 'Conecta tu cuenta para ver tus datos.' : profile()?.email ?? 'Sin identidad confirmada' }}</p></div></section>
+    <nav class="account-navigation" role="tablist" aria-label="Secciones de configuración">
+      @for (item of tabItems; track item; let index = $index) {
+        <button class="account-nav-item" type="button" role="tab" [id]="'settings-tab-' + index" aria-controls="settings-panel" [attr.aria-label]="item" [attr.aria-describedby]="'account-tab-help-' + index" [attr.aria-selected]="tab() === item" [attr.tabindex]="tab() === item ? 0 : -1" [class.active]="tab() === item" (keydown)="onTabKeydown($event, index)" (click)="selectTab(item)">
+          <ac-icon [name]="item === 'Perfil' ? 'users' : item === 'Seguridad' ? 'shield' : 'folder'" /><span><strong>{{ item }}</strong><small [id]="'account-tab-help-' + index">{{ item === 'Perfil' ? 'Nombre y preferencias' : item === 'Seguridad' ? '2FA y sesiones' : 'Solicitudes y datos' }}</small></span><ac-icon name="arrow" />
+        </button>
+      }
+    </nav>
+    <div class="account-rail-note"><ac-icon name="shield" /><div><strong>{{ mfa() ? (mfa()!.enabled ? '2FA activada' : '2FA desactivada') : 'Estado de 2FA sin confirmar' }}</strong><p>Consulta Seguridad para revisar el acceso a tu cuenta.</p></div></div>
+    <a class="account-team-shortcut" [routerLink]="design ? '/design/team' : '/app/team'"><ac-icon name="users" /><span>Ver equipo y permisos</span><ac-icon name="arrow" /></a>
+  </aside>
   <section
+    class="account-content"
     id="settings-panel"
     role="tabpanel"
     tabindex="0"
@@ -40,13 +31,14 @@
     [attr.aria-label]="tab()"
   >
     @if (tab() === "Perfil") {
-      <article class="panel">
-        <span class="eyebrow">PERFIL</span>
-        <h2>Así te conoce tu equipo.</h2>
+      <article class="panel account-profile-card">
+        <div class="account-card-title"><span class="account-card-icon"><ac-icon name="users" /></span><div><span class="eyebrow">IDENTIDAD DEL CREADOR</span><h2>Tu perfil en el estudio.</h2><p>El nombre y las preferencias de tu cuenta.</p></div></div>
         <form
+          class="account-profile-form"
           #profileForm="ngForm"
           (ngSubmit)="profileForm.valid && saveProfile()"
         >
+          <div class="account-field-grid">
           <label
             >Nombre<input
               name="name"
@@ -55,12 +47,12 @@
               maxlength="100"
               [disabled]="design || busy()" /></label
           ><label
-            >Correo<input
+            >Correo de la cuenta<input
               [value]="profile()?.email ?? ''"
               readonly
               placeholder="Conecta tu cuenta para verlo" /></label
           ><label
-            >Zona horaria IANA<input
+            >Zona horaria<input
               name="timezone" [attr.aria-invalid]="!!timezone && !timezoneValid()" [attr.aria-describedby]="timezone && !timezoneValid() ? 'settings-timezone-error' : null"
               [(ngModel)]="timezone"
               (ngModelChange)="error.set(''); message.set('')"
@@ -71,6 +63,8 @@
           @if (timezone && !timezoneValid()) { <p id="settings-timezone-error" class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
           <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
           <p class="muted">Esta preferencia se guarda en tu cuenta. La entrega de notificaciones depende de los servicios habilitados.</p>
+          </div>
+          <div class="account-form-actions">
           <button
             class="button primary"
             type="submit"
@@ -79,17 +73,18 @@
             Guardar perfil<ac-icon name="check" />
           </button>
           <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications)">Descartar cambios</button>
+          </div>
         </form>
       </article>
     }
     @if (tab() === "Seguridad") {
-      <article class="panel">
+      <article class="panel account-security-card">
         <div class="panel-heading">
           <div>
             <span class="eyebrow">AUTENTICACIÓN EN DOS PASOS</span>
-            <h2>Un paso más de protección.</h2>
+            <h2>Protege tu acceso.</h2>
           </div>
-          <span class="badge">{{
+          <span class="account-status-pill" [class.is-ready]="mfa()?.enabled">{{
             mfa() ? (mfa()!.enabled ? "Activada" : "Desactivada") : "Sin datos"
           }}</span>
         </div>
@@ -104,7 +99,7 @@
             {{ mfa()!.recoveryCodesRemaining }}
           </p>
         }
-        <form #securityForm="ngForm" (ngSubmit)="$event.preventDefault()">
+        <form class="account-proof-form" #securityForm="ngForm" (ngSubmit)="$event.preventDefault()">
           <label
             >Contraseña actual<input
               type="password"
@@ -244,6 +239,7 @@
               class="button small"
               type="button"
               (click)="revoke(item.id)"
+              [attr.aria-label]="(item.revokedAt ? 'Sesión revocada ' : 'Cerrar sesión ') + item.id.slice(0,8)"
               [disabled]="design || busy() || !!item.revokedAt"
             >
               {{ item.revokedAt ? "Revocada" : "Cerrar sesión" }}
@@ -263,9 +259,9 @@
       </article>
     }
     @if (tab() === "Privacidad") {
-      <article class="panel">
+      <article class="panel account-privacy-card">
         <span class="eyebrow">PRIVACIDAD Y DATOS</span>
-        <h2>Gestiona tus solicitudes.</h2>
+        <h2>Tus datos, con claridad.</h2>
         <p>
           Puedes registrar solicitudes de exportación o eliminación. Su
           ejecución integral entre servicios está pendiente; registrarlas no
@@ -273,6 +269,7 @@
         </p>
         @if (!mfa()) { <p class="alert">Comprueba el estado de 2FA en Seguridad antes de registrar una solicitud.</p> }
         <form
+          class="account-proof-form"
           #privacyForm="ngForm"
           (ngSubmit)="privacyForm.valid && requestPrivacy()"
         >
@@ -324,33 +321,7 @@
       </article>
     }
   </section>
-  <aside>
-    <article class="panel profile-summary">
-      <span class="avatar large">{{
-        design ? "AC" : name.slice(0, 2).toUpperCase()
-      }}</span
-      ><span class="eyebrow">TU PERFIL</span>
-      <h2>
-        {{
-          design
-            ? "Tu nombre aparecerá aquí."
-            : (profile()?.name ?? (busy() ? "Cargando cuenta…" : "Perfil no disponible"))
-        }}
-      </h2>
-      <p>
-        {{ design ? "Sin datos ficticios de identidad." : profile()?.email }}
-      </p>
-      <span class="badge">{{
-        design ? "Exploración de estructura" : "Sesión autenticada"
-      }}</span>
-    </article>
-    <a class="panel compact settings-team-link" [routerLink]="design ? '/design/team' : '/app/team'">
-      <ac-icon name="users" />
-      <h3>Equipo y espacio.</h3>
-      <p>
-        {{ design ? "Explora los roles y la propuesta de organización." : "Consulta los miembros, permisos e invitaciones de tu espacio." }}
-      </p>
-      <span class="text-link">{{ design ? "Ver propuesta" : "Administrar equipo" }} <ac-icon name="arrow" /></span>
-    </a>
-  </aside>
+
+</div>
+
 </div>
