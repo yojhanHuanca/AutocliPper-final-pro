@@ -24,6 +24,8 @@ Health live separada de ready; errores de dependencias no filtran endpoints. El 
 
 ## Backup y restauración
 
+El [ensayo aislado de recuperación cifrada](recovery-drill.md) implementa la copia fría de un clúster sintético de seis bases y un volumen RustFS, restauración a volúmenes nuevos y replay real de inspección con Redis vacío. Su evidencia y limitaciones se registran por separado; no convierte el ejemplo lógico de etapa 1 siguiente en un backup integral de producción.
+
 Las aplicaciones nunca necesitan password del superusuario. Para backup local desde `autoclipper-infrastructure`, no usar redirección binaria de PowerShell:
 
 ```powershell
