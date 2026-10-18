@@ -113,6 +113,8 @@ flowchart TB
 
 Los dominios `.invalid` son marcadores y no configuración desplegable. Solo web/gateway se publican por Tunnel; no se crean rutas públicas a puertos internos, consolas, bases, Redis, métricas o Swagger. La ruta de medios termina en Worker; el resto de la API llega al gateway. El canal de autorización Worker→origen requiere identidad de servicio y comprobación del usuario/grant; no permite publicar un proxy arbitrario a endpoints internos. El gateway elimina cabeceras de privilegio aportadas por el navegador.
 
+La credencial de ese canal será distinta del `INTERNAL_TOKEN` general de los microservicios y solo autorizará el contrato estrecho de transferencia. El backend resolverá la referencia opaca a objeto/operación permitidos, comprobará sesión o grant y permisos actuales, y rechazará destinos, claves o cabeceras de privilegio elegidos por el cliente. El Worker es código de confianza con acceso al binding privado; ese acceso no se concede al navegador. Una caída del canal de autorización debe cerrar la transferencia, sin usar permisos anteriores en caché como fallback.
+
 La sesión usa cookies del host API; mantener medios bajo ese mismo host evita suponer que una cookie `__Host-` viaja a otro subdominio. Las escrituras conservan CSRF y origen permitido. TLS, CORS, cookie Secure, reenvío de IP confiable y reglas del Worker necesitan aceptación en el entorno real; los puertos loopback de desarrollo no prueban estos controles.
 
 ## Decisión concreta para medios privados
