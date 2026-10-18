@@ -18,8 +18,9 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
     });
     return next(authorized).pipe(
       catchError((error: unknown) => {
-        // Authentication failures must not replay passwords or consume another recovery code.
-        const authRequest = request.url.startsWith(`${base}/auth/`);
+        // Administrative authority is session-bound; never replay its reads or factors.
+        const authRequest = request.url.startsWith(`${base}/auth/`) ||
+          request.url.startsWith(`${base}/admin/`);
         if (
           !(error instanceof HttpErrorResponse) ||
           error.status !== 401 ||

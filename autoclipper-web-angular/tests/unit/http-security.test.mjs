@@ -83,6 +83,24 @@ test('commercial admission rejection is explained without retry or alternate pro
   const error = await promise; assert.match(errorMessage(error), /no admite nuevas exportaciones manuales/); controller.expectNone(base + '/auth/refresh');
 });
 
+test('administrative reauthentication uses CSRF and never replays its one-use factor after 401', async () => {
+  const promise = firstValueFrom(http.post(base + '/admin/access', { password: 'synthetic-test-only', factor: '123456' })).catch(error => error);
+  controller.expectOne(base + '/auth/csrf').flush({ csrfToken: 'test-only-csrf' });
+  await tick();
+  const request = controller.expectOne(base + '/admin/access');
+  assert.equal(request.request.withCredentials, true);
+  assert.equal(request.request.headers.get('X-CSRF-Token'), 'test-only-csrf');
+  request.flush({}, { status: 401, statusText: 'Unauthorized' });
+  assert.equal((await promise).status, 401);
+  controller.expectNone(base + '/auth/refresh');
+  controller.expectNone(base + '/admin/access');
+  const read = firstValueFrom(http.get(base + '/admin/jobs?limit=25')).catch(error => error);
+  controller.expectOne(base + '/admin/jobs?limit=25').flush({}, { status: 401, statusText: 'Unauthorized' });
+  assert.equal((await read).status, 401);
+  controller.expectNone(base + '/auth/refresh');
+  controller.expectNone(base + '/admin/jobs?limit=25');
+});
+
 test('stale editor revisions retain a recoverable conflict message', () => {
   assert.match(errorMessage(new HttpErrorResponse({ status: 412 })), /tus cambios siguen en el formulario/);
 });

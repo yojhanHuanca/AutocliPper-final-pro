@@ -42,6 +42,10 @@
 .admin-table-wrap th,.admin-table-wrap td { max-width: 260px; padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .admin-table-wrap td { color: #34445c; }
 .admin-id { font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 11px; overflow-wrap: anywhere; }
+.admin-reference summary { color: var(--accent); white-space: nowrap; cursor: pointer; }
+.admin-reference[open] summary { margin-bottom: 7px; }
+.admin-table-wrap details span { display: block; max-width: 200px; margin-top: 7px; }
+.admin-console button:focus-visible,.admin-console summary:focus-visible,.admin-console input:focus-visible,.admin-console select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .admin-console-state[role="status"] { color: var(--muted); }
 .admin-data-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
 .admin-data-footer p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }

@@ -13,7 +13,7 @@ src/app/
   layouts/
     public/                navegación y footer del sitio público
     workspace/             navegación adaptable y selector de espacios
-    administration/        estructura global prevista, sin operaciones
+    administration/        consola protegida de consulta y estructura prevista
   features/
     auth/                  rutas, página y cliente de registro/recuperación
     dashboard/             composición de inicio y datos del usuario
@@ -23,7 +23,7 @@ src/app/
     consumption/           cliente de lectura, ledger y página
     settings/              cliente de cuenta/seguridad y página
     workspaces/            estado de selección, guard y alta inicial
-    administration/        estructura informativa, no cliente ficticio
+    administration/        cliente administrativo de solo lectura y vista informativa
     landing/               relato, fotografía y escenas enlazadas
   shared/ui/               iconos genéricos y página no encontrada
 ```
@@ -54,7 +54,7 @@ Los subtítulos se seleccionan desde la pista o un selector nativo. Un component
 
 La selección no forma parte del snapshot de cambios. La edición, conversión, alta y retirada de frases comprueban el rol y el estado de guardado; lector conserva selección y consulta. Guardado mantiene la selección válida; recarga, restauración y cambio de edición la reinician. La restauración consulta de nuevo la transcripción de esa revisión, con una generación de petición independiente y errores recuperables sin descartar el formulario. Los componentes de timeline y frase aíslan sus estilos, IDs y breakpoints; los IDs usan un contexto distinto para panel y timeline. La navegación de pista tiene foco móvil con flechas/Inicio/Fin y los ajustes usan campos numéricos y rangos nativos.
 
-Pendientes de UX/componentización: selección visual de segunda fuente, más granularidad en seguridad/privacidad, thumbnails de video persistentes cuando exista su contrato, listado/reanudación multipart y experiencia administrativa cuando existan permisos globales y contratos estables. La edición de cues y su exportación se aceptaron por UI con una cuenta QA propietaria; faltan las variantes reales Editor/Lector y los casos no cubiertos por ese ensayo. Estos límites no se presentan como funciones verificadas de extremo a extremo.
+Pendientes de UX/componentización: selección visual de segunda fuente, más granularidad en seguridad/privacidad, thumbnails de video persistentes cuando exista su contrato, listado/reanudación multipart y operaciones administrativas fuera de las consultas autorizadas disponibles. La edición de cues y su exportación se aceptaron por UI con una cuenta QA propietaria; faltan las variantes reales Editor/Lector y los casos no cubiertos por ese ensayo. Estos límites no se presentan como funciones verificadas de extremo a extremo.
 
 La revisión de arquitectura/accesibilidad de este bloque conserva la prueba de límites core/shared, DTO generados y un único estado de edición. Se revisaron etiquetas explícitas, IDs separados para controles duplicados, errores asociados, foco visible, retirada de la selección, movimiento reducido y estado vacío responsive. No es una auditoría completa de accesibilidad. La responsividad coordinada del shell/editor todavía tiene reglas en styles.css: su extracción gradual hacia los layouts/features debe conservar el orden de capas y los tamaños revisados.
 
@@ -77,3 +77,11 @@ La entrada al editor desde un proyecto conserva localmente el EditorDraftDto rea
 La lista de borradores tiene estados de carga/error/consulta completada y reintento independiente. La denegación 403/404 limpia datos anteriores e invalida consultas de fuentes; una caída de red conserva las filas conocidas con aviso. Las mutaciones del detalle comprueban rol y DESIGN_MODE dentro de sus métodos; el modo público de estructura no hace HTTP. ProjectsApi observa cancelación antes/después del hash y antes de confirmar. Una intención aceptada después del aborto se libera mediante el endpoint de cancelación existente antes de transferir bytes; un fallo se informa, sin ocultarlo como éxito. La selección de fuente y la asociación de transcripción siguen validándose con las reglas de procedencia anteriores; una referencia guardada en el navegador no prueba esa asociación.
 
 El selector de espacios presenta el tipo Personal/Equipo y el rol del DTO junto al nombre, para distinguir espacios homónimos sin mostrar UUID ni inferir permisos por texto. Conserva el ID como valor de selección y las comprobaciones de autorización existentes. El aviso de carga confirmada remite al estado real de inspección de la misma vista, evitando conservar una afirmación temporal de espera tras una inspección ya completada.
+
+## Administración de consulta
+
+La ruta /admin requiere sesión y consulta GET /admin/access antes de habilitar filas. Los cuatro permisos globales de lectura son independientes del rol de workspace: usuarios, espacios, intenciones de procesamiento y asignaciones de consumo. AdminApi utiliza exclusivamente las rutas públicas administrativas, páginas de 25 filas y el cursor UUID exclusivo; nunca recurre a endpoints normales de proyectos para sortear un rechazo. El alcance lo impone el servidor; la UI ofrece filtro opcional global o selección de la allowlist declarada. No calcula totales globales a partir de una página ni presenta los estados persistidos como una cola en tiempo real. Consumo conserva segundos por etapa y periodo UTC, sin dinero ni créditos.
+
+La reautenticación es la única escritura de esta consola: contraseña y TOTP/código de recuperación según POST /admin/access, con CSRF/cookie existentes. El interceptor no repite ese POST ni las consultas administrativas ante un 401, porque su autoridad está ligada a la sesión. Los secretos se vacían tras el intento y al destruir la vista. La elevación depende de granted, MFA y fecha devuelta por el servidor; la UI comprueba el reloj real antes/después de consultas y oculta/limpia filas al caducar (comprobación visual cada segundo). El servidor conserva la decisión de autorización en cada solicitud.
+
+Actualizar acceso invalida las consultas pendientes y vacía los datos anteriores antes de leer capacidades; siempre vuelve a consultar la sección vigente. Las respuestas de lectura o reautenticación de una generación anterior se descartan. Un 401/403 de filas cierra las capacidades locales y exige comprobación explícita; 429/503 muestran fallo y reintento manual sin aparentar una colección vacía ni hacer polling. El detalle de UUID y versión de plan se despliega a petición; no hay nombres/correos, contenido privado, controles de grants, suspensión o eliminación. /design/admin conserva su función informativa separada.

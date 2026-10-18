@@ -12,7 +12,7 @@
         <h1>Consulta segura.</h1>
         <p>Datos mínimos, autorizados por permiso y alcance del servidor.</p>
       </div>
-      <button class="button small" type="button" (click)="refreshAccess()" [disabled]="loadingAccess() || loadingPage()"><ac-icon name="refresh" />Actualizar acceso</button>
+      <button class="button small" type="button" (click)="refreshAccess()" [disabled]="loadingAccess() || loadingPage() || mutationBusy()"><ac-icon name="refresh" />Actualizar acceso</button>
     </section>
 
     @if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
@@ -51,7 +51,7 @@
           <div><span class="eyebrow">REVALIDACIÓN DE CINCO MINUTOS</span><h2 id="admin-elevation-heading">Confirma que eres tú.</h2><p>Ingresa tu contraseña y un código TOTP vigente o un código de recuperación de un uso.</p></div>
           <form #elevationForm="ngForm" (ngSubmit)="elevationForm.valid && elevate()">
             <label>Contraseña<input type="password" name="adminPassword" [(ngModel)]="password" required maxlength="128" autocomplete="current-password" /></label>
-            <label>Código TOTP o de recuperación<input name="adminFactor" [(ngModel)]="factor" required maxlength="128" autocomplete="one-time-code" /></label>
+            <label>Código TOTP o de recuperación<input name="adminFactor" [(ngModel)]="factor" required pattern="([0-9]{6}|[a-f0-9]{24})" maxlength="24" autocomplete="one-time-code" /></label>
             <button class="button primary" type="submit" [disabled]="elevationForm.invalid || mutationBusy()">{{ mutationBusy() ? "Verificando…" : "Elevar acceso" }}<ac-icon name="arrow" /></button>
           </form>
         </section>
@@ -84,21 +84,23 @@
           }
 
           @if (loadingPage() && !users().length && !workspaces().length && !jobs().length && !consumption().length) { <p class="admin-console-state" role="status">Consultando {{ activeSectionLabel.toLowerCase() }}…</p> }
-          @if (section() === "users") {
+          @if (pageFailed()) {
+            <section class="admin-console-state" role="status"><h3>La consulta no se completó.</h3><p>No hay un resultado confirmado. Reintentar vuelve a consultar la primera página.</p><button class="button" type="button" (click)="loadSection()" [disabled]="loadingPage()">Reintentar consulta</button></section>
+          } @else if (section() === "users") {
             <div class="admin-table-wrap"><table><caption>Usuarios con identificadores y estados mínimos</caption><thead><tr><th scope="col">ID de cuenta</th><th scope="col">Verificada</th><th scope="col">MFA</th><th scope="col">Creada</th></tr></thead><tbody>
-              @for (user of users(); track user.id) { <tr><td class="admin-id">{{ user.id }}</td><td>{{ user.verified ? "Sí" : "No" }}</td><td>{{ user.mfaEnabled ? "Activo" : "No" }}</td><td>{{ user.createdAt | date: "mediumDate" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="4">No hay resultados autorizados.</td></tr> } }
+              @for (user of users(); track user.id) { <tr><td><details class="admin-reference"><summary>{{ user.id.slice(0, 8) }}…</summary><span class="admin-id">{{ user.id }}</span></details></td><td>{{ user.verified ? "Sí" : "No" }}</td><td>{{ user.mfaEnabled ? "Activo" : "No" }}</td><td>{{ user.createdAt | date: "mediumDate" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="4">No hay resultados autorizados.</td></tr> } }
             </tbody></table></div>
           } @else if (section() === "workspaces") {
             <div class="admin-table-wrap"><table><caption>Espacios autorizados y cantidad de miembros</caption><thead><tr><th scope="col">ID de espacio</th><th scope="col">Tipo</th><th scope="col">Miembros</th><th scope="col">Creado</th></tr></thead><tbody>
-              @for (workspace of workspaces(); track workspace.id) { <tr><td class="admin-id">{{ workspace.id }}</td><td>{{ workspace.kind === "team" ? "Equipo" : "Personal" }}</td><td>{{ workspace.memberCount }}</td><td>{{ workspace.createdAt | date: "mediumDate" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="4">No hay resultados autorizados.</td></tr> } }
+              @for (workspace of workspaces(); track workspace.id) { <tr><td><details class="admin-reference"><summary>{{ workspace.id.slice(0, 8) }}…</summary><span class="admin-id">{{ workspace.id }}</span></details></td><td>{{ workspace.kind === "team" ? "Equipo" : "Personal" }}</td><td>{{ workspace.memberCount }}</td><td>{{ workspace.createdAt | date: "mediumDate" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="4">No hay resultados autorizados.</td></tr> } }
             </tbody></table></div>
           } @else if (section() === "jobs") {
-            <div class="admin-table-wrap"><table><caption>Estados resumidos de trabajos autorizados</caption><thead><tr><th scope="col">ID de trabajo</th><th scope="col">Espacio</th><th scope="col">Tipo</th><th scope="col">Estado</th><th scope="col">Código de error</th></tr></thead><tbody>
-              @for (job of jobs(); track job.id) { <tr><td class="admin-id">{{ job.id }}</td><td class="admin-id">{{ job.workspaceId }}</td><td>{{ job.kind }}</td><td>{{ job.status }}</td><td>{{ job.errorCode || "—" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="5">No hay resultados autorizados.</td></tr> } }
+            <div class="admin-table-wrap"><table><caption>Estados persistidos de trabajos autorizados; no representa una cola en tiempo real</caption><thead><tr><th scope="col">ID de trabajo</th><th scope="col">Espacio</th><th scope="col">Tipo</th><th scope="col">Estado</th><th scope="col">Creado / finalizado</th><th scope="col">Código de error</th></tr></thead><tbody>
+              @for (job of jobs(); track job.id) { <tr><td><details class="admin-reference"><summary>{{ job.id.slice(0, 8) }}…</summary><span class="admin-id">{{ job.id }}</span></details></td><td><details class="admin-reference"><summary>{{ job.workspaceId.slice(0, 8) }}…</summary><span class="admin-id">{{ job.workspaceId }}</span></details></td><td>{{ jobKind(job.kind) }}</td><td>{{ jobStatus(job.status) }}</td><td>{{ job.createdAt | date: "short" }}<br />{{ job.finishedAt ? (job.finishedAt | date: "short") : "Sin finalización registrada" }}</td><td>{{ job.errorCode || "—" }}</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="6">No hay resultados autorizados.</td></tr> } }
             </tbody></table></div>
           } @else if (section() === "consumption") {
-            <div class="admin-table-wrap"><table><caption>Segundos de material por etapa según las asignaciones existentes</caption><thead><tr><th scope="col">Espacio</th><th scope="col">Plan</th><th scope="col">Periodo</th><th scope="col">Presupuesto</th><th scope="col">Consumido</th><th scope="col">Reservado</th></tr></thead><tbody>
-              @for (item of consumption(); track item.id) { <tr><td class="admin-id">{{ item.id }}</td><td>{{ item.planKind }} · {{ item.planVersion }}</td><td>{{ item.periodStart | date: "mediumDate" }} – {{ item.periodEnd | date: "mediumDate" }}</td><td>{{ item.budgetSeconds }} s</td><td>{{ item.consumedSeconds }} s</td><td>{{ item.reservedSeconds }} s</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="6">No hay asignaciones registradas en este alcance.</td></tr> } }
+            <div class="admin-table-wrap"><table><caption>Segundos de material por etapa según las asignaciones existentes · periodo UTC</caption><thead><tr><th scope="col">Espacio</th><th scope="col">Plan</th><th scope="col">Periodo</th><th scope="col">Presupuesto</th><th scope="col">Consumido</th><th scope="col">Reservado</th></tr></thead><tbody>
+              @for (item of consumption(); track item.id) { <tr><td><details class="admin-reference"><summary>{{ item.id.slice(0, 8) }}…</summary><span class="admin-id">{{ item.id }}</span></details></td><td>Desarrollo<details><summary>Versión del plan</summary><span class="admin-id">{{ item.planVersion }}</span></details></td><td>{{ item.periodStart | date: "mediumDate": "UTC" }} – {{ item.periodEnd | date: "mediumDate": "UTC" }}</td><td>{{ item.budgetSeconds }} s</td><td>{{ item.consumedSeconds }} s</td><td>{{ item.reservedSeconds }} s</td></tr> } @empty { @if (!loadingPage()) { <tr><td colspan="6">No hay asignaciones registradas en este alcance.</td></tr> } }
             </tbody></table></div>
           }
 

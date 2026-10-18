@@ -28,8 +28,7 @@ export class AdminConsoleComponent {
   readonly now = signal(Date.now());
   readonly isElevated = computed(() => {
     const current = this.access();
-    const until = current ? current.elevatedUntil : this.elevatedUntil();
-    return !!until && Date.parse(until) > this.now();
+    return !!current?.granted && current.mfaEnabled && !!current.elevatedUntil && Date.parse(current.elevatedUntil) > this.now();
   });
   readonly sections = [
     { id: "users", permission: "users.read", label: "Usuarios", icon: "users" },
@@ -45,6 +44,7 @@ export class AdminConsoleComponent {
   readonly consumption = signal<Schema<"AdminConsumptionDto">[]>([]);
   readonly nextBeforeId = signal<string | null>(null);
   readonly loadingPage = signal(false);
+  readonly pageFailed = signal(false);
   readonly error = signal("");
   readonly message = signal("");
   readonly mutationBusy = signal(false);
@@ -57,11 +57,15 @@ export class AdminConsoleComponent {
   constructor() {
     const clock = setInterval(() => {
       this.now.set(Date.now());
-      if (!this.isElevated()) this.clearData();
-    }, 30_000);
+      if (!this.isElevated()) {
+        this.clearData();
+        this.message.set("");
+      }
+    }, 1_000);
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
       this.pageVersion += 1;
+      this.accessVersion += 1;
       this.password = "";
       this.factor = "";
     });
@@ -82,16 +86,20 @@ export class AdminConsoleComponent {
   }
   async refreshAccess(): Promise<void> {
     const version = ++this.accessVersion;
+    const previous = this.access();
+    this.clearData();
+    this.access.set(null);
+    this.message.set("");
     this.loadingAccess.set(true);
     this.error.set("");
     this.notFound.set(false);
     try {
       const result = await this.api.access();
       if (version !== this.accessVersion) return;
-      const previous = this.access();
       const authorityChanged = !!previous && this.authorityChanged(previous, result);
       if (authorityChanged) this.clearData();
       this.access.set(result);
+      this.now.set(Date.now());
       this.elevatedUntil.set(result.elevatedUntil ?? "");
       if (!result.granted || !result.mfaEnabled || !result.elevatedUntil || Date.parse(result.elevatedUntil) <= Date.now()) {
         this.clearData();
@@ -106,24 +114,28 @@ export class AdminConsoleComponent {
         this.clearData();
         this.section.set(this.sections.find((item) => result.permissions.includes(item.permission))?.id ?? null);
         if (this.sections.some((item) => result.permissions.includes(item.permission))) await this.loadSection();
+      } else {
+        await this.loadSection();
       }
     } catch (error) {
       if (version !== this.accessVersion) return;
       this.access.set(null);
       this.clearData();
       this.notFound.set(this.httpStatus(error) === 404);
-      this.error.set(this.notFound() ? "" : errorMessage(error));
+      this.error.set(this.notFound() ? "" : this.adminError(error));
     } finally {
       if (version === this.accessVersion) this.loadingAccess.set(false);
     }
   }
   async elevate(): Promise<void> {
-    if (this.mutationBusy() || !this.access()?.granted || !this.access()?.mfaEnabled || !this.password || !this.factor.trim()) return;
+    if (this.loadingAccess() || this.mutationBusy() || !this.access()?.granted || !this.access()?.mfaEnabled || !this.password || !/^(\d{6}|[a-f0-9]{24})$/.test(this.factor.trim())) return;
+    const version = this.accessVersion;
     this.mutationBusy.set(true);
     this.error.set("");
     this.message.set("");
     try {
       const result = await this.api.elevate({ password: this.password, factor: this.factor.trim() });
+      if (version !== this.accessVersion) return;
       this.elevatedUntil.set(result.elevatedUntil);
       this.access.update((current) => current ? { ...current, elevatedUntil: result.elevatedUntil } : current);
       this.password = "";
@@ -133,7 +145,7 @@ export class AdminConsoleComponent {
       this.section.set(this.availableSections()[0]?.id ?? null);
       if (this.availableSections().length) await this.loadSection();
     } catch (error) {
-      this.error.set(errorMessage(error));
+      if (version === this.accessVersion) this.error.set(this.adminError(error));
     } finally {
       this.mutationBusy.set(false);
       this.password = "";
@@ -157,6 +169,7 @@ export class AdminConsoleComponent {
     await this.loadSection(cursor);
   }
   async loadSection(beforeId?: string): Promise<void> {
+    this.now.set(Date.now());
     const section = this.section();
     const access = this.access();
     if (!section || !access?.granted || !access.mfaEnabled || !this.isElevated() || !access.permissions.includes(`${section}.read` as AdminPermission) || this.loadingPage()) return;
@@ -167,6 +180,7 @@ export class AdminConsoleComponent {
     }
     const version = ++this.pageVersion;
     this.loadingPage.set(true);
+    this.pageFailed.set(false);
     this.error.set("");
     try {
       if (section === "users") {
@@ -192,9 +206,16 @@ export class AdminConsoleComponent {
       }
     } catch (error) {
       if (!this.isCurrentPage(version, section, workspaceId)) return;
-      this.error.set(errorMessage(error));
       this.clearData();
-      if (this.errorIsForbidden(error)) void this.refreshAccess();
+      this.pageFailed.set(true);
+      this.error.set(this.adminError(error));
+      if (this.httpStatus(error) === 401 || this.errorIsForbidden(error)) {
+        this.accessVersion += 1;
+        this.access.set(null);
+        this.loadingAccess.set(false);
+        this.elevatedUntil.set("");
+        this.message.set("");
+      }
     } finally {
       if (version === this.pageVersion) this.loadingPage.set(false);
     }
@@ -210,7 +231,20 @@ export class AdminConsoleComponent {
     return scope === null || !!scope?.includes(value);
   }
   private isCurrentPage(version: number, section: AdminSection, workspaceId?: string): boolean {
+    this.now.set(Date.now());
     return version === this.pageVersion && section === this.section() && workspaceId === (section === "users" ? undefined : this.workspaceFilter().trim() || undefined) && this.isElevated();
+  }
+  private adminError(error: unknown): string {
+    const status = this.httpStatus(error);
+    if (status === 403) return "El servidor rechazó el acceso. Comprueba tus permisos y vuelve a confirmar la sesión si la elevación caducó.";
+    if (status === 503) return "La consulta administrativa no está disponible. Reintenta cuando el servicio se recupere.";
+    return errorMessage(error);
+  }
+  jobKind(value: string): string {
+    return ({ audio: "Audio", render: "Exportación", analysis: "Análisis", pipeline: "Procesamiento" } as Record<string, string>)[value] ?? "Sin clasificar";
+  }
+  jobStatus(value: string): string {
+    return ({ queued: "En espera", running: "En curso", transcribing: "Transcribiendo", selecting: "Seleccionando", audio: "Preparando audio", analysis: "Analizando", render: "Exportando", stopping: "Deteniéndose", succeeded: "Completado", failed: "Fallido", cancelled: "Cancelado" } as Record<string, string>)[value] ?? "Sin clasificar";
   }
   private errorIsForbidden(error: unknown): boolean {
     return this.httpStatus(error) === 403;
@@ -233,5 +267,6 @@ export class AdminConsoleComponent {
     this.consumption.set([]);
     this.nextBeforeId.set(null);
     this.loadingPage.set(false);
+    this.pageFailed.set(false);
   }
 }

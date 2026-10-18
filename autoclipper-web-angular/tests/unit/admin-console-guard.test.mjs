@@ -12,6 +12,8 @@ function subject(access) {
   component.section = signal('users');
   component.workspaceFilter = signal('');
   component.loadingPage = signal(false);
+  component.pageFailed = signal(false);
+  component.message = signal('');
   component.error = signal('');
   component.pageVersion = 0;
   component.accessVersion = 0;
@@ -118,4 +120,85 @@ test('an authorized, elevated read calls only its permitted data endpoint', asyn
   await component.loadSection();
   assert.equal(component.apiCalls, 1);
   assert.equal(component.loadingPage(), false);
+});
+
+test('a late page cannot repopulate rows after a capability refresh starts', async () => {
+  const component = subject(access());
+  let resolvePage;
+  let resolveAccess;
+  component.api.users = () => new Promise(resolve => { resolvePage = resolve; });
+  component.api.access = () => new Promise(resolve => { resolveAccess = resolve; });
+  const page = component.loadSection();
+  const refresh = component.refreshAccess();
+  resolvePage({ items: [{ id: 'obsolete-user' }], nextBeforeId: 'obsolete-cursor' });
+  await page;
+  assert.deepEqual(component.users(), []);
+  resolveAccess(access({ granted: false, permissions: [], elevatedUntil: null }));
+  await refresh;
+  assert.deepEqual(component.users(), []);
+  assert.equal(component.nextBeforeId(), null);
+});
+
+test('expiry is checked against actual time before requests and after responses', async () => {
+  const component = subject(access());
+  component.now.set(Date.now() - 120_000);
+  component.access.set(access({ elevatedUntil: new Date(Date.now() - 1).toISOString() }));
+  await component.loadSection();
+  assert.equal(component.apiCalls, 0);
+  component.access.set(access());
+  let resolvePage;
+  component.api.users = () => new Promise(resolve => { resolvePage = resolve; });
+  const page = component.loadSection();
+  component.access.set(access({ elevatedUntil: new Date(Date.now() - 1).toISOString() }));
+  resolvePage({ items: [{ id: 'expired-user' }], nextBeforeId: null });
+  await page;
+  assert.deepEqual(component.users(), []);
+});
+
+test('401/403 close access without automatic row retries, while 429/503 remain explicit query failures', async () => {
+  for (const status of [401, 403, 429, 503]) {
+    const component = subject(access());
+    component.users.set([{ id: 'previous-user' }]);
+    component.api.users = async () => { component.apiCalls++; throw { status }; };
+    component.api.access = async () => { throw new Error('must not refresh automatically'); };
+    await component.loadSection();
+    assert.deepEqual(component.users(), []);
+    assert.equal(component.apiCalls, 1);
+    assert.equal(component.pageFailed(), true);
+    assert.equal(component.loadingPage(), false);
+    assert.equal(component.access() === null, status === 401 || status === 403);
+  }
+});
+
+test('same-scope refresh reloads the selected section, and reauthentication cannot restore superseded access', async () => {
+  const component = subject(access());
+  component.api.access = async () => access();
+  await component.refreshAccess();
+  assert.equal(component.apiCalls, 1);
+  component.mutationBusy = signal(false);
+  component.password = 'synthetic-password';
+  component.factor = '123456';
+  let resolveElevation;
+  component.api.elevate = () => new Promise(resolve => { resolveElevation = resolve; });
+  const elevation = component.elevate();
+  component.api.access = async () => access({ granted: false, permissions: [], elevatedUntil: null });
+  await component.refreshAccess();
+  resolveElevation({ elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
+  await elevation;
+  assert.equal(component.access().granted, false);
+  assert.equal(component.access().elevatedUntil, null);
+  assert.equal(component.password, '');
+  assert.equal(component.factor, '');
+  assert.equal(component.apiCalls, 1);
+});
+
+test('a read denied during capability refresh leaves an actionable closed state', async () => {
+  const component = subject(access());
+  component.api.access = async () => access();
+  component.api.users = async () => { throw { status: 403 }; };
+  await component.refreshAccess();
+  assert.equal(component.access(), null);
+  assert.equal(component.loadingAccess(), false);
+  assert.equal(component.loadingPage(), false);
+  assert.match(component.error(), /rechazó el acceso/);
 });
