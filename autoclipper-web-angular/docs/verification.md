@@ -1,5 +1,15 @@
 # Evidencia de la primera entrega
 
+## Teclado y accesibilidad de los recorridos críticos — 2026-10-18
+
+Revisión de código de login/registro, shell, proyecto/carga, editor, cuenta y administración: se conservaron las etiquetas nativas, permisos, estados de carga/error y reglas existentes de movimiento reducido. Se corrigió el foco de navegación entre páginas (main; sin robar foco a filtros/query o anclas), el menú móvil como diálogo con fondo inert, Tab/Shift+Tab contenidos y Escape/cierre con retorno al botón. La capa de fondo es ahora un control real de cierre; el contenido recibe margen de scroll para no quedar bajo cabeceras fijas. El selector de archivo conserva entrada nativa y ayuda asociada.
+
+Login muestra errores por campo también fuera del registro, con aria-invalid/describedby y alerta; los toggles de contraseña/confirmación tienen nombres distintos. Cuenta vincula el error de zona horaria y ayuda/formato de factor a sus entradas. Tablas de consumo/admin permiten foco en su región desplazable. Seleccionar una herramienta del editor lleva el foco al inspector, vinculado mediante aria-controls; los tiempos de composición describen su rango válido.
+
+122 pruebas aprobadas (cuatro nuevas sobre transición de página, skip, límites de Tab visibles y contenedor vacío), typecheck y build de producción aprobados. Una pasada final de navegador confirmó main enfocado al navegar, menú móvil con aria-modal/inert, Shift+Tab desde Cerrar hasta el último enlace y Escape cerrando; login inválido anunció «Revisa el formato del correo» con aria-invalid=true; Exportaciones enfocó editor-inspector-panel y mantuvo ancho 375/375 en móvil. Capturas: C:/Users/USER/Documents/Codex/artifacts/autoclipper-keyboard-2026-10-18/mobile-shell.jpg, mobile-login-error.jpg y mobile-editor-panel.jpg. No se repitieron login, correo, procesamientos, cambios de cuenta ni privilegios administrativos.
+
+No es una certificación ni auditoría completa con lectores de pantalla. Las consultas administrativas pobladas requieren operador MFA, y el recorrido de correo sigue pendiente de su servicio; no se alteró backend ni se concedieron permisos. Reduced motion se revisó en los estilos/scheduler y sus pruebas existentes, sin atribuir una emulación de preferencia del sistema al navegador. Se conserva como base la revisión responsive real de cuenta/equipo/consumo del bloque anterior.
+
 ## Configuración, equipo y consumo del creador — 2026-10-18
 
 Auditoría con status.md, stage-6-consumption.md, OpenAPI público y sus dueños: la privacidad solo registra solicitudes (fulfillment pending), las invitaciones requieren correo/cuenta coincidente, y el GET de invitaciones sigue sin esquema de respuesta utilizable. No se inventó ese listado ni se atribuyó entrega externa al POST. Billing pagina hasta 50 movimientos por cursor entero; su SQL filtra workspace/id y no el periodo, a diferencia del resumen mensual UTC. La UI distingue ambos alcances y mantiene la unidad de material por etapa, sin precios, suscripciones ni pagos.

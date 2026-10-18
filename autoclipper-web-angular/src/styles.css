@@ -837,14 +837,6 @@
     .menu-open .sidebar {
       transform: translateX(0);
     }
-    .menu-open .app-body:before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 25;
-      pointer-events: none;
-      background: #2022202b;
-    }
     .mobile-menu {
       display: inline-grid;
       z-index: 35;
@@ -1438,3 +1430,5 @@
     .timeline-lane { grid-template-columns: 74px minmax(0, 1fr); }
   }
 }
+
+@layer utilities { #main { scroll-margin-top: 112px; } :focus-visible { scroll-margin-block: 100px 24px; } }

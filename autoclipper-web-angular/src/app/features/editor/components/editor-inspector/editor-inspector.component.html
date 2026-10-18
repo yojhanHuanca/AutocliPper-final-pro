@@ -1,4 +1,4 @@
-<aside class="editor-inspector panel">
+<aside id="editor-inspector-panel" class="editor-inspector panel" tabindex="-1" aria-label="Ajustes del editor">
   @if (vm.tab() === "composition") {
     <span class="eyebrow">COMPOSICIÓN</span>
     <h2>Encuentra tu encuadre.</h2>
@@ -13,7 +13,7 @@
             [max]="vm.sourceDuration() ?? null"
             step="0.1"
             required
-            [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1"
+            aria-describedby="editor-range-help" [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1"
             [disabled]="!vm.canChangeCaptions()" /></label
         ><label
           >Fin (s)<input
@@ -24,10 +24,11 @@
             [max]="vm.sourceDuration() ?? null"
             step="0.1"
             required
-            [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1 || vm.spec.endSeconds - vm.spec.startSeconds > 120"
+            aria-describedby="editor-range-help" [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1 || vm.spec.endSeconds - vm.spec.startSeconds > 120"
             [disabled]="!vm.canChangeCaptions()"
         /></label>
       </div>
+      <p id="editor-range-help" class="source-duration-note">El intervalo debe durar de 0,1 a 120 segundos y estar dentro de la fuente.</p>
       @if (vm.sourceDuration(); as duration) {
         <p class="source-duration-note">Duración medida de la fuente: {{ duration | number: "1.1-1" }} s.</p>
       } @else {

@@ -1,5 +1,10 @@
 @layer components {
 /* Studio shell */
+.workspace-menu-close,.workspace-backdrop { display: none; }
+@media (max-width: 800px) {
+  .workspace-menu-close { display: block; flex-shrink: 0; margin-bottom: 18px; }
+  .workspace-backdrop { display: block; position: fixed; inset: 0; z-index: 25; border: 0; border-radius: 0; background: #2022202b; }
+}
 .app-shell {
   min-height: 100dvh;
   display: grid;

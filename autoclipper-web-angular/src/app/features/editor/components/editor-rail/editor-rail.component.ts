@@ -13,4 +13,8 @@ import { EditorState } from "../../state/editor.state";
 })
 export class EditorRailComponent {
   readonly vm = inject(EditorState);
+  selectTab(tab: string): void {
+    this.vm.tab.set(tab);
+    requestAnimationFrame(() => document.getElementById("editor-inspector-panel")?.focus());
+  }
 }

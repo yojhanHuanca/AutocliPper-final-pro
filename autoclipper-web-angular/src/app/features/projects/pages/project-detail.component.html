@@ -41,7 +41,7 @@
   <section class="panel">
     <span class="eyebrow">PASO 1 · VIDEO DE ORIGEN</span>
     <h2>Elige tu video.</h2>
-    <p>El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
+    <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
     <label class="upload-drop"
       ><ac-icon name="upload" /><strong>{{
         file?.name ?? "Selecciona tu archivo de video"
@@ -49,6 +49,7 @@
       ><span>MP4, WebM, MOV o MKV</span
       ><input
         type="file"
+        aria-label="Seleccionar video de origen" aria-describedby="upload-file-help"
         accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv"
         [disabled]="busy() || !canEdit()"
         (change)="choose($event)" /></label

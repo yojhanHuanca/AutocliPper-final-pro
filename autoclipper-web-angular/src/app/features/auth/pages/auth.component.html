@@ -5,7 +5,7 @@
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
       @if (error()) {
-        <div class="alert error" role="alert">{{ error() }}</div>
+        <div id="auth-form-error" class="alert error" role="alert">{{ error() }}</div>
       }
       @if (message()) {
         <div class="alert success" role="status">{{ message() }}</div>
@@ -40,7 +40,7 @@
           <li><span>3</span><div><strong>Crea un proyecto</strong><small>Entra con tu cuenta.</small></div></li>
         </ol>
       }
-      <form #form="ngForm" (ngSubmit)="form.valid && submit()">
+      <form [attr.aria-busy]="busy()" [attr.aria-describedby]="error() ? 'auth-form-error' : null" #form="ngForm" (ngSubmit)="form.valid && submit()">
         @if (mode === "register") {
           <label
             >Nombre<input
@@ -69,10 +69,10 @@
               autocomplete="email"
               placeholder="tu@correo.com"
               #emailModel="ngModel"
-              [attr.aria-invalid]="mode === 'register' && emailModel.touched && emailModel.invalid"
-              [attr.aria-describedby]="mode === 'register' && emailModel.touched && emailModel.invalid ? 'register-email-error' : null"
+              [attr.aria-invalid]="emailModel.touched && emailModel.invalid"
+              [attr.aria-describedby]="emailModel.touched && emailModel.invalid ? 'register-email-error' : null"
           /></label>
-          @if (mode === "register" && emailModel.touched && emailModel.invalid) {
+          @if (emailModel.touched && emailModel.invalid) {
             <span class="auth-field-error" id="register-email-error" role="alert">{{ emailModel.errors?.['required'] ? "Escribe tu correo electrónico." : "Revisa el formato del correo." }}</span>
           }
         }
@@ -100,16 +100,17 @@
                 mode === 'login' || mode === 'invitation' ? 'current-password' : 'new-password'
               "
               #passwordModel="ngModel"
-              [attr.aria-invalid]="mode === 'register' && passwordModel.touched && passwordModel.invalid"
-              [attr.aria-describedby]="mode === 'register' ? 'register-password-help' : null"
-          />@if (mode === "register") { <button class="auth-password-toggle" type="button" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
+              [attr.aria-invalid]="passwordModel.touched && passwordModel.invalid"
+              [attr.aria-describedby]="mode === 'register' ? 'register-password-help' + (passwordModel.touched && passwordModel.invalid ? ' auth-password-error' : '') : passwordModel.touched && passwordModel.invalid ? 'auth-password-error' : null"
+          />@if (mode === "register") { <button class="auth-password-toggle" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
+          @if ((mode === "login" || mode === "invitation" || mode === "reset") && passwordModel.touched && passwordModel.invalid) { <span id="auth-password-error" class="auth-field-error" role="alert">{{ passwordModel.errors?.["required"] ? "Escribe tu contraseña." : "Revisa la longitud de la contraseña." }}</span> }
           @if (mode !== "login" && mode !== "invitation") {
             @if (mode === "register") {
               <small class="muted" id="register-password-help" aria-live="polite">{{ registrationPasswordFeedback() }}</small>
               @if (passwordModel.touched && passwordModel.invalid) {
-                <span class="auth-field-error" role="alert">{{ passwordModel.errors?.['required'] ? "Escribe una contraseña." : "La contraseña debe tener entre 12 y 128 caracteres." }}</span>
+                <span class="auth-field-error" id="auth-password-error" role="alert">{{ passwordModel.errors?.['required'] ? "Escribe una contraseña." : "La contraseña debe tener entre 12 y 128 caracteres." }}</span>
               }
-              <label>Confirmar contraseña<span class="auth-password-field"><input [type]="showPasswordConfirmation() ? 'text' : 'password'" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" required autocomplete="new-password" #confirmationModel="ngModel" [attr.aria-invalid]="confirmationModel.touched && (confirmationModel.invalid || passwordConfirmation !== password)" [attr.aria-describedby]="'register-confirmation-help'" /><button class="auth-password-toggle" type="button" [attr.aria-pressed]="showPasswordConfirmation()" (click)="showPasswordConfirmation.set(!showPasswordConfirmation())">{{ showPasswordConfirmation() ? "Ocultar" : "Mostrar" }}</button></span></label>
+              <label>Confirmar contraseña<span class="auth-password-field"><input [type]="showPasswordConfirmation() ? 'text' : 'password'" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" required autocomplete="new-password" #confirmationModel="ngModel" [attr.aria-invalid]="confirmationModel.touched && (confirmationModel.invalid || passwordConfirmation !== password)" [attr.aria-describedby]="'register-confirmation-help'" /><button class="auth-password-toggle" type="button" [attr.aria-label]="showPasswordConfirmation() ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'" [attr.aria-pressed]="showPasswordConfirmation()" (click)="showPasswordConfirmation.set(!showPasswordConfirmation())">{{ showPasswordConfirmation() ? "Ocultar" : "Mostrar" }}</button></span></label>
               <small id="register-confirmation-help" class="muted">{{ confirmationModel.touched && passwordConfirmation !== password ? "Las contraseñas todavía no coinciden." : "La confirmación solo se comprueba en este formulario." }}</small>
               @if (confirmationModel.touched && confirmationModel.invalid) { <span class="auth-field-error" role="alert">Confirma la contraseña.</span> }
               @else if (confirmationModel.touched && passwordConfirmation !== password) { <span class="auth-field-error" role="alert">Las contraseñas deben coincidir.</span> }

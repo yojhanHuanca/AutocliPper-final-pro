@@ -1,5 +1,6 @@
 <div class="app-shell" [class.menu-open]="menuOpen()">
-  <aside class="sidebar" aria-label="Navegación del estudio">
+  <aside id="workspace-navigation" class="sidebar" aria-label="Navegación del estudio" [attr.role]="mobile() && menuOpen() ? 'dialog' : null" [attr.aria-modal]="mobile() && menuOpen() ? true : null" (click)="onSidebarClick($event)">
+    <button class="button small workspace-menu-close" type="button" (click)="closeNavigation()">Cerrar navegación</button>
     <a class="brand" routerLink="/"><ac-brand/></a>
     <div class="workspace-select">
       <span class="workspace-avatar"><ac-icon name="film" /></span>
@@ -24,7 +25,7 @@
       </div>
     </div>
     <span class="nav-caption">CREA Y ORGANIZA</span>
-    <nav aria-label="Estudio" (click)="menuOpen.set(false)">
+    <nav aria-label="Estudio">
       <a
         [routerLink]="base"
         routerLinkActive="active"
@@ -93,15 +94,17 @@
       }
     </div>
   </aside>
-  <div class="app-body">
+  @if (mobile() && menuOpen()) { <button type="button" class="workspace-backdrop" tabindex="-1" aria-label="Cerrar navegación" (click)="closeNavigation()"></button> }
+  <div class="app-body" [inert]="mobile() && menuOpen()">
     <header class="app-topbar">
       <div>
         <button
           class="icon-button mobile-menu"
           type="button"
           aria-label="Abrir o cerrar navegación"
+          aria-controls="workspace-navigation"
           [attr.aria-expanded]="menuOpen()"
-          (click)="menuOpen.set(!menuOpen())"
+          (click)="openNavigation()"
         >
           <ac-icon name="menu" /></button
         ><span>Mi espacio <span class="muted">/ Estudio</span></span>

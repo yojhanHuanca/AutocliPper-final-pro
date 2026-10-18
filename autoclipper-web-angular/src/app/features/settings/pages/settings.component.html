@@ -61,14 +61,14 @@
               placeholder="Conecta tu cuenta para verlo" /></label
           ><label
             >Zona horaria IANA<input
-              name="timezone"
+              name="timezone" [attr.aria-invalid]="!!timezone && !timezoneValid()" [attr.aria-describedby]="timezone && !timezoneValid() ? 'settings-timezone-error' : null"
               [(ngModel)]="timezone"
               (ngModelChange)="error.set(''); message.set('')"
               required
               [disabled]="design || busy()"
               placeholder="America/Lima"
           /></label>
-          @if (timezone && !timezoneValid()) { <p class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
+          @if (timezone && !timezoneValid()) { <p id="settings-timezone-error" class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
           <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
           <p class="muted">Esta preferencia se guarda en tu cuenta. La entrega de notificaciones depende de los servicios habilitados.</p>
           <button
@@ -122,11 +122,17 @@
                   : "Código TOTP o de recuperación"
               }}<input
                 name="factor"
+                #factorModel="ngModel"
+                [pattern]="setupUri() ? '[0-9]{6}' : '([0-9]{6}|[a-f0-9]{24})'"
+                maxlength="24"
+                [attr.aria-invalid]="factorModel.touched && factorModel.invalid"
+                aria-describedby="settings-factor-help"
                 [(ngModel)]="factor"
                 autocomplete="one-time-code"
                 [disabled]="design || busy()"
             /></label>
           }
+          <p id="settings-factor-help" class="muted">Usa 6 dígitos de tu autenticador o un código de recuperación de 24 caracteres. Para activar 2FA, usa el código del autenticador.</p>
           <div class="button-row">
             @if (mfa() && !mfa()!.enabled && !setupUri()) {
               <button
@@ -143,7 +149,7 @@
                 class="button primary"
                 type="button"
                 (click)="enableMfa()"
-                [disabled]="design || busy() || !setupUri() || !factor || !password"
+                [disabled]="design || busy() || securityForm.invalid || !setupUri() || !factor || !password"
               >
                 Confirmar activación
               </button>
@@ -153,14 +159,14 @@
                 class="button"
                 type="button"
                 (click)="rotateCodes()"
-                [disabled]="design || busy() || !password || !factorValid()"
+                [disabled]="design || busy() || securityForm.invalid || !password || !factorValid()"
               >
                 Renovar códigos</button
               ><button
                 class="button danger"
                 type="button"
                 (click)="disableMfa()"
-                [disabled]="design || busy() || !password || !factorValid()"
+                [disabled]="design || busy() || securityForm.invalid || !password || !factorValid()"
               >
                 Desactivar 2FA
               </button>

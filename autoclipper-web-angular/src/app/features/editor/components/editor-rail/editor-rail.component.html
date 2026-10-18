@@ -5,7 +5,8 @@
       type="button"
       [class.active]="vm.tab() === item.id"
       [attr.aria-pressed]="vm.tab() === item.id"
-      (click)="vm.tab.set(item.id)"
+      aria-controls="editor-inspector-panel"
+      (click)="selectTab(item.id)"
     >
       <ac-icon [name]="item.icon" />{{ item.label }}
     </button>
