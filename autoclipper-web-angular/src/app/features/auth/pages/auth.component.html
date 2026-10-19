@@ -52,7 +52,7 @@
           <li><span>3</span><div><strong>Crea un proyecto</strong><small>Entra con tu cuenta.</small></div></li>
         </ol>
       }
-      <form [attr.aria-busy]="busy()" [attr.aria-describedby]="error() ? 'auth-form-error' : null" #form="ngForm" (input)="clearError()" (ngSubmit)="form.valid && submit()">
+      <form [attr.aria-busy]="busy()" [attr.aria-describedby]="error() ? 'auth-form-error' : null" #form="ngForm" (input)="clearError()" (ngSubmit)="(form.valid || ['register', 'verify', 'reset'].includes(mode)) && submit()">
         @if (mode === "register") {
           <label
             >Nombre<input
@@ -62,10 +62,10 @@
               maxlength="100"
               autocomplete="name"
               #nameModel="ngModel"
-              [attr.aria-invalid]="nameModel.touched && (!name.trim() || nameModel.invalid)"
-              [attr.aria-describedby]="nameModel.touched && (!name.trim() || nameModel.invalid) ? 'register-name-error' : null"
+              [attr.aria-invalid]="(validationAttempted() || nameModel.touched) && (!name.trim() || nameModel.invalid)"
+              [attr.aria-describedby]="(validationAttempted() || nameModel.touched) && (!name.trim() || nameModel.invalid) ? 'register-name-error' : null"
           /></label>
-            @if (nameModel.touched && (!name.trim() || nameModel.invalid)) {
+            @if ((validationAttempted() || nameModel.touched) && (!name.trim() || nameModel.invalid)) {
               <span class="auth-field-error" id="register-name-error" role="alert">{{ !name.trim() ? "Escribe tu nombre para continuar." : "El nombre admite hasta 100 caracteres." }}</span>
             }
         }
@@ -81,10 +81,10 @@
               autocomplete="email"
               placeholder="tu@correo.com"
               #emailModel="ngModel"
-              [attr.aria-invalid]="emailModel.touched && emailModel.invalid"
-              [attr.aria-describedby]="emailModel.touched && emailModel.invalid ? 'auth-email-error' : null"
+              [attr.aria-invalid]="(emailModel.touched || (mode === 'register' && validationAttempted())) && emailModel.invalid"
+              [attr.aria-describedby]="(emailModel.touched || (mode === 'register' && validationAttempted())) && emailModel.invalid ? 'auth-email-error' : null"
           /></label>
-          @if (emailModel.touched && emailModel.invalid) {
+          @if ((emailModel.touched || (mode === 'register' && validationAttempted())) && emailModel.invalid) {
             <span class="auth-field-error" id="auth-email-error" role="alert">{{ emailModel.errors?.['required'] ? "Escribe tu correo electrónico." : "Revisa el formato del correo." }}</span>
           }
         }
@@ -94,9 +94,15 @@
               name="token"
               [(ngModel)]="token"
               required
+              pattern="^[A-Za-z0-9_-]{43}$"
+              maxlength="43"
               autocomplete="one-time-code"
               spellcheck="false"
+              #tokenModel="ngModel"
+              [attr.aria-invalid]="(validationAttempted() || tokenModel.touched) && tokenModel.invalid"
+              [attr.aria-describedby]="(validationAttempted() || tokenModel.touched) && tokenModel.invalid ? 'auth-token-error' : null"
           /></label>
+          @if ((validationAttempted() || tokenModel.touched) && tokenModel.invalid) { <span id="auth-token-error" class="auth-field-error" role="alert">{{ tokenModel.errors?.['required'] ? 'Pega el token recibido por correo.' : 'El token debe tener 43 caracteres válidos.' }}</span> }
         }
         @if (mode === "login" || mode === "register" || mode === "reset" || (mode === "invitation" && invitationReady() && !session.user())) {
           <label
@@ -112,20 +118,20 @@
                 mode === 'login' || mode === 'invitation' ? 'current-password' : 'new-password'
               "
               #passwordModel="ngModel"
-              [attr.aria-invalid]="passwordModel.touched && passwordModel.invalid"
-              [attr.aria-describedby]="mode === 'register' ? 'register-password-help' + (passwordModel.touched && passwordModel.invalid ? ' auth-password-error' : '') : passwordModel.touched && passwordModel.invalid ? 'auth-password-error' : null"
+              [attr.aria-invalid]="(passwordModel.touched || (validationAttempted() && (mode === 'register' || mode === 'reset'))) && passwordModel.invalid"
+              [attr.aria-describedby]="mode === 'register' ? 'register-password-help' + ((passwordModel.touched || validationAttempted()) && passwordModel.invalid ? ' auth-password-error' : '') : (passwordModel.touched || (validationAttempted() && mode === 'reset')) && passwordModel.invalid ? 'auth-password-error' : null"
           />@if (mode === "login" || mode === "register" || mode === "reset") { <button class="auth-password-toggle" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
-          @if ((mode === "login" || mode === "invitation" || mode === "reset") && passwordModel.touched && passwordModel.invalid) { <span id="auth-password-error" class="auth-field-error" role="alert">{{ passwordModel.errors?.["required"] ? "Escribe tu contraseña." : "Revisa la longitud de la contraseña." }}</span> }
+          @if ((mode === "login" || mode === "invitation" || mode === "reset") && (passwordModel.touched || (validationAttempted() && mode === 'reset')) && passwordModel.invalid) { <span id="auth-password-error" class="auth-field-error" role="alert">{{ passwordModel.errors?.["required"] ? "Escribe tu contraseña." : "La contraseña debe tener entre 12 y 128 caracteres." }}</span> }
           @if (mode !== "login" && mode !== "invitation") {
             @if (mode === "register") {
               <small class="muted" id="register-password-help" aria-live="polite">{{ registrationPasswordFeedback() }}</small>
-              @if (passwordModel.touched && passwordModel.invalid) {
+              @if ((passwordModel.touched || validationAttempted()) && passwordModel.invalid) {
                 <span class="auth-field-error" id="auth-password-error" role="alert">{{ passwordModel.errors?.['required'] ? "Escribe una contraseña." : "La contraseña debe tener entre 12 y 128 caracteres." }}</span>
               }
-              <label>Confirmar contraseña<span class="auth-password-field"><input [type]="showPasswordConfirmation() ? 'text' : 'password'" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" required autocomplete="new-password" #confirmationModel="ngModel" [attr.aria-invalid]="confirmationModel.touched && (confirmationModel.invalid || passwordConfirmation !== password)" [attr.aria-describedby]="'register-confirmation-help'" /><button class="auth-password-toggle" type="button" [attr.aria-label]="showPasswordConfirmation() ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'" [attr.aria-pressed]="showPasswordConfirmation()" (click)="showPasswordConfirmation.set(!showPasswordConfirmation())">{{ showPasswordConfirmation() ? "Ocultar" : "Mostrar" }}</button></span></label>
-              <small id="register-confirmation-help" class="muted">{{ confirmationModel.touched && passwordConfirmation !== password ? "Las contraseñas todavía no coinciden." : "La confirmación solo se comprueba en este formulario." }}</small>
-              @if (confirmationModel.touched && confirmationModel.invalid) { <span class="auth-field-error" role="alert">Confirma la contraseña.</span> }
-              @else if (confirmationModel.touched && passwordConfirmation !== password) { <span class="auth-field-error" role="alert">Las contraseñas deben coincidir.</span> }
+              <label>Confirmar contraseña<span class="auth-password-field"><input [type]="showPasswordConfirmation() ? 'text' : 'password'" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" required autocomplete="new-password" #confirmationModel="ngModel" [attr.aria-invalid]="(confirmationModel.touched || validationAttempted()) && (confirmationModel.invalid || passwordConfirmation !== password)" [attr.aria-describedby]="'register-confirmation-help' + ((confirmationModel.touched || validationAttempted()) && (confirmationModel.invalid || passwordConfirmation !== password) ? ' register-confirmation-error' : '')" /><button class="auth-password-toggle" type="button" [attr.aria-label]="showPasswordConfirmation() ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'" [attr.aria-pressed]="showPasswordConfirmation()" (click)="showPasswordConfirmation.set(!showPasswordConfirmation())">{{ showPasswordConfirmation() ? "Ocultar" : "Mostrar" }}</button></span></label>
+              <small id="register-confirmation-help" class="muted">{{ (confirmationModel.touched || validationAttempted()) && passwordConfirmation !== password ? "Las contraseñas todavía no coinciden." : "La confirmación solo se comprueba en este formulario." }}</small>
+              @if ((confirmationModel.touched || validationAttempted()) && confirmationModel.invalid) { <span id="register-confirmation-error" class="auth-field-error" role="alert">Confirma la contraseña.</span> }
+              @else if ((confirmationModel.touched || validationAttempted()) && passwordConfirmation !== password) { <span id="register-confirmation-error" class="auth-field-error" role="alert">Las contraseñas deben coincidir.</span> }
             } @else {
               <small class="muted">Entre 12 y 128 caracteres.</small>
             }
@@ -154,7 +160,7 @@
         }
         <button
           class="button primary full"
-          [disabled]="busy() || (mode === 'invitation' ? invitationChecking() || !invitationReady() || (!session.user() && form.invalid) : form.invalid) || (mode === 'register' && !registrationValid())"
+          [disabled]="busy() || (['register', 'verify', 'reset'].includes(mode) ? false : (mode === 'invitation' ? invitationChecking() || !invitationReady() || (!session.user() && form.invalid) : form.invalid))"
           type="submit"
         >
           {{ busy() ? "Un momento…" : action }}<ac-icon name="arrow" />

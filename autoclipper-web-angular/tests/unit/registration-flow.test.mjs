@@ -14,6 +14,7 @@ function registerComponent(register) {
   component.message = signal('');
   component.registerAccepted = signal(false);
   component.authCompleted = signal(false);
+  component.validationAttempted = signal(false);
   component.registeredEmail = signal('');
   component.name = '  Yojhan Huanca  ';
   component.email = ' yojhan@example.com ';
@@ -30,10 +31,11 @@ function authComponent(mode, api) {
   component.error = signal('');
   component.message = signal('');
   component.authCompleted = signal(false);
+  component.validationAttempted = signal(false);
   component.registerAccepted = signal(false);
   component.email = 'person@example.test';
   component.password = 'long-enough-password';
-  component.token = 'one-use-token';
+  component.token = 't'.repeat(43);
   return component;
 }
 
@@ -81,7 +83,23 @@ test('invalid client values do not call the registration endpoint', async () => 
   assert.match(component.registrationPasswordFeedback(), /Añade 7; el rango es 12–128/);
   await component.submit();
   assert.equal(calls, 0);
+  assert.equal(component.validationAttempted(), true);
   assert.match(component.error(), /Revisa los campos/);
+});
+
+test('verification rejects malformed tokens locally and accepts only the documented token shape', async () => {
+  let calls = 0;
+  const component = authComponent('verify', { verify: async () => { calls++; return { verified: true }; } });
+  component.token = 'too-short';
+  await component.submit();
+  assert.equal(calls, 0);
+  assert.equal(component.validationAttempted(), true);
+  assert.match(component.error(), /43 caracteres/);
+  component.token = 'v'.repeat(43);
+  assert.equal(component.tokenValid(), true);
+  await component.submit();
+  assert.equal(calls, 1);
+  assert.equal(component.authCompleted(), true);
 });
 
 test('verification, recovery and reset success become final states and cannot be submitted twice', async () => {

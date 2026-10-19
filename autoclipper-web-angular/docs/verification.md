@@ -246,3 +246,7 @@ Veintidós pruebas focalizadas de pipeline/proyecto pasan; typecheck y build de 
 ## Claridad de enlaces Kick
 
 La validación del cliente distingue el canal Kick (único formato con reproductor oficial disponible aquí) de URLs de VOD/clips, que no se transforman en canales ni se presentan como importables. La vista previa continúa bajo solicitud explícita del usuario. 7 pruebas de source-link, typecheck Angular y build de producción aprobados; no se activó importación ni se envió la URL al backend.
+
+## Alta y verificación accesibles — 2026-10-19
+
+El formulario de alta deja enviar una solicitud incompleta al validador local para mostrar errores por campo con ria-invalid/ria-describedby; no llama a la API hasta corregir nombre, correo, contraseña y confirmación. El token de verificación/restablecimiento se valida contra el contrato real (43 caracteres URL-safe), con un error asociado al campo y sin enviar tokens mal formados. El backend solo expone POST /auth/register y POST /auth/verify; registro devuelve aceptación anti-enumeración y genera correo solo para cuentas nuevas, sin endpoint de reenvío. No se simuló correo ni OAuth. Una verificación focalizada: 7 pruebas de registro/verificación, typecheck Angular y build de producción aprobados.

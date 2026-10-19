@@ -39,6 +39,7 @@ export class AuthComponent {
   readonly invitationChecking = signal(false);
   readonly registerAccepted = signal(false);
   readonly authCompleted = signal(false);
+  readonly validationAttempted = signal(false);
   readonly registeredEmail = signal("");
   readonly showPassword = signal(false);
   readonly showPasswordConfirmation = signal(false);
@@ -145,10 +146,11 @@ export class AuthComponent {
   }
   registrationValid(): boolean {
     return this.name.trim().length > 0 && this.name.trim().length <= 100 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim()) &&
+      this.email.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email.trim()) &&
       this.password.length >= 12 && this.password.length <= 128 &&
       this.passwordConfirmation.length > 0 && this.password === this.passwordConfirmation;
   }
+  tokenValid(): boolean { return /^[A-Za-z0-9_-]{43}$/.test(this.token.trim()); }
   completionTitle(): string {
     return ({ verify: "Correo verificado", forgot: "Solicitud recibida", reset: "Contraseña actualizada" } as Record<string, string>)[this.mode] ?? "Listo";
   }
@@ -174,8 +176,16 @@ export class AuthComponent {
   }
   async submit(): Promise<void> {
     if (this.busy() || this.authCompleted() || (this.mode === "register" && this.registerAccepted())) return;
+    if (["register", "verify", "reset"].includes(this.mode)) this.validationAttempted.set(true);
     if (this.mode === "register" && !this.registerAccepted() && !this.registrationValid()) {
       this.error.set("Revisa los campos señalados antes de continuar.");
+      return;
+    }
+    if ((this.mode === "verify" && !this.tokenValid()) ||
+        (this.mode === "reset" && (!this.tokenValid() || this.password.length < 12 || this.password.length > 128))) {
+      this.error.set(this.mode === "verify"
+        ? "Pega el token completo de verificación (43 caracteres) recibido por correo."
+        : "Revisa el token y escribe una contraseña de 12 a 128 caracteres.");
       return;
     }
     if (this.mode === "register" && this.registerAccepted()) return;
