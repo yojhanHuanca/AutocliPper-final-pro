@@ -44,6 +44,15 @@
   <section id="project-source-panel" class="panel project-source-panel" role="tabpanel" tabindex="0" aria-labelledby="project-tab-source" [hidden]="workbench() !== 'source'">
     <span class="eyebrow">PASO 1 · VIDEO DE ORIGEN</span>
     <h2>Elige tu video.</h2>
+    <p>Desde tu equipo o, cuando esté disponible, desde un enlace.</p>
+    <div class="source-mode-picker" role="group" aria-label="Cómo añadir tu video">
+      <button id="source-mode-file" type="button" [attr.aria-pressed]="sourceMode() === 'file'" aria-controls="source-file-content" (click)="showSource('file')"><ac-icon name="upload" /><span><strong>Subir archivo</strong><small>Disponible ahora</small></span></button>
+      <button type="button" [attr.aria-pressed]="sourceMode() === 'link'" aria-controls="source-link-content" (click)="showSource('link')"><ac-icon name="play" /><span><strong>Pegar enlace</strong><small>YouTube, Kick y Twitch</small></span></button>
+    </div>
+    <div id="source-link-content" [hidden]="sourceMode() !== 'link'">
+      @if (sourceMode() === 'link') { <ac-source-link-preview (useFile)="showSource('file', true)" /> }
+    </div>
+    <div id="source-file-content" [hidden]="sourceMode() !== 'file'">
     <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
     <label class="upload-drop"
       ><ac-icon name="upload" /><strong>{{
@@ -66,6 +75,7 @@
       }}<ac-icon name="upload" />
     </button>
     @if (file && !uploading()) { <p class="selected-file" role="status">Listo para revisar: <strong>{{ file.name }}</strong></p> }
+    </div>
     @if (uploading()) {
       <p class="muted" role="status">{{ message() || "Preparando la transferencia…" }} @if (!hasActiveUpload()) { El cálculo SHA-256 debe terminar antes de habilitar la cancelación. }</p>
     }

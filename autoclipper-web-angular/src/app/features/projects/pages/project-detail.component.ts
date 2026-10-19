@@ -20,12 +20,13 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
+import { SourceLinkPreviewComponent } from '../components/source-link-preview.component';
 
 type EditList = Response<"/v1/projects/{id}/edits">;
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-project",
-  imports: [FormsModule, RouterLink, DatePipe, DecimalPipe, IconComponent],
+  imports: [FormsModule, RouterLink, DatePipe, DecimalPipe, IconComponent, SourceLinkPreviewComponent],
   templateUrl: "./project-detail.component.html",
   styleUrl: "./project-detail.component.css",
 })
@@ -96,6 +97,11 @@ export class ProjectComponent {
   private activeUploadId = "";
   readonly cancellingUpload = signal(false);
   readonly workbench = signal<"source" | "processing" | "drafts">("source");
+  readonly sourceMode = signal<'file' | 'link'>('file');
+  showSource(mode: 'file' | 'link', focus = false): void {
+    this.sourceMode.set(mode);
+    if (focus) requestAnimationFrame(() => { if (!this.disposed) document.getElementById('source-mode-file')?.focus(); });
+  }
   readonly workbenchTabs = [
     { id: "source", label: "Video de origen", step: "source", icon: "upload" },
     { id: "processing", label: "Procesar clip", step: "render", icon: "scissors" },
@@ -204,6 +210,7 @@ export class ProjectComponent {
     this.handoffNotice.set('');
   }
   private switchProject(id: string): void {
+    this.sourceMode.set('file');
     this.workbench.set("source");
     if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
     this.activeUploadController?.abort();
