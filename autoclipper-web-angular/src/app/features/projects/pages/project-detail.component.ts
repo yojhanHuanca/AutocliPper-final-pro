@@ -22,6 +22,7 @@ import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { SourceLinkPreviewComponent } from '../components/source-link-preview.component';
 import { uploadContentType, type UploadPhase } from '../models/upload-file';
+import { pipelineProgress } from '../models/pipeline-progress';
 
 type EditList = Response<"/v1/projects/{id}/edits">;
 @Component({
@@ -385,6 +386,16 @@ export class ProjectComponent {
   }
   pipelineStateLabel(state: Schema<"PipelineStatusDto">["status"]): string {
     return ({ queued: "En cola", audio: "Preparando audio", analysis: "Transcribiendo", render: "Creando el clip", stopping: "Cancelación solicitada", succeeded: "Completado", failed: "No se pudo completar", cancelled: "Cancelado" } as Record<string, string>)[state] ?? state;
+  }
+  pipelineProgress(task: Schema<"PipelineStatusDto">) {
+    return pipelineProgress(task.status, task.events);
+  }
+  sourceOriginLabel(): string {
+    const uploadId = this.uploadId.trim();
+    if (!uploadId) return "No hay un archivo cargado seleccionado";
+    if (this.sourceFileName() && this.namedUploadId === uploadId)
+      return `Archivo cargado: ${this.sourceFileName()}`;
+    return `Archivo cargado · ${uploadId.slice(0, 8)}`;
   }
   eventStateLabel(state: string): string {
     return ({ queued: "En cola", audio: "Preparando audio", analysis: "Transcribiendo", render: "Creando el clip", stopping: "Cancelación solicitada", succeeded: "Completado", failed: "Error", cancelled: "Cancelado" } as Record<string, string>)[state] ?? state;

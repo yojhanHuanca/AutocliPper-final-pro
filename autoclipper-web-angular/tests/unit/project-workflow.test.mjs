@@ -317,6 +317,18 @@ test('reused project detail resets its ID and ignores responses from the previou
   }
 });
 
+test('processing keeps the actual uploaded source visible even when a link preview is selected', async () => {
+  try {
+    const {state}=await handoffSetup();
+    assert.equal(state.sourceOriginLabel(),'Archivo cargado · upload-f');
+    state.showSource('link');
+    assert.equal(state.sourceMode(),'link');
+    assert.equal(state.sourceOriginLabel(),'Archivo cargado · upload-f');
+    state.selectUpload('');
+    assert.equal(state.sourceOriginLabel(),'No hay un archivo cargado seleccionado');
+  } finally { TestBed.resetTestingModule(); }
+});
+
 test('manual pipeline interval is constrained to the inspected source duration', async () => {
   const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
   Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:{getItem:()=>null,setItem(){}}});

@@ -166,6 +166,69 @@
 .pipeline-card h3 {
   font-size: 16px;
 }
+.pipeline-source-note {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  margin: 16px 0 20px;
+  border-left: 3px solid var(--accent);
+  background: #f5f8ff;
+  font-size: 12px;
+}
+.pipeline-source-note strong { color: var(--text); }
+.pipeline-source-note span { color: var(--text); overflow-wrap: anywhere; }
+.pipeline-source-note small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.pipeline-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  margin: 18px 0 22px;
+  list-style: none;
+}
+.pipeline-progress li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.pipeline-progress li:not(:last-child)::after {
+  content: "";
+  height: 2px;
+  flex: 1;
+  margin: 8px 8px 0 0;
+  background: var(--border);
+}
+.pipeline-progress-marker {
+  display: grid;
+  place-items: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.pipeline-progress li.complete,
+.pipeline-progress li.current { color: var(--text); }
+.pipeline-progress li.complete .pipeline-progress-marker,
+.pipeline-progress li.current .pipeline-progress-marker {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.pipeline-progress li.current .pipeline-progress-marker { box-shadow: 0 0 0 3px #2354bb22; }
+.pipeline-progress li.failed { color: #a52828; }
+.pipeline-progress li.failed .pipeline-progress-marker { border-color: #b83232; background: #b83232; }
+.pipeline-progress li.cancelled { color: var(--muted); }
+.pipeline-progress small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.pipeline-progress li.failed small { color: #a52828; }
 .pipeline-events {
   list-style: none;
   padding: 0;
@@ -320,4 +383,8 @@
 @media(max-width:1100px) { .project-workbench { grid-template-columns:minmax(0,1fr) 240px; gap:18px; } .project-workbench-tabs > button { padding:12px 10px; gap:8px; } .project-tab-icon { width:29px; height:32px; } }
 @media(max-width:950px) { .project-workbench { grid-template-columns:1fr; } .project-context { position:static; grid-template-columns:1fr 1fr; align-items:start; } .project-hero { gap:20px; } .project-hero-actions .button { padding-inline:16px; } }
 @media(max-width:600px) { .project-hero { flex-direction:column; align-items:stretch; gap:22px; padding-bottom:24px; } .project-hero h1 { font-size:33px; } .project-hero-actions { display:flex; flex-wrap:wrap; justify-content:space-between; gap:13px; } .project-hero-actions .button { flex:1 1 190px; } .project-hero-meta { gap:8px 14px; margin-top:14px; } .project-workbench-tabs { gap:3px; padding:4px; border-radius:12px; margin-bottom:18px; } .project-workbench-tabs > button { min-height:82px; flex-direction:column; justify-content:center; align-items:flex-start; gap:8px; padding:10px 8px; } .project-workbench-tabs strong { font-size:11px; } .project-workbench-tabs small { font-size:9px; } .project-tab-icon { display:none; } .project-tab-count { display:none; } .project-workbench .edit-list,.project-context { grid-template-columns:1fr; } .project-next-step { padding:14px; } .project-next-step .button { width:100%; margin:0; } .project-source-summary { padding:17px; } .project-workbench .upload-drop { padding:27px 10px; } .project-workbench .upload-drop > input { max-width:100%; } }
+@media(max-width:600px) {
+  .pipeline-progress { grid-template-columns:1fr; gap:10px; }
+  .pipeline-progress li:not(:last-child)::after { display:none; }
+}
 }

@@ -171,6 +171,7 @@
     <span class="eyebrow">PASO 2 · PROCESAMIENTO</span>
     <h2>Elige el intervalo.</h2>
     <p>Selecciona a mano el fragmento que quieres convertir en un MP4. El servicio genera subtítulos cuando termina la transcripción local; no elige momentos por ti.</p>
+    <div class="pipeline-source-note" role="note"><strong>Origen del procesamiento</strong><span>{{ sourceOriginLabel() }}</span>@if (sourceMode() === 'link') { <small>El enlace seleccionado es solo una vista previa. Este paso procesa el archivo cargado; AutoClipper todavía no importa videos desde enlaces.</small> } @else { <small>Se procesará el archivo privado seleccionado para este proyecto.</small> }</div>
     <form
       #pipelineForm="ngForm"
       (ngSubmit)="pipelineForm.valid && startPipeline()"
@@ -239,6 +240,14 @@
           <h3>Procesamiento: {{ pipelineStateLabel(task.status) }}</h3>
         </div>
         @if (pollingPipeline()) { <p class="muted" role="status">Consultando el estado actualizado…</p> }
+        <ol class="pipeline-progress" aria-label="Etapas del procesamiento">
+          @for (stage of pipelineProgress(task); track stage.id) {
+            <li [class.complete]="stage.state === 'complete'" [class.current]="stage.state === 'current'" [class.failed]="stage.state === 'failed'" [class.cancelled]="stage.state === 'cancelled'" [attr.aria-current]="stage.state === 'current' ? 'step' : null">
+              <span class="pipeline-progress-marker" aria-hidden="true">{{ stage.state === 'complete' ? '✓' : '' }}</span>
+              <span>{{ stage.label }}<small>{{ stage.state === 'complete' ? 'Listo' : stage.state === 'current' ? 'En curso' : stage.state === 'failed' ? 'No completado' : stage.state === 'cancelled' ? 'Cancelado' : 'Pendiente' }}</small></span>
+            </li>
+          }
+        </ol>
         @if (hasKnownPipelineUpload() && !pipelineMatchesSelectedUpload()) {
           <p class="alert">Este procesamiento se inició para otra carga. Puedes descargar sus archivos, pero su transcripción no se vinculará al video seleccionado.</p>
         } @else if (!hasKnownPipelineUpload()) {
