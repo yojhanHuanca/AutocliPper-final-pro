@@ -33,6 +33,7 @@ function subject(access) {
   component.jobs = signal([]);
   component.consumption = signal([]);
   component.nextBeforeId = signal(null);
+  component.summaryRows = signal({});
   component.loadingAccess = signal(false);
   component.notFound = signal(false);
   component.elevatedUntil = signal('');
@@ -172,6 +173,17 @@ test('job status colors distinguish active, complete, failed, cancelled and unkn
   assert.equal(component.jobStatusTone('failed'), 'error');
   assert.equal(component.jobStatusTone('cancelled'), 'stopped');
   assert.equal(component.jobStatusTone('unrecognized'), 'unknown');
+});
+
+test('overview page counts come from the returned cursor pages and never claim a global total', async () => {
+  const component = subject(access());
+  component.api.users = async beforeId => beforeId
+    ? { items: [{ id: 'user-2', verified: false, mfaEnabled: false, createdAt: '2026-10-17T00:00:00Z' }], nextBeforeId: null }
+    : { items: [{ id: 'user-1', verified: true, mfaEnabled: true, createdAt: '2026-10-18T00:00:00Z' }], nextBeforeId: 'cursor-1' };
+  await component.selectSection('users');
+  assert.equal(component.summaryLine('users'), '1 fila consultada · hay más páginas. No es un total global.');
+  await component.loadNextPage();
+  assert.equal(component.summaryLine('users'), '2 filas consultadas · sin cursor siguiente. No es un total global.');
 });
 
 test('a late page cannot repopulate rows after a capability refresh starts', async () => {

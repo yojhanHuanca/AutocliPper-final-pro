@@ -74,6 +74,12 @@ La cuenta sintética frontend-qa registrada anteriormente pudo iniciar sesión p
 
 Se corrigieron los hallazgos frontend del ensayo: el aviso de carga confirmada remite al estado de inspección y ya no dice que sigue esperando cuando la inspección terminó; el selector distingue Personal/Equipo y el rol en los dos espacios QA con el mismo nombre; el resumen muestra «1 exportación». No se modificaron backend, servicios, políticas de admisión, precios o suscripciones.
 
+## Consola operativa read-only — 2026-10-18
+
+La consola ahora presenta un resumen de permisos y páginas consultadas, accesos a Usuarios/Espacios/Procesamiento/Consumo y la razón concreta por la que Auditoría no está disponible (no existe un endpoint de lectura administrativa en el contrato). Los conteos reflejan solo filas devueltas bajo el alcance actual y el cursor; no se etiquetan como totales globales. Las tablas usan el DTO redactado del servidor, paginación `beforeId` de 25 filas y filtro remoto por workspace cuando corresponde. El texto y los filtros tipo/estado se aplican únicamente a las filas ya cargadas, indicado junto al control. Estados de trabajo usan etiquetas/clases derivadas del estado real. Sin acciones de suspensión, edición, cancelación, créditos o lectura de auditoría.
+
+Quince pruebas administrativas focalizadas pasan, incluido acceso/MFA/elevación, alcance, filas/cursor de resumen, filtros locales, permisos de overview y estados de trabajo; typecheck y build aprobados. No se repitió revisión visual ni E2E: Work bloquea el navegador local y no se dispuso de aceptación con cuenta operadora autorizada. No hubo cambios de backend.
+
 El cierre del 18 de octubre conserva 100 pruebas aprobadas, typecheck y build de producción. La comprobación de disponibilidad actual volvió a dar ECONNREFUSED en localhost:3000/v1/health/ready; se inició únicamente el servidor frontend para revisar su estado vacío. Por ello la revisión visual final no se presenta como otra aceptación poblada y los bloqueos «API apagada» de los apartados anteriores describen checkpoints históricos, anteriores al ensayo real exitoso.
 
 La revisión visual final de /design/editor a 1440×1000 y 390×844 confirmó el estado vacío, sin desbordamiento horizontal del documento ni errores/advertencias de consola. Capturas locales: C:/Users/USER/Documents/Codex/artifacts/autoclipper-e2e-closure-2026-10-18/desktop-empty.jpg y mobile-empty.jpg. Esta vista de estructura no requiere autenticación y no sustituye la aceptación real del 17 de octubre.

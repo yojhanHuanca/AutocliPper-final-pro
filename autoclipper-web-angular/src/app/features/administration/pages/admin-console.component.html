@@ -80,7 +80,7 @@
                 @for (item of sections; track item.id) {
                   <article class="admin-overview-card" [class.authorized]="canRead(item.permission)">
                     <span class="admin-overview-icon"><ac-icon [name]="item.icon" /></span>
-                    <div><h4>{{ item.label }}</h4><p>{{ canRead(item.permission) ? 'Lectura autorizada por el servidor.' : 'Esta cuenta no tiene permiso de lectura.' }}</p></div>
+                    <div><h4>{{ item.label }}</h4><p>{{ summaryLine(item.id) }}</p></div>
                     @if (canRead(item.permission)) { <button type="button" (click)="selectSection(item.id)" [disabled]="loadingPage()">Abrir consulta<ac-icon name="arrow" /></button> }
                     @else { <span class="admin-overview-locked">Sin permiso</span> }
                   </article>

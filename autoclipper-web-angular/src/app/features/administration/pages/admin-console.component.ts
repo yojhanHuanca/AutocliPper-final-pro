@@ -11,6 +11,7 @@ import { AdminApi } from "../data-access/admin-api.service";
 type AdminSection = "users" | "workspaces" | "jobs" | "consumption";
 type AdminView = "summary" | AdminSection;
 type AdminPermission = Schema<"AdminAccessDto">["permissions"][number];
+type AdminSectionSummary = { count: number; hasMore: boolean; loading: boolean; failed: boolean };
 
 @Component({
   encapsulation: ViewEncapsulation.None,
@@ -45,6 +46,7 @@ export class AdminConsoleComponent {
   readonly jobs = signal<Schema<"AdminJobDto">[]>([]);
   readonly consumption = signal<Schema<"AdminConsumptionDto">[]>([]);
   readonly nextBeforeId = signal<string | null>(null);
+  readonly summaryRows = signal<Partial<Record<AdminSection, AdminSectionSummary>>>({});
   readonly loadingPage = signal(false);
   readonly pageFailed = signal(false);
   readonly error = signal("");
@@ -64,6 +66,7 @@ export class AdminConsoleComponent {
       this.now.set(Date.now());
       if (!this.isElevated()) {
         this.clearData();
+        this.summaryRows.set({});
         this.message.set("");
       }
     }, 1_000);
@@ -95,6 +98,7 @@ export class AdminConsoleComponent {
     this.clearData();
     this.access.set(null);
     this.activeView.set("summary");
+    this.summaryRows.set({});
     this.message.set("");
     this.loadingAccess.set(true);
     this.error.set("");
@@ -148,6 +152,7 @@ export class AdminConsoleComponent {
       this.factor = "";
       this.now.set(Date.now());
       this.message.set("Acceso de consulta elevado por cinco minutos para esta sesión.");
+      this.summaryRows.set({});
       this.section.set(this.availableSections()[0]?.id ?? null);
       if (this.availableSections().length) await this.loadSection();
     } catch (error) {
@@ -211,6 +216,7 @@ export class AdminConsoleComponent {
   async setWorkspaceFilter(value: string): Promise<void> {
     this.workspaceFilter.set(value.trim());
     this.clearData();
+    this.summaryRows.set({});
     if (this.section() && this.isElevated()) await this.loadSection();
   }
   async loadNextPage(): Promise<void> {
@@ -232,32 +238,38 @@ export class AdminConsoleComponent {
     this.loadingPage.set(true);
     this.pageFailed.set(false);
     this.error.set("");
+    this.summaryRows.update((rows) => ({ ...rows, [section]: { count: rows[section]?.count ?? 0, hasMore: rows[section]?.hasMore ?? false, loading: true, failed: false } }));
     try {
       if (section === "users") {
         const result = await this.api.users(beforeId);
         if (!this.isCurrentPage(version, section, workspaceId)) return;
         this.users.update((items) => beforeId ? [...items, ...result.items] : result.items);
         this.nextBeforeId.set(result.nextBeforeId);
+        this.recordSummary(section, this.users().length, result.nextBeforeId !== null);
       } else if (section === "workspaces") {
         const result = await this.api.workspaces(beforeId, workspaceId);
         if (!this.isCurrentPage(version, section, workspaceId)) return;
         this.workspaces.update((items) => beforeId ? [...items, ...result.items] : result.items);
         this.nextBeforeId.set(result.nextBeforeId);
+        this.recordSummary(section, this.workspaces().length, result.nextBeforeId !== null);
       } else if (section === "jobs") {
         const result = await this.api.jobs(beforeId, workspaceId);
         if (!this.isCurrentPage(version, section, workspaceId)) return;
         this.jobs.update((items) => beforeId ? [...items, ...result.items] : result.items);
         this.nextBeforeId.set(result.nextBeforeId);
+        this.recordSummary(section, this.jobs().length, result.nextBeforeId !== null);
       } else {
         const result = await this.api.consumption(beforeId, workspaceId);
         if (!this.isCurrentPage(version, section, workspaceId)) return;
         this.consumption.update((items) => beforeId ? [...items, ...result.items] : result.items);
         this.nextBeforeId.set(result.nextBeforeId);
+        this.recordSummary(section, this.consumption().length, result.nextBeforeId !== null);
       }
     } catch (error) {
       if (!this.isCurrentPage(version, section, workspaceId)) return;
       this.clearData();
       this.pageFailed.set(true);
+      this.summaryRows.update((rows) => ({ ...rows, [section]: { count: 0, hasMore: false, loading: false, failed: true } }));
       this.error.set(this.adminError(error));
       if (this.httpStatus(error) === 401 || this.errorIsForbidden(error)) {
         this.accessVersion += 1;
@@ -274,6 +286,17 @@ export class AdminConsoleComponent {
     return this.access()?.workspaceIds === null
       ? "Scope global autorizado; el filtro es opcional."
       : "Sin filtro se consulta únicamente la lista de espacios autorizada por el servidor.";
+  }
+  summaryLine(section: AdminSection): string {
+    if (!this.canRead(`${section}.read` as AdminPermission)) return "Sin permiso de lectura.";
+    const result = this.summaryRows()[section];
+    if (!result) return "Aún no consultada en este alcance.";
+    if (result.loading && !result.count) return "Consultando la primera página…";
+    if (result.failed) return "La consulta falló; reintenta desde esta sección.";
+    return `${result.count} fila${result.count === 1 ? "" : "s"} consultada${result.count === 1 ? "" : "s"}${result.hasMore ? " · hay más páginas" : " · sin cursor siguiente"}. No es un total global.`;
+  }
+  private recordSummary(section: AdminSection, count: number, hasMore: boolean): void {
+    this.summaryRows.update((rows) => ({ ...rows, [section]: { count, hasMore, loading: false, failed: false } }));
   }
   private validWorkspaceFilter(value: string): boolean {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) return false;
