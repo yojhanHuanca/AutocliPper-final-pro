@@ -230,3 +230,9 @@ Evidence from the prior visual review: `C:/Users/USER/Documents/Codex/artifacts/
 
 Provider import capabilities supplied by backend as preliminary findings: YouTube audiovisual import lacks an authorized route; Kick has no official media download API identified; Twitch Helix supports authorized clip downloads with OAuth/scope only, not VOD/live. These findings do not enable frontend import. The UI reports each separately and awaits the backend's published contract and authorization enforcement.
 
+## Progreso visible del procesamiento — 2026-10-18
+
+El panel de proyecto ahora deriva una guía de cuatro etapas del estado/eventos recibidos del pipeline: cola, audio, transcripción y render. Distingue fases pendientes/activas/completadas y marca el punto de fallo o cancelación a partir del último evento reconocido; el éxito completa la secuencia. Los errores y acciones existentes de consultar/reintentar siguen siendo explícitos. El panel conserva visible el archivo cargado como origen y avisa que un enlace sigue siendo vista previa; ningún enlace se convierte en una carga ni habilita procesamiento.
+
+Veintidós pruebas focalizadas de pipeline/proyecto pasan; typecheck y build de producción aprobados. No se ejecutó E2E: el gateway esperado no estaba disponible y Docker Desktop estaba apagado; tampoco hubo revisión visual nueva porque el navegador local está deshabilitado en Work. Se actualizará esa evidencia cuando el runtime y navegador estén disponibles.
+
