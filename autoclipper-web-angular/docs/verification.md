@@ -266,3 +266,6 @@ El archivo seleccionado solo se marca como cargado cuando la API devuelve estado
 ## Consistencia de estados de carga y pipeline — 2026-10-19
 
 Las respuestas de consulta deben conservar el ID pedido y el proyecto actual antes de reemplazar estado de carga/procesamiento. Una respuesta cruzada se descarta y deja disponibles los datos previos y el reintento; nunca habilita inspección, vinculación de transcripción o apertura de editor. 24 pruebas de workflow/progreso aprobadas; typecheck y build aprobados. No se consultó un runtime compartido.
+## Errores de inspección y pipeline para creadores — 2026-10-19
+
+Los fallos de inspección/procesamiento ahora anuncian un mensaje accesible y orientado a la acción, sin exponer códigos internos del worker. Los controles existentes de consulta/cancelación/reintento siguen siendo autoritativos. Typecheck Angular y build de producción aprobados; sin llamadas a runtime.

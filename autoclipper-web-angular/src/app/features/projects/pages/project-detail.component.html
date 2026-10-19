@@ -147,7 +147,7 @@
           </p>
         }
         @if (status.inspection?.errorCode) {
-          <p class="alert error">La inspección rechazó el archivo. Código: {{ status.inspection.errorCode }}. Prueba con un video compatible de hasta 300 segundos.</p>
+          <p class="alert error" role="alert">El servidor no pudo inspeccionar este archivo. Prueba con un video compatible de hasta 300 segundos y vuelve a consultar el estado.</p>
         }
         @if (status.state === "pending") {
           <p class="muted">La transferencia todavía no se confirmó. Si el enlace temporal venció, vuelve a seleccionar el archivo o cancela esta carga pendiente.</p>
@@ -273,7 +273,7 @@
           }
         </ol></details>
         @if (task.errorCode) {
-          <p class="alert error">El pipeline no se completó. Código del servidor: {{ task.errorCode }}. Puedes consultar el estado o revisar el intervalo antes de crear otro procesamiento.</p>
+          <p class="alert error" role="alert">El procesamiento no se completó. Consulta el estado, revisa el intervalo y vuelve a intentarlo con el archivo seleccionado.</p>
         }
         @if (task.status === "succeeded") {
           <div class="button-row">
