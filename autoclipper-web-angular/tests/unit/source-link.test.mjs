@@ -19,7 +19,9 @@ test('source recognition permits exact official domains and concrete known shape
   assert.deepEqual(recognizeSourceLink('https://www.twitch.tv/videos/12345').target,{platform:'Twitch',kind:'video',id:'12345'});
   assert.equal(recognizeSourceLink('https://clips.twitch.tv/IncredulousAbstemiousFennelImGlitch').target.kind,'clip');
   assert.equal(recognizeSourceLink('https://www.twitch.tv/twitchdev/clip/ExampleClip-123').target.kind,'clip');
-  assert.equal(recognizeSourceLink('https://kick.com/example-channel').target.kind,'live');
+  const kickLive = recognizeSourceLink('https://kick.com/example-channel');
+  assert.equal(kickLive.target.kind,'live');
+  assert.match(kickLive.message,/canal en directo/);
   for(const url of ['https://youtube.com.evil.test/watch?v=M7lc1UVf-VE','https://youtube.com@evil.test/watch?v=M7lc1UVf-VE','https://evil.test/?url=https://youtube.com/watch?v=M7lc1UVf-VE','https://notkick.com/example','https://twitch.tv.evil.test/videos/123','https://www.youtube.com./watch?v=M7lc1UVf-VE','https://player.kick.com/example']) {
     assert.equal(recognizeSourceLink(url).target,undefined,url);
   }
@@ -30,6 +32,7 @@ test('empty, invalid and unverifiable links have explicit states without manufac
   for(const url of ['youtube.com/watch?v=M7lc1UVf-VE','javascript:alert(1)','http://youtube.com/watch?v=M7lc1UVf-VE','https://youtube.com:8443/watch?v=M7lc1UVf-VE','https://user:pass@youtube.com/watch?v=M7lc1UVf-VE','https://you\ntube.com/watch?v=M7lc1UVf-VE']) assert.equal(recognizeSourceLink(url).state,'invalid',url);
   for(const url of ['https://kick.com/video/123','https://kick.com/channel/videos/123','https://kick.com/channel?clip=clip_123','https://kick.com/channel?clip_id=123','https://kick.com/videos','https://youtube.com/playlist?list=123','https://youtube.com/watch?v=short','https://youtube.com/watch?v=M7lc1UVf-VE&v=AAAAAAAAAAA','https://twitch.tv/twitchdev']) {
     const result=recognizeSourceLink(url); assert.equal(result.state,'unverifiable',url); assert.equal(result.target,undefined);
+    if (url.includes('kick.com')) assert.match(result.message,/no se convierte en ese canal.*VOD\/clips no se importan/);
   }
 });
 

@@ -242,3 +242,7 @@ El panel de proyecto ahora deriva una guía de cuatro etapas del estado/eventos 
 
 Veintidós pruebas focalizadas de pipeline/proyecto pasan; typecheck y build de producción aprobados. No se ejecutó E2E: el gateway esperado no estaba disponible y Docker Desktop estaba apagado; tampoco hubo revisión visual nueva porque el navegador local está deshabilitado en Work. Se actualizará esa evidencia cuando el runtime y navegador estén disponibles.
 
+
+## Claridad de enlaces Kick
+
+La validación del cliente distingue el canal Kick (único formato con reproductor oficial disponible aquí) de URLs de VOD/clips, que no se transforman en canales ni se presentan como importables. La vista previa continúa bajo solicitud explícita del usuario. 7 pruebas de source-link, typecheck Angular y build de producción aprobados; no se activó importación ni se envió la URL al backend.
