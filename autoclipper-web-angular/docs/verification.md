@@ -254,3 +254,6 @@ El formulario de alta deja enviar una solicitud incompleta al validador local pa
 ## Mensaje de exportación fallida en editor — 2026-10-19
 
 La lista ya no presenta los códigos del procesador directamente a creadores; muestra un mensaje neutral y mantiene el reintento contractual cuando se trata de la revisión actual. Una prueba comprueba códigos conocidos, desconocidos y contenido sensible simulado; typecheck y build aprobados. No se modificó la API ni el render.
+## Alta del primer espacio de trabajo — 2026-10-19
+
+Si la creación del espacio se acepta pero falla la consulta posterior de la lista, el cliente conserva la referencia de esa creación y reintenta primero la lectura; no vuelve a crear otro espacio. Un caso prueba una falla de lectura tras el POST y confirma una sola escritura/idempotency key al reintentar. Typecheck y build aprobados. Sin llamadas a runtime compartido.

@@ -10,6 +10,7 @@ export class WorkspaceStore {
   private creationKey = "";
   private creationName = "";
   private creationKind: "personal" | "team" = "personal";
+  private pendingCreated: { id: string; name: string; kind: "personal" | "team" } | null = null;
   private loadVersion = 0;
   async createPersonal(name: string): Promise<void> {
     await this.create(name, "personal");
@@ -19,6 +20,20 @@ export class WorkspaceStore {
   }
   private async create(name: string, kind: "personal" | "team"): Promise<void> {
     const selectedBeforeCreate = this.workspaceId();
+    const pending = this.pendingCreated;
+    if (pending) {
+      try { await this.loadWorkspaces(); }
+      catch { throw new Error("El espacio ya se creó, pero no pudimos actualizar la lista. Reintenta; no enviaremos otra creación."); }
+      if (!this.workspaces().some((workspace) => workspace.id === pending.id))
+        throw new Error("El servidor aceptó el espacio, pero todavía no aparece en la lista. Reintenta para volver a consultarla sin crear otro.");
+      this.pendingCreated = null;
+      if (pending.name === name && pending.kind === kind) {
+        if ((!selectedBeforeCreate || this.workspaceId() === selectedBeforeCreate) && this.workspaces().some((workspace) => workspace.id === pending.id))
+          this.workspaceId.set(pending.id);
+        this.creationKey = "";
+        return;
+      }
+    }
     if (name !== this.creationName || kind !== this.creationKind || !this.creationKey) {
       this.creationName = name;
       this.creationKind = kind;
@@ -30,7 +45,12 @@ export class WorkspaceStore {
       this.creationKey,
     );
     this.creationKey = "";
-    await this.loadWorkspaces();
+    this.pendingCreated = { id: created.id, name, kind };
+    try { await this.loadWorkspaces(); }
+    catch { throw new Error("El servidor aceptó la creación, pero no pudimos actualizar la lista. Reintenta; no se creará otro espacio."); }
+    if (!this.workspaces().some((workspace) => workspace.id === created.id))
+      throw new Error("El servidor aceptó la creación, pero el espacio aún no aparece en la lista. Reintenta para volver a consultarla.");
+    this.pendingCreated = null;
     if (
       (!selectedBeforeCreate || this.workspaceId() === selectedBeforeCreate) &&
       this.workspaces().some((workspace) => workspace.id === created.id)

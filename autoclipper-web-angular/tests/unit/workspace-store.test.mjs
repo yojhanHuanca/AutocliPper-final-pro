@@ -29,6 +29,30 @@ test('creating a team uses its contract kind and selects the created workspace',
   } finally { TestBed.resetTestingModule(); }
 });
 
+test('a failed post-create list refresh can be retried without creating a duplicate workspace', async () => {
+  let posts = 0, gets = 0;
+  const idempotencyKeys = [];
+  TestBed.configureTestingModule({ providers: [
+    WorkspaceStore,
+    { provide: TestComponentRenderer, useValue: renderer },
+    { provide: ApiTransport, useValue: {
+      post: async (_path, _body, key) => { posts++; idempotencyKeys.push(key); return { id: 'personal-created' }; },
+      get: async () => {
+        if (++gets === 1) throw new Error('list unavailable');
+        return { items: [workspace('personal-created', 'personal')] };
+      },
+    } },
+  ] });
+  try {
+    const store = TestBed.inject(WorkspaceStore);
+    await assert.rejects(store.createPersonal('Mi estudio'), /no pudimos actualizar la lista/);
+    await store.createPersonal('Mi estudio');
+    assert.equal(posts, 1);
+    assert.equal(idempotencyKeys[0].length > 0, true);
+    assert.equal(store.workspaceId(), 'personal-created');
+  } finally { TestBed.resetTestingModule(); }
+});
+
 test('late workspace loads cannot overwrite the newest workspace list', async () => {
   const calls = [deferred(), deferred()];
   let index = 0;
