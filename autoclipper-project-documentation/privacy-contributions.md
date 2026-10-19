@@ -4,7 +4,7 @@ Fecha: 18 de octubre de 2026. Incremento actual: membresías de Workspace. Conti
 
 ## Alcance por servicio
 
-Implementados: `identity-profile-v1`, perfil y vínculo Google del propio solicitante; y el nuevo `workspace-memberships-v1`, membresías **actuales**, tipo de workspace, rol/propiedad actual y fechas. Ambos son aportes parciales, no fulfillment global. Workspace omite nombres del equipo, correos/IDs de compañeros, invitaciones, auditoría general, proyectos y contenido. Un creador histórico que ya no es miembro no recibe metadatos de ese equipo mediante este aporte.
+Implementados: `identity-profile-v1`, perfil y vínculo Google del propio solicitante; `workspace-memberships-v1`, membresías **actuales**, tipo de workspace, rol/propiedad actual y fechas; y `project-attribution-v1`, referencias/metadatos básicos de proyectos, cargas, trabajos, pipelines y revisiones escritos por el solicitante. Son aportes parciales, no fulfillment global. Workspace omite nombres del equipo, correos/IDs de compañeros, invitaciones, auditoría general, proyectos y contenido. Project omite textos, claves/hash de objetos y bytes; no convierte autoría histórica en acceso actual al equipo o al contenido.
 
 Diseño de los siguientes aportes, sin endpoints o integraciones ficticios:
 
@@ -13,7 +13,7 @@ Diseño de los siguientes aportes, sin endpoints o integraciones ficticios:
 - **Analysis — analysis-attribution-v1:** trabajos/transcripciones/selecciones asociados a referencias autorizadas, con revisión/modelo/estado y resultado incierto identificado. El texto compartido o que menciona a terceros necesita decisiones adicionales; este nombre de alcance no acredita exportación de transcripciones ni eliminación de intentos externos.
 - **Billing — consumption-attribution-v1:** reservas y movimientos atribuibles a los pipelines del solicitante, sin incluir indiscriminadamente el consumo del equipo. No inventa precios ni decide retención de ledger. Reservas abiertas e intentos inciertos necesitan conciliación antes de cualquier eliminación.
 
-Las historias de seguridad, correo, invitaciones y los casos compartidos de Identity/Workspace tampoco quedan completos por los dos aportes actuales. El [catálogo SQL](../autoclipper-backend-microservices/privacy/data-map.json) ahora incluye las 58 tablas declaradas por los seis dueños, incluidas capacidades y recibos nuevos; su prueba exige revisar tablas añadidas o retiradas. Los plazos permanecen `undecided`.
+Las historias de seguridad, correo, invitaciones y los casos compartidos de Identity/Workspace/Project tampoco quedan completos por los aportes actuales. El [catálogo SQL](../autoclipper-backend-microservices/privacy/data-map.json) ahora incluye las 61 tablas declaradas por los seis dueños, incluidas capacidades y recibos nuevos; su prueba exige revisar tablas añadidas o retiradas. Los plazos permanecen `undecided`.
 
 ## API nueva y autorización
 
@@ -58,7 +58,7 @@ Repetir la misma clave con datos iguales produce el mismo recibo, hash, fechas y
 
 Si el dueño está caído, la autorización puede haber quedado registrada en Identity, pero no se afirma preparación ni finalización. El cliente puede reintentar con la misma clave y nueva prueba sensible; recibo y auditoría se confirman juntos en Workspace. Se mantiene `globalFulfillment=pending` durante fallos y éxitos parciales.
 
-El límite inicial es **500 membresías**, una protección técnica del JSON síncrono, no una cuota comercial ni un plazo de retención. La consulta obtiene como máximo 501 para detectar exceso. Si hay más de 500, responde 413 `PRIVACY_EXPORT_SCOPE_TOO_LARGE` sin devolver una lista truncada ni preparar un recibo incompleto. Paginación/manifiesto de mayor tamaño siguen pendientes.
+El límite de Workspace es **500 membresías** y el de Project **500 referencias agregadas**, protecciones técnicas del JSON síncrono, no una cuota comercial ni un plazo de retención. Cada consulta obtiene como máximo 501 por categoría para detectar exceso. Si hay más de 500, responde 413 `PRIVACY_EXPORT_SCOPE_TOO_LARGE` sin devolver una lista truncada ni preparar un recibo incompleto. Paginación/manifiesto de mayor tamaño siguen pendientes. Ver el [aporte de atribución Project](privacy-project-attribution.md) para sus categorías y pruebas.
 
 ## Consistencia global que aún falta
 

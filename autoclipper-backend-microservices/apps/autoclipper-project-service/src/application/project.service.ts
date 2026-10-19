@@ -45,7 +45,8 @@ import { EditorManager } from "./editor.manager.js";
 import { CollaborationManager } from "./collaboration.manager.js";
 import { PipelineManager } from "./pipeline.manager.js";
 import { UsageManager } from "./usage.manager.js";
-import {adminOwnerRequest,adminAuthority,adminJobsPage} from "@autoclipper/api-contracts";
+import {adminOwnerRequest,adminAuthority,adminJobsPage,privacyProjectOwnerRequest,privacyProjectAuthority} from "@autoclipper/api-contracts";
+import { prepareProjectExport } from "./privacy-exports.js";
 
 type Project = {
   id: string;
@@ -95,6 +96,13 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     const authority=body(adminAuthority,await adminAuthorization(this.config,{token,permission:"jobs.read",correlationId,workspaceId:query.workspaceId}));
     const rows=(await this.pool.query<{id:string;workspace_id:string;kind:string;status:string;created_at:Date;finished_at:Date|null;error_code:string|null}>("SELECT * FROM (SELECT id,workspace_id,CASE WHEN spec->>'kind'='audio' THEN 'audio' ELSE 'render' END AS kind,status,created_at,finished_at,error_code FROM processing_requests UNION ALL SELECT id,workspace_id,'analysis',COALESCE(cached_status->>'status','queued'),created_at,finished_at,cached_status->>'errorCode' FROM analysis_requests UNION ALL SELECT id,workspace_id,'pipeline',status,created_at,finished_at,error_code FROM pipelines) jobs WHERE ($1::uuid IS NULL OR workspace_id=$1) AND ($2::uuid[] IS NULL OR workspace_id=ANY($2)) AND ($3::uuid IS NULL OR id<$3) ORDER BY id DESC LIMIT $4",[query.workspaceId??null,authority.workspaceIds,query.beforeId??null,query.limit+1])).rows;
     const items=rows.slice(0,query.limit).map(row=>({id:row.id,workspaceId:row.workspace_id,kind:row.kind,status:row.status,createdAt:row.created_at.toISOString(),finishedAt:row.finished_at?.toISOString()??null,errorCode:row.error_code&&/^[A-Z_]{1,100}$/u.test(row.error_code)?row.error_code:null}));return body(adminJobsPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
+  }
+  async privacyProjectExport(req:Request,input:unknown){
+    requireInternal(req,this.config);
+    const data=body(privacyProjectOwnerRequest,input);
+    const authority=body(privacyProjectAuthority,await internalJson(this.config.IDENTITY_URL,'/v1/internal/privacy-project-export-authorize',this.config,{...data,scope:'project-attribution-v1'}));
+    const result=await prepareProjectExport(this.pool,authority.userId,authority.requestId,data.idempotencyKey,data.correlationId);
+    return result;
   }
   readonly config = loadServiceConfig();
   readonly pool = new pg.Pool({

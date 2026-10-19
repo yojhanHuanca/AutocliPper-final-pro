@@ -84,3 +84,63 @@ export class PrivacyWorkspaceExportDto {
   @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
   @ApiProperty({type:PrivacyWorkspaceDataDto}) data!:PrivacyWorkspaceDataDto;
 }
+
+const privacyProjectTimestamp=z.iso.datetime();
+const privacyProjectId=z.uuid();
+const privacyProjectError=z.string().regex(/^[A-Z0-9_]{1,100}$/u).nullable();
+export const privacyProjectData=z.object({
+  schemaVersion:z.literal(1),subjectId:z.uuid(),
+  projects:z.array(z.object({id:privacyProjectId,version:z.number().int().positive(),createdAt:privacyProjectTimestamp,deleted:z.boolean()}).strict()).max(500),
+  uploads:z.array(z.object({id:privacyProjectId,projectId:privacyProjectId,bytes:z.number().int().positive(),contentType:z.enum(['video/mp4','video/webm','video/quicktime','video/x-matroska']),state:z.enum(['pending','confirmed','aborted']),createdAt:privacyProjectTimestamp,cleaned:z.boolean()}).strict()).max(500),
+  processing:z.array(z.object({id:privacyProjectId,uploadId:privacyProjectId,projectId:privacyProjectId,status:z.enum(['queued','running','succeeded','failed','cancelled']),createdAt:privacyProjectTimestamp,finishedAt:privacyProjectTimestamp.nullable(),errorCode:privacyProjectError}).strict()).max(500),
+  analyses:z.array(z.object({id:privacyProjectId,uploadId:privacyProjectId,projectId:privacyProjectId,finishedAt:privacyProjectTimestamp.nullable(),createdAt:privacyProjectTimestamp}).strict()).max(500),
+  pipelines:z.array(z.object({id:privacyProjectId,uploadId:privacyProjectId,projectId:privacyProjectId,status:z.enum(['queued','audio','analysis','render','stopping','succeeded','failed','cancelled']),createdAt:privacyProjectTimestamp,finishedAt:privacyProjectTimestamp.nullable(),errorCode:privacyProjectError}).strict()).max(500),
+  revisions:z.array(z.object({id:privacyProjectId,draftId:privacyProjectId,version:z.number().int().positive(),action:z.enum(['created','updated','restored']),createdAt:privacyProjectTimestamp,restoredFromVersion:z.number().int().positive().nullable()}).strict()).max(500),
+}).strict().superRefine((data,ctx)=>{
+  const total=data.projects.length+data.uploads.length+data.processing.length+data.analyses.length+data.pipelines.length+data.revisions.length;
+  if(total>500)ctx.addIssue({code:'custom',message:'Project privacy export exceeds 500 referenced rows'});
+});
+export const privacyProjectExport=z.object({requestId:z.uuid(),receiptId:z.uuid(),scope:z.literal('project-attribution-v1'),state:z.literal('prepared'),fulfillment:z.literal('partial'),globalFulfillment:z.literal('pending'),createdAt:z.iso.datetime(),capturedAt:z.iso.datetime(),sha256:z.string().regex(/^[a-f0-9]{64}$/u),data:privacyProjectData}).strict();
+export const privacyProjectResult=z.union([privacyProjectExport,z.object({state:z.literal('snapshot_changed'),requestId:z.uuid()}).strict(),z.object({state:z.literal('limit_exceeded'),requestId:z.uuid()}).strict()]);
+export const privacyProjectOwnerRequest=z.object({capability:z.string().regex(/^[A-Za-z0-9_-]{43}$/u),idempotencyKey:z.uuid(),correlationId:z.uuid()}).strict();
+export const privacyProjectAuthorityRequest=privacyProjectOwnerRequest.extend({scope:z.literal('project-attribution-v1')}).strict();
+export const privacyProjectAuthority=z.object({userId:z.uuid(),requestId:z.uuid(),scope:z.literal('project-attribution-v1')}).strict();
+export class PrivacyProjectReferenceDto {
+  @ApiProperty({format:'uuid'}) id!:string;
+  @ApiPropertyOptional({format:'uuid'}) projectId?:string;
+  @ApiPropertyOptional({format:'uuid'}) uploadId?:string;
+  @ApiPropertyOptional({format:'uuid'}) draftId?:string;
+  @ApiPropertyOptional({minimum:1}) version?:number;
+  @ApiPropertyOptional() status?:string;
+  @ApiPropertyOptional({format:'date-time'}) createdAt?:string;
+  @ApiPropertyOptional({type:String,format:'date-time',nullable:true}) finishedAt?:string|null;
+  @ApiPropertyOptional({type:String,nullable:true}) errorCode?:string|null;
+  @ApiPropertyOptional() deleted?:boolean;
+  @ApiPropertyOptional() cleaned?:boolean;
+  @ApiPropertyOptional({minimum:1}) bytes?:number;
+  @ApiPropertyOptional() contentType?:string;
+  @ApiPropertyOptional({enum:['created','updated','restored']}) action?:string;
+  @ApiPropertyOptional({type:Number,nullable:true}) restoredFromVersion?:number|null;
+}
+export class PrivacyProjectDataDto {
+  @ApiProperty({enum:[1]}) schemaVersion!:number;
+  @ApiProperty({format:'uuid'}) subjectId!:string;
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) projects!:PrivacyProjectReferenceDto[];
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) uploads!:PrivacyProjectReferenceDto[];
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) processing!:PrivacyProjectReferenceDto[];
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) analyses!:PrivacyProjectReferenceDto[];
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) pipelines!:PrivacyProjectReferenceDto[];
+  @ApiProperty({type:[PrivacyProjectReferenceDto],maxItems:500}) revisions!:PrivacyProjectReferenceDto[];
+}
+export class PrivacyProjectExportDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;
+  @ApiProperty({format:'uuid'}) receiptId!:string;
+  @ApiProperty({enum:['project-attribution-v1']}) scope!:string;
+  @ApiProperty({enum:['prepared']}) state!:string;
+  @ApiProperty({enum:['partial']}) fulfillment!:string;
+  @ApiProperty({enum:['pending']}) globalFulfillment!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;
+  @ApiProperty({format:'date-time'}) capturedAt!:string;
+  @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
+  @ApiProperty({type:PrivacyProjectDataDto}) data!:PrivacyProjectDataDto;
+}

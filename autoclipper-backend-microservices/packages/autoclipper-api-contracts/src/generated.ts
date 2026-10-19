@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/privacy-requests/{id}/project-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IdentityController_privacyProjectExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/security-events": {
         parameters: {
             query?: never;
@@ -1440,6 +1456,62 @@ export interface components {
             capturedAt: string;
             sha256: string;
             data: components["schemas"]["PrivacyWorkspaceDataDto"];
+        };
+        PrivacyProjectReferenceDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** Format: uuid */
+            uploadId?: string;
+            /** Format: uuid */
+            draftId?: string;
+            version?: number;
+            status?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            finishedAt?: string | null;
+            errorCode?: string | null;
+            deleted?: boolean;
+            cleaned?: boolean;
+            bytes?: number;
+            contentType?: string;
+            /** @enum {string} */
+            action?: "created" | "updated" | "restored";
+            restoredFromVersion?: number | null;
+        };
+        PrivacyProjectDataDto: {
+            /** @enum {number} */
+            schemaVersion: 1;
+            /** Format: uuid */
+            subjectId: string;
+            projects: components["schemas"]["PrivacyProjectReferenceDto"][];
+            uploads: components["schemas"]["PrivacyProjectReferenceDto"][];
+            processing: components["schemas"]["PrivacyProjectReferenceDto"][];
+            analyses: components["schemas"]["PrivacyProjectReferenceDto"][];
+            pipelines: components["schemas"]["PrivacyProjectReferenceDto"][];
+            revisions: components["schemas"]["PrivacyProjectReferenceDto"][];
+        };
+        PrivacyProjectExportDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: uuid */
+            receiptId: string;
+            /** @enum {string} */
+            scope: "project-attribution-v1";
+            /** @enum {string} */
+            state: "prepared";
+            /** @enum {string} */
+            fulfillment: "partial";
+            /** @enum {string} */
+            globalFulfillment: "pending";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            capturedAt: string;
+            sha256: string;
+            data: components["schemas"]["PrivacyProjectDataDto"];
         };
         PrivacyStatusResponseDto: {
             /** Format: uuid */
@@ -4007,6 +4079,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivacyWorkspaceExportDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    IdentityController_privacyProjectExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description UUID for this Project attribution snapshot. */
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyProfileProofDto"];
+            };
+        };
+        responses: {
+            /** @description Partial Project attribution contribution; global privacy request remains pending. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyProjectExportDto"];
                 };
             };
             /** @description Classified error with a safe correlation identifier */

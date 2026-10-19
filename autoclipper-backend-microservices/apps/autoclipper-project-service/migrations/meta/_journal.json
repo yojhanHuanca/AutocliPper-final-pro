@@ -71,6 +71,13 @@
       "when": 1792040000000,
       "tag": "0009_pipeline_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792370000000,
+      "tag": "0010_privacy_exports",
+      "breakpoints": true
     }
   ]
 }

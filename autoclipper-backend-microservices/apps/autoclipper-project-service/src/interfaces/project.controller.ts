@@ -63,6 +63,7 @@ class PartDto {
 @Controller()
 export class ProjectController {
   @Post("internal/admin-jobs")@HttpCode(200)@ApiExcludeEndpoint() adminJobs(@Req()req:Request,@Body()input:unknown){return this.service.adminJobs(req,input);}
+  @Post("internal/privacy-project-export")@HttpCode(200)@ApiExcludeEndpoint() privacyProjectExport(@Req()req:Request,@Body()input:unknown){return this.service.privacyProjectExport(req,input);}
   constructor(@Inject(ProjectService) readonly service: ProjectService) {}
   @Get('projects/storage')@ApiOkResponse({schema:{type:'object',required:['workspaceId','usedBytes','reservedBytes','limitBytes'],properties:{workspaceId:{type:'string',format:'uuid'},usedBytes:{type:'integer'},reservedBytes:{type:'integer'},limitBytes:{type:'integer'}}}})
   storage(@Req()req:Request,@Query('workspaceId')workspaceId:string){return this.service.storage(req,uuid(workspaceId));}

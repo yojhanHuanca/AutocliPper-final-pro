@@ -8,13 +8,14 @@ import { configureHttp } from '@autoclipper/observability';
 import { loadServiceConfig, seal } from '@autoclipper/http-security';
 import { AppModule } from '../../apps/autoclipper-identity-service/dist/app.module.js';
 import {verifyWorkspacePrivacy} from './workspace-privacy-fixture.mjs';
+import {verifyProjectPrivacy} from './project-privacy-fixture.mjs';
 
 // Synthetic users/MFA/link state are SQL fixtures, not SMTP or Google acceptance.
 // The requests, authentication, CSRF, factor verification and database are real.
 export async function verifyPrivacyProfileExports(config){
   const databaseUrl=role=>`postgresql://autoclipper_identity_${role}:${config.password}@target-pg:5432/autoclipper_identity`;
   const encryptionKey=randomBytes(32).toString('hex');
-  Object.assign(process.env,{NODE_ENV:'test',DATABASE_URL:databaseUrl('runtime'),REDIS_URL:'redis://target-redis:6379/1',AUTH_ENCRYPTION_KEY:encryptionKey,CSRF_SIGNING_KEY:randomBytes(32).toString('hex'),INTERNAL_TOKEN:config.internalToken,CORS_ORIGIN:'http://localhost:4200',COOKIE_AUTH:'true',ENABLE_DOCS:'false',SMTP_HOST:'127.0.0.1',SMTP_PORT:'1025',WORKSPACE_URL:'http://127.0.0.1:3203'});
+  Object.assign(process.env,{NODE_ENV:'test',DATABASE_URL:databaseUrl('runtime'),REDIS_URL:'redis://target-redis:6379/1',AUTH_ENCRYPTION_KEY:encryptionKey,CSRF_SIGNING_KEY:randomBytes(32).toString('hex'),INTERNAL_TOKEN:config.internalToken,CORS_ORIGIN:'http://localhost:4200',COOKIE_AUTH:'true',ENABLE_DOCS:'false',SMTP_HOST:'127.0.0.1',SMTP_PORT:'1025',WORKSPACE_URL:'http://127.0.0.1:3203',PROJECT_URL:'http://127.0.0.1:3204'});
   const db=new pg.Pool({connectionString:databaseUrl('runtime')}),owner=new pg.Pool({connectionString:databaseUrl('owner')});
   let app;
   const password=`Fixture-${randomBytes(18).toString('hex')}`,canary=`PRIVACY_${randomUUID()}`;
@@ -102,7 +103,8 @@ export async function verifyPrivacyProfileExports(config){
     assert.equal((await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':key})).status,401);
     const profileChecks=httpChecks;
     const workspaceContribution=await verifyWorkspacePrivacy(config,base,client,encryptionKey);
-    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution};
+    const projectContribution=await verifyProjectPrivacy(config,base,client,encryptionKey);
+    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution};
   }catch(error){if(!error.privacyCheckpoint)error.privacyCheckpoint=checkpoint;throw error;}
   finally{if(app)await app.close();await db.end();await owner.end();}
 }

@@ -544,6 +544,55 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/project-export": {
+      "post": {
+        "operationId": "IdentityController_privacyProjectExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Project attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Project attribution contribution; global privacy request remains pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyProjectExportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
     "/v1/auth/security-events": {
       "get": {
         "operationId": "IdentityController_securityEvents",
@@ -1894,6 +1943,206 @@
           },
           "data": {
             "$ref": "#/components/schemas/PrivacyWorkspaceDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
+      "PrivacyProjectReferenceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "draftId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "cleaned": {
+            "type": "boolean"
+          },
+          "bytes": {
+            "type": "number",
+            "minimum": 1
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "restored"
+            ]
+          },
+          "restoredFromVersion": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PrivacyProjectDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projects": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          },
+          "uploads": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          },
+          "processing": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          },
+          "analyses": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          },
+          "pipelines": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          },
+          "revisions": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyProjectReferenceDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "projects",
+          "uploads",
+          "processing",
+          "analyses",
+          "pipelines",
+          "revisions"
+        ]
+      },
+      "PrivacyProjectExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyProjectDataDto"
           }
         },
         "required": [
