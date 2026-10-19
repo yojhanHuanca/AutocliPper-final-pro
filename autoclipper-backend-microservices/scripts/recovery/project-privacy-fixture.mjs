@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import pg from 'pg';
 import argon2 from 'argon2';
+import {HeadObjectCommand,PutObjectCommand,S3Client} from '@aws-sdk/client-s3';
 import {NestFactory} from '@nestjs/core';
 import {configureHttp} from '@autoclipper/observability';
 import {loadServiceConfig,seal} from '@autoclipper/http-security';
 import {AppModule} from '../../apps/autoclipper-project-service/dist/app.module.js';
+import {ProjectService} from '../../apps/autoclipper-project-service/dist/application/project.service.js';
 import {issueProjectCapability} from '../../apps/autoclipper-identity-service/dist/application/privacy-project-capabilities.js';
 
 // Owner and authorization checks use isolated Postgres volumes plus real Identity/Project HTTP.
@@ -13,15 +15,23 @@ export async function verifyProjectPrivacy(config,identityBase,clientFactory,enc
   const url=(service,role='runtime')=>`postgresql://autoclipper_${service}_${role}:${config.password}@target-pg:5432/autoclipper_${service}`;
   const identity=new pg.Pool({connectionString:url('identity')}),identityOwner=new pg.Pool({connectionString:url('identity','owner')}),project=new pg.Pool({connectionString:url('project')}),projectOwner=new pg.Pool({connectionString:url('project','owner')});
   let app,httpChecks=0,checkpoint='STARTUP';
-  const userId=randomUUID(),otherId=randomUUID(),projectId=randomUUID(),peerProject=randomUUID(),uploadId=randomUUID(),peerUpload=randomUUID(),processingId=randomUUID(),analysisId=randomUUID(),pipelineId=randomUUID(),draftId=randomUUID(),revisionId=randomUUID();
+  const userId=randomUUID(),otherId=randomUUID(),projectId=randomUUID(),peerProject=randomUUID(),uploadId=randomUUID(),peerUpload=randomUUID(),processingId=randomUUID(),analysisId=randomUUID(),pipelineId=randomUUID(),draftId=randomUUID(),revisionId=randomUUID(),expiredUploadId=randomUUID(),expiredWorkspaceId=randomUUID(),expiredObjectKey=`expired/${randomUUID()}`;
+  const storage=new S3Client({endpoint:'http://target-storage:9000',forcePathStyle:true,region:'us-east-1',credentials:{accessKeyId:config.accessKey,secretAccessKey:config.secretKey}});
   const key=()=>randomUUID(),hash=value=>createHash('sha256').update(value).digest('hex');
-  const password=`Project-${randomBytes(18).toString('hex')}`,email=`project-${key()}@example.test`,otherEmail=`peer-${key()}@example.test`,privateName=`PRIVATE_PROJECT_${key()}`,privateObjectKey=`private-object-${key()}`;
+  const password=`Project-${randomBytes(18).toString('hex')}`,email=`project-${key()}@example.test`,otherEmail=`peer-${key()}@example.test`,privateName=`PRIVATE_PROJECT_${key()}`,privateObjectKey=`private-object-${key()}`,peerObjectKey=`peer-object-${key()}`;
   const factors=Array.from({length:40},()=>randomBytes(12).toString('hex'));
   const client=()=>{const value=clientFactory();return{jar:value.jar,async request(...args){httpChecks++;return value.request(...args);}};};
   const projectBase='http://127.0.0.1:3204/v1';
   async function internal(base,path,input,authenticated=true){httpChecks++;const response=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json',...(authenticated?{'x-service-token':config.internalToken}:{})},body:JSON.stringify(input),signal:AbortSignal.timeout(10000)});return{status:response.status,value:await response.json()};}
+  function configureOwner(){
+    Object.assign(process.env,{DATABASE_URL:url('project'),IDENTITY_URL:identityBase.slice(0,-3),PROJECT_URL:'http://127.0.0.1:3204',MEDIA_URL:'http://127.0.0.1:3001',ANALYSIS_URL:'http://127.0.0.1:3006',BILLING_URL:'http://127.0.0.1:3007',S3_ENDPOINT:'http://target-storage:9000',S3_PUBLIC_ENDPOINT:'http://target-storage:9000',S3_REGION:'us-east-1',S3_BUCKET:'recovery-fixture',S3_ACCESS_KEY:config.accessKey,S3_SECRET_KEY:config.secretKey});
+  }
+  async function runUploadCleanup(){
+    configureOwner();const service=new ProjectService();
+    try{await service.cleanupExpiredUploads();}finally{await service.onModuleDestroy();}
+  }
   async function startOwner(){
-    Object.assign(process.env,{DATABASE_URL:url('project'),IDENTITY_URL:identityBase.slice(0,-3),PROJECT_URL:'http://127.0.0.1:3204',MEDIA_URL:'http://127.0.0.1:3001',ANALYSIS_URL:'http://127.0.0.1:3006',BILLING_URL:'http://127.0.0.1:3007',S3_ENDPOINT:'http://127.0.0.1:9000',S3_PUBLIC_ENDPOINT:'http://127.0.0.1:9000',S3_REGION:'us-east-1',S3_BUCKET:'fixture',S3_ACCESS_KEY:'fixture-access',S3_SECRET_KEY:'fixture-secret'});
+    configureOwner();
     app=await NestFactory.create(AppModule,{logger:false,abortOnError:false});configureHttp(app,loadServiceConfig(),'project-privacy-fixture');await app.listen(3204,'127.0.0.1');
   }
   try{
@@ -30,7 +40,22 @@ export async function verifyProjectPrivacy(config,identityBase,clientFactory,enc
     await identity.query('INSERT INTO user_mfa(user_id,secret_cipher,enabled) VALUES($1,$2,true)',[userId,seal('JBSWY3DPEHPK3PXP',encryptionKey,`mfa:${userId}`)]);
     for(const factor of factors)await identity.query('INSERT INTO recovery_codes(user_id,code_hash) VALUES($1,$2)',[userId,hash(factor)]);
     await project.query("INSERT INTO projects(id,workspace_id,creator_id,name,version,idempotency_key,request_hash) VALUES($1,$2,$3,$4,1,$5,$6),($7,$8,$9,$10,1,$11,$6)",[projectId,randomUUID(),userId,privateName,key(),'a'.repeat(64),peerProject,randomUUID(),otherId,`PEER_PROJECT_${key()}`,key()]);
-    await project.query("INSERT INTO uploads(id,workspace_id,project_id,creator_id,idempotency_key,request_hash,object_key,expected_bytes,sha256,content_type,mode,state,etag) VALUES($1,$2,$3,$4,$5,$6,$7,2048,$8,'video/mp4','put','confirmed','fixture-etag'),($9,$10,$11,$12,$13,$6,$14,4096,$8,'video/mp4','put','confirmed','peer-etag')",[uploadId,randomUUID(),projectId,userId,key(),'b'.repeat(64),privateObjectKey,'c'.repeat(64),peerUpload,randomUUID(),peerProject,otherId,key(),`peer-object-${key()}`]);
+    await project.query("INSERT INTO uploads(id,workspace_id,project_id,creator_id,idempotency_key,request_hash,object_key,expected_bytes,sha256,content_type,mode,state,etag) VALUES($1,$2,$3,$4,$5,$6,$7,2048,$8,'video/mp4','put','confirmed','fixture-etag'),($9,$10,$11,$12,$13,$6,$14,4096,$8,'video/mp4','put','confirmed','peer-etag')",[uploadId,randomUUID(),projectId,userId,key(),'b'.repeat(64),privateObjectKey,'c'.repeat(64),peerUpload,randomUUID(),peerProject,otherId,key(),peerObjectKey]);
+    const peerWorkspaceId=(await project.query('SELECT workspace_id FROM uploads WHERE id=$1',[peerUpload])).rows[0].workspace_id;
+    await project.query("INSERT INTO uploads(id,workspace_id,project_id,creator_id,idempotency_key,request_hash,object_key,expected_bytes,sha256,content_type,mode,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,777,$8,'video/mp4','put','pending',now()-interval '1 second')",[expiredUploadId,expiredWorkspaceId,projectId,userId,key(),'9'.repeat(64),expiredObjectKey,'8'.repeat(64)]);
+    await project.query('INSERT INTO workspace_storage(workspace_id,used_bytes,reserved_bytes) VALUES($1,0,777),($2,4096,0)',[expiredWorkspaceId,peerWorkspaceId]);
+    await storage.send(new PutObjectCommand({Bucket:'recovery-fixture',Key:expiredObjectKey,Body:Buffer.from('expired-upload-fixture')}));
+    await storage.send(new PutObjectCommand({Bucket:'recovery-fixture',Key:peerObjectKey,Body:Buffer.from('peer-workspace-fixture')}));
+    await projectOwner.query(`CREATE FUNCTION recovery_fail_expired_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fixture failure after object deletion' USING ERRCODE='40001'; END $$`);
+    await projectOwner.query(`CREATE TRIGGER recovery_fail_expired_cleanup BEFORE UPDATE OF state,cleaned_at ON uploads FOR EACH ROW WHEN (OLD.id='${expiredUploadId}'::uuid AND NEW.cleaned_at IS NOT NULL) EXECUTE FUNCTION recovery_fail_expired_cleanup()`);
+    checkpoint='UPLOAD_PURGE_RETRY';
+    await assert.rejects(runUploadCleanup(),error=>error.code==='40001');
+    await assert.rejects(storage.send(new HeadObjectCommand({Bucket:'recovery-fixture',Key:expiredObjectKey})),error=>error.$metadata?.httpStatusCode===404||error.name==='NotFound');
+    const rolledBack=(await project.query('SELECT state,cleaned_at FROM uploads WHERE id=$1',[expiredUploadId])).rows[0];assert.equal(rolledBack.state,'pending');assert.equal(rolledBack.cleaned_at,null);assert.equal((await project.query('SELECT reserved_bytes FROM workspace_storage WHERE workspace_id=$1',[expiredWorkspaceId])).rows[0].reserved_bytes,'777');
+    await projectOwner.query('DROP TRIGGER recovery_fail_expired_cleanup ON uploads');await projectOwner.query('DROP FUNCTION recovery_fail_expired_cleanup()');
+    await runUploadCleanup();
+    const purged=(await project.query('SELECT state,cleaned_at FROM uploads WHERE id=$1',[expiredUploadId])).rows[0];assert.equal(purged.state,'aborted');assert.ok(purged.cleaned_at);assert.equal((await project.query('SELECT reserved_bytes FROM workspace_storage WHERE workspace_id=$1',[expiredWorkspaceId])).rows[0].reserved_bytes,'0');
+    await runUploadCleanup();assert.equal((await project.query('SELECT reserved_bytes FROM workspace_storage WHERE workspace_id=$1',[expiredWorkspaceId])).rows[0].reserved_bytes,'0');assert.equal((await storage.send(new HeadObjectCommand({Bucket:'recovery-fixture',Key:peerObjectKey}))).ContentLength,22);
     await project.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,correlation_id,spec,reservation_bytes,status,finished_at,error_code) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'{}',1024,'failed',now(),'FIXTURE_FAILURE')",[processingId,uploadId,projectId,randomUUID(),userId,key(),'d'.repeat(64),randomUUID()]);
     await project.query("INSERT INTO analysis_requests(id,audio_processing_id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,source,spec,correlation_id,finished_at,cached_status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'{}','{}',$9,now(),'{\"status\":\"failed\"}')",[analysisId,processingId,uploadId,projectId,randomUUID(),userId,key(),'e'.repeat(64),randomUUID()]);
     await project.query("INSERT INTO pipelines(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,correlation_id,status,usage_state,finished_at,remaining_reservation_bytes) VALUES($1,$2,$3,$4,$5,$6,$7,'{}',$8,'failed','legacy',now(),0)",[pipelineId,uploadId,projectId,randomUUID(),userId,key(),'f'.repeat(64),randomUUID()]);
@@ -51,7 +76,7 @@ export async function verifyProjectPrivacy(config,identityBase,clientFactory,enc
     checkpoint='LIMIT';await projectOwner.query("INSERT INTO projects(id,workspace_id,creator_id,name,idempotency_key,request_hash) SELECT gen_random_uuid(),gen_random_uuid(),$1,'fixture',gen_random_uuid(),$2 FROM generate_series(1,501)",[userId,'9'.repeat(64)]);const oversized=await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':key()});assert.equal(oversized.status,413);assert.equal(oversized.value.code,'PRIVACY_EXPORT_SCOPE_TOO_LARGE');assert.equal(oversized.value.data,undefined);assert.equal(Number((await project.query('SELECT count(*) AS count FROM privacy_export_receipts')).rows[0].count),before+1);
     checkpoint='RECEIPTS_AUDIT';const receipts=(await project.query('SELECT * FROM privacy_export_receipts WHERE request_id=$1',[requestId])).rows,audits=(await project.query('SELECT * FROM privacy_export_audit WHERE receipt_id=ANY($1::uuid[])',[receipts.map(value=>value.id)])).rows;assert.equal(receipts.length,3);for(const action of['prepared','replayed','snapshot_changed'])assert.ok(audits.some(value=>value.action===action));assert.ok(audits.every(value=>value.actor_user_id===userId));for(const secret of[privateName,privateObjectKey,password,passwordHash,otherEmail])assert.equal(JSON.stringify({receipts,audits}).includes(secret),false);await assert.rejects(project.query('DELETE FROM privacy_export_audit'),error=>error.code==='42501');await assert.rejects(projectOwner.query('UPDATE privacy_export_receipts SET scope=scope'),error=>error.code==='23514');
     await a.request('/auth/logout','POST');await assert.equal((await a.request(path,'POST',{password},{'idempotency-key':firstKey})).status,401);
-    return{status:'passed',httpChecks,scope:'project-attribution-v1',receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,ownerRestartRecovered:true,oversizedScopeDenied:true};
+    return{status:'passed',httpChecks,scope:'project-attribution-v1',receipts:receipts.length,uploadCleanup:{status:'passed',retryAfterObjectDelete:true,workspaceIsolation:true,idempotentReservationRelease:true},globalFulfillment:'pending',storedPersonalPayloads:0,ownerRestartRecovered:true,oversizedScopeDenied:true};
   }catch(error){error.privacyCheckpoint=`PROJECT_${checkpoint}`;throw error;}
-  finally{if(app)await app.close();await Promise.all([identity.end(),identityOwner.end(),project.end(),projectOwner.end()]);}
+  finally{if(app)await app.close();storage.destroy();await Promise.all([identity.end(),identityOwner.end(),project.end(),projectOwner.end()]);}
 }

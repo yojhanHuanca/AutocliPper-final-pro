@@ -692,6 +692,53 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
       return { aborted: true, quotaRelease: "after_signed_urls_expire" };
     });
   }
+  private async cleanupExpiredUploads() {
+    const expired = await this.pool.query<Upload>(
+      "SELECT * FROM uploads WHERE cleaned_at IS NULL AND (state='aborted' OR state='pending') AND expires_at<now() LIMIT 25",
+    );
+    for (const upload of expired.rows) {
+      await this.tx(async (c) => {
+        const active = (
+          await c.query<Upload>(
+            "SELECT * FROM uploads WHERE id=$1 AND state<>'confirmed' AND cleaned_at IS NULL AND expires_at<now() FOR UPDATE",
+            [upload.id],
+          )
+        ).rows[0];
+        if (!active) return;
+        if (active.upload_id)
+          try {
+            await this.s3.send(
+              new AbortMultipartUploadCommand({
+                Bucket: this.bucket,
+                Key: active.object_key,
+                UploadId: active.upload_id,
+              }),
+            );
+          } catch (error) {
+            if (
+              (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+                ?.httpStatusCode !== 404
+            )
+              throw error;
+          }
+        await this.s3.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucket,
+            Key: active.object_key,
+          }),
+        );
+        const changed = await c.query(
+          "UPDATE uploads SET state='aborted',cleaned_at=now() WHERE id=$1 AND state<>'confirmed' AND cleaned_at IS NULL RETURNING id",
+          [active.id],
+        );
+        if (changed.rows.length)
+          await c.query(
+            "UPDATE workspace_storage SET reserved_bytes=reserved_bytes-$1 WHERE workspace_id=$2",
+            [active.expected_bytes, active.workspace_id],
+          );
+      });
+    }
+  }
   private async dispatch() {
     await this.usage.dispatch();
     await this.derivatives.dispatch();
@@ -727,51 +774,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
-    const expired = await this.pool.query<Upload>(
-      "SELECT * FROM uploads WHERE cleaned_at IS NULL AND (state='aborted' OR state='pending') AND expires_at<now() LIMIT 25",
-    );
-    for (const upload of expired.rows) {
-      await this.tx(async (c) => {
-        const active = (
-          await c.query<Upload>(
-            "SELECT * FROM uploads WHERE id=$1 AND state<>'confirmed' AND cleaned_at IS NULL AND expires_at<now() FOR UPDATE",
-            [upload.id],
-          )
-        ).rows[0];
-        if (!active) return;
-        if (active.upload_id)
-          try {
-            await this.s3.send(
-              new AbortMultipartUploadCommand({
-                Bucket: this.bucket,
-                Key: upload.object_key,
-                UploadId: active.upload_id,
-              }),
-            );
-          } catch (error) {
-            if (
-              (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-                ?.httpStatusCode !== 404
-            )
-              throw error;
-          }
-        await this.s3.send(
-          new DeleteObjectCommand({
-            Bucket: this.bucket,
-            Key: upload.object_key,
-          }),
-        );
-        const changed = await c.query(
-          "UPDATE uploads SET state='aborted',cleaned_at=now() WHERE id=$1 AND state<>'confirmed' AND cleaned_at IS NULL RETURNING id",
-          [upload.id],
-        );
-        if (changed.rows.length)
-          await c.query(
-            "UPDATE workspace_storage SET reserved_bytes=reserved_bytes-$1 WHERE workspace_id=$2",
-            [upload.expected_bytes, upload.workspace_id],
-          );
-      });
-    }
+    await this.cleanupExpiredUploads();
   }
   async onModuleDestroy() {
     if (this.timer) clearInterval(this.timer);
