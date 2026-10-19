@@ -50,7 +50,7 @@
       <button type="button" [attr.aria-pressed]="sourceMode() === 'link'" aria-controls="source-link-content" (click)="showSource('link')"><ac-icon name="play" /><span><strong>Pegar enlace</strong><small>YouTube, Kick y Twitch</small></span></button>
     </div>
     <div id="source-link-content" [hidden]="sourceMode() !== 'link'">
-      @if (sourceMode() === 'link') { <ac-source-link-preview (useFile)="showSource('file', true)" /> }
+      @if (sourceMode() === 'link' && workbench() === 'source') { <ac-source-link-preview (useFile)="showSource('file', true)" /> }
     </div>
     <div id="source-file-content" [hidden]="sourceMode() !== 'file'">
     <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
@@ -59,25 +59,46 @@
         file?.name ?? "Selecciona tu archivo de video"
       }}</strong
       ><span>MP4, WebM, MOV o MKV</span
-      ><input
+      ><input #sourceFileInput
         type="file"
-        aria-label="Seleccionar video de origen" aria-describedby="upload-file-help"
+        aria-label="Seleccionar video de origen" aria-describedby="upload-file-help selected-video-feedback" [attr.aria-invalid]="selectionError() ? 'true' : null"
         accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv"
-        [disabled]="busy() || !canEdit()"
+        [disabled]="busy() || (!design && !canEdit())"
         (change)="choose($event)" /></label
-    ><button
+    >
+    @if (file) {
+      <section class="local-video-card" aria-label="Archivo seleccionado">
+        @if (localPreview() && !previewUnavailable() && sourceMode() === 'file' && workbench() === 'source') {
+          <video class="local-video-preview" [src]="localPreview()" controls preload="metadata" [muted]="true" aria-label="Vista previa local del archivo seleccionado" (error)="previewUnavailable.set(true)"></video>
+        }
+        <div class="local-video-info"><span class="eyebrow">SELECCIÓN LOCAL</span><h3>{{ file.name }}</h3><p>{{ file.size / 1024 / 1024 | number: '1.2-2' }} MiB · {{ selectionError() ? 'Revisa este archivo' : 'Formato admitido para cargar' }}</p>
+          @if (previewUnavailable() && !selectionError()) { <p>Tu navegador no puede mostrar la vista previa. Puedes cargar el archivo para que se inspeccione.</p> }
+          <button class="text-link" type="button" (click)="clearSelectedFile(sourceFileInput)" [disabled]="busy()">Quitar selección</button>
+        </div>
+      </section>
+    }
+    <p id="selected-video-feedback" class="selection-feedback" [class.invalid]="selectionError()" [attr.role]="selectionError() ? 'alert' : 'status'">
+      @if (selectionError()) { {{ selectionError() }} }
+      @else if (hasUnuploadedSelection()) { La vista previa permanece en tu equipo. {{ design ? 'Abre un proyecto de tu cuenta para enviar el archivo.' : 'Pulsa «Cargar archivo privado» para enviarlo.' }} @if (uploadStatus()) { Esta selección todavía no sustituye el origen consultado. } }
+      @else if (file) { La selección está vinculada a la carga iniciada. Consulta su estado abajo. }
+    </p>
+    <button
       class="button primary"
       type="button"
       (click)="upload()"
-      [disabled]="!file || busy() || !canEdit()"
+      [disabled]="!file || !!selectionError() || busy() || !canEdit()"
     >
       {{ uploading() ? "Cargando…" : "Cargar archivo privado"
       }}<ac-icon name="upload" />
     </button>
-    @if (file && !uploading()) { <p class="selected-file" role="status">Listo para revisar: <strong>{{ file.name }}</strong></p> }
     </div>
+    @if (uploading() || uploadStatus()) {
+      <ol class="source-milestones" aria-label="Etapas de la carga">
+        @for (stage of sourceMilestones; track stage; let index = $index) { <li [class.complete]="index < sourceStageIndex()" [class.current]="index === sourceStageIndex()" [attr.aria-current]="index === sourceStageIndex() ? 'step' : null"><span>{{ index < sourceStageIndex() ? '✓' : index + 1 }}</span>{{ stage }}</li> }
+      </ol>
+    }
     @if (uploading()) {
-      <p class="muted" role="status">{{ message() || "Preparando la transferencia…" }} @if (!hasActiveUpload()) { El cálculo SHA-256 debe terminar antes de habilitar la cancelación. }</p>
+      <div class="source-operation" role="status"><span class="spinner" aria-hidden="true"></span><div><strong>{{ message() || "Preparando la transferencia…" }}</strong><p>{{ hasActiveUpload() ? 'Puedes detener la transferencia desde aquí.' : 'La preparación debe terminar antes de habilitar la cancelación.' }}</p></div></div>
     }
     @if (uploading() && hasActiveUpload()) {
       <button class="button small" type="button" (click)="cancelActiveUpload()" [disabled]="cancellingUpload() || !canEdit()">
@@ -223,7 +244,14 @@
         } @else if (!hasKnownPipelineUpload()) {
           <p class="alert">Este pipeline se consultó por ID y no está vinculado a la carga seleccionada; su transcripción no se asociará al borrador.</p>
         }
-        <ol class="pipeline-events">
+        @if (task.status === 'succeeded') {
+          <section class="pipeline-result" aria-labelledby="pipeline-result-title"><span class="pipeline-result-icon"><ac-icon name="check" /></span><div><h3 id="pipeline-result-title">Tu clip está listo.</h3><p>Intervalo procesado: {{ task.spec.startSeconds }}–{{ task.spec.endSeconds }} s. Descarga el video o crea un borrador de este mismo intervalo.</p>
+            @if (pipelineMatchesSelectedUpload() && inspected()) { <button class="button primary" type="button" (click)="editPipelineResult()" [disabled]="busy() || !canEdit()">Editar este intervalo<ac-icon name="scissors" /></button> }
+          </div></section>
+        } @else if (pipelineInProgress()) {
+          <p class="pipeline-working" role="status"><span class="spinner" aria-hidden="true"></span>{{ pipelineStateLabel(task.status) }}. Puedes cambiar de panel mientras continúa.</p>
+        }
+        <details class="pipeline-history"><summary>Ver actividad del procesamiento</summary><ol class="pipeline-events">
           @for (event of task.events; track $index) {
             <li>
               <ac-icon name="clock" /><span
@@ -232,7 +260,7 @@
               >
             </li>
           }
-        </ol>
+        </ol></details>
         @if (task.errorCode) {
           <p class="alert error">El pipeline no se completó. Código del servidor: {{ task.errorCode }}. Puedes consultar el estado o revisar el intervalo antes de crear otro procesamiento.</p>
         }
@@ -243,7 +271,7 @@
               type="button"
               (click)="downloadPipeline('video')"
             >
-              MP4<ac-icon name="download" /></button
+              Descargar MP4<ac-icon name="download" /></button
             ><button
               class="button"
               type="button"
@@ -358,13 +386,14 @@
 <aside class="project-context" aria-label="Resumen del proyecto">
   <section class="project-source-summary">
     <div class="project-source-symbol"><ac-icon name="film" /><span>{{ uploadStatus() ? 'ORIGEN DEL PROYECTO' : 'AQUÍ EMPIEZA TU CLIP' }}</span></div>
-    <h2>{{ file?.name ?? 'Tu video de origen' }}</h2>
+    <h2>{{ sourceFileName() || 'Tu video de origen' }}</h2>
     <p>{{ inspected() ? 'Inspección completada. Conservamos el material original como referencia.' : uploading() ? 'Tu archivo se está transfiriendo. Puedes consultar el progreso en Video de origen.' : 'Carga un archivo propio y comprueba sus datos antes de crear el corte.' }}</p>
     <dl>
-      <div><dt>Archivo</dt><dd>{{ uploadStatus() ? uploadStateLabel(uploadStatus()!.state) : file ? 'Elegido, sin cargar' : 'Sin archivo confirmado' }}</dd></div>
+      <div><dt>Archivo de origen</dt><dd>{{ uploadStatus() ? uploadStateLabel(uploadStatus()!.state) : 'Sin archivo confirmado' }}</dd></div>
       <div><dt>Duración medida</dt><dd>{{ sourceDurationSeconds() !== null ? (sourceDurationSeconds() | number: '1.1-1') + ' s' : 'Pendiente' }}</dd></div>
       @if (uploadStatus()?.inspection?.result; as source) { <div><dt>Resolución</dt><dd>{{ source.width }} × {{ source.height }}</dd></div> }
     </dl>
+    @if (hasUnuploadedSelection()) { <p class="source-candidate-notice"><strong>{{ uploadStatus() ? 'Otra selección local' : 'Selección local' }}</strong><span>{{ file?.name }}</span>{{ selectionError() ? 'Revisa el archivo antes de cargarlo.' : 'Aún no se ha enviado como nuevo origen.' }}</p> }
   </section>
   <section class="project-continuity">
     <div><span class="project-context-dot"></span><h2>El proyecto sigue contigo.</h2></div>

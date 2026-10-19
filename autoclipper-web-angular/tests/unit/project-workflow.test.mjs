@@ -115,6 +115,82 @@ test('upload validation accepts missing Windows MIME only for supported extensio
   ]) assert.throws(()=>uploadContentType(file));
 });
 
+test('local selection validates before upload, releases previews and keeps confirmed source metadata separate', async () => {
+  const originalCreate=URL.createObjectURL, originalRevoke=URL.revokeObjectURL;
+  const revoked=[]; let preview=0;
+  URL.createObjectURL=()=>`blob:fixture-${++preview}`;
+  URL.revokeObjectURL=url=>revoked.push(url);
+  try {
+    const {state,calls}=await handoffSetup();
+    const first=new File(['video'],'first.mp4',{type:'video/mp4'});
+    state.choose({target:{files:[first]}});
+    assert.equal(state.selectionError(),''); assert.equal(state.localPreview(),'blob:fixture-1');
+    assert.equal(state.inspected(),true); assert.equal(state.sourceFileName(),'');
+    assert.equal(state.hasUnuploadedSelection(),true);
+    state.choose({target:{files:[]}}); assert.equal(state.file,first);
+    state.choose({target:{files:[new File(['x'],'bad.exe',{type:'application/octet-stream'})]}});
+    assert.match(state.selectionError(),/Formato no admitido/); assert.equal(state.localPreview(),'');
+    assert.deepEqual(revoked,['blob:fixture-1']); await state.upload(); assert.equal(calls.writes.length,0);
+    const input={value:'bad.exe',focus(){this.focused=true;}};
+    state.clearSelectedFile(input); assert.equal(input.value,''); assert.equal(input.focused,true);
+    assert.equal(state.file,null); assert.equal(state.selectionError(),''); assert.equal(state.inspected(),true);
+    state.choose({target:{files:[first]}});
+    state.switchProject('next-project'); assert.equal(state.localPreview(),'');
+    assert.deepEqual(revoked,['blob:fixture-1','blob:fixture-2']);
+  } finally { URL.createObjectURL=originalCreate; URL.revokeObjectURL=originalRevoke; TestBed.resetTestingModule(); }
+});
+
+test('selection cannot change while busy or with read-only access',async()=>{
+  try {
+    const {state,memberships}=await handoffSetup(); const file=new File(['x'],'clip.mp4',{type:'video/mp4'});
+    state.busy.set(true); state.choose({target:{files:[file]}}); assert.equal(state.file,null);
+    state.busy.set(false); memberships.set([{id:'workspace-fixture',role:'reader'}]);
+    state.choose({target:{files:[file]}}); assert.equal(state.file,null);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('public design may preview a local file but cannot transfer it or invoke processing',async()=>{
+  try {
+    const {state,calls}=await handoffSetup({design:true});
+    state.choose({target:{files:[new File(['x'],'clip.mp4',{type:'video/mp4'})]}});
+    assert.equal(state.file.name,'clip.mp4'); assert.ok(state.localPreview().startsWith('blob:'));
+    await state.upload(); await state.startPipeline(); await state.createEdit();
+    assert.deepEqual(calls.writes,[]); assert.deepEqual(calls.pipelines,[]); assert.deepEqual(calls.reads,[]);
+    state.releaseLocalPreview();
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('confirmed filename follows the upload reference, never an untransferred replacement',async()=>{
+  try {
+    const {state,api}=await handoffSetup();
+    state.file=new File(['x'],'accepted.mp4',{type:'video/mp4'});
+    api.uploadFile=async(project,file,progress,remember)=>{ progress('Transfiriendo','transferring'); assert.equal(state.sourceStageIndex(),1); remember('new-upload'); return {id:'new-upload',projectId:'project-fixture',state:'confirmed',inspection:{status:'succeeded'}}; };
+    await state.upload(); assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.hasUnuploadedSelection(),false); assert.equal(state.sourceStageIndex(),3);
+    state.choose({target:{files:[new File(['y'],'replacement.mp4',{type:'video/mp4'})]}});
+    assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.hasUnuploadedSelection(),true);
+    api.uploadFile=async()=>{throw new Error('Transferencia no iniciada');}; await state.upload();
+    assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.uploadId,'new-upload');
+    state.selectUpload('other-upload'); assert.equal(state.sourceFileName(),'');
+    state.releaseLocalPreview();
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('editing a completed clip uses its returned spec and cannot claim an unknown or different source',async()=>{
+  try {
+    const {state,calls}=await handoffSetup();
+    state.pipelineId='pipeline-fixture';
+    state.pipeline.set({id:'pipeline-fixture',status:'succeeded',analysisId:'analysis-fixture',spec:{startSeconds:2,endSeconds:8,aspect:'square',language:'es'}});
+    state.startSeconds=0; state.endSeconds=15;
+    await state.editPipelineResult(); assert.equal(calls.writes.length,0);
+    state.pipelineUploadId='other-upload'; await state.editPipelineResult(); assert.equal(calls.writes.length,0);
+    state.pipelineUploadId='upload-fixture'; await state.editPipelineResult();
+    assert.equal(calls.writes.length,1); assert.equal(calls.writes[0].body.spec.startSeconds,2);
+    assert.equal(calls.writes[0].body.spec.endSeconds,8); assert.equal(calls.writes[0].body.spec.aspect,'square');
+    assert.equal(calls.writes[0].body.spec.subtitles.analysisId,'analysis-fixture');
+    assert.equal(state.workbench(),'drafts'); assert.equal(calls.navigations.length,1);
+  } finally {TestBed.resetTestingModule();}
+});
+
 test('cancellation before or during hashing never allocates a server upload intent',async()=>{
   const api=Object.create(ProjectsApi.prototype);let calls=0;api.api={post:async()=>{calls++;}};
   const file=Object.assign(new Blob(['x'],{type:'video/mp4'}),{name:'fixture.mp4'});

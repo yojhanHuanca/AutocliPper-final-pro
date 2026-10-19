@@ -216,3 +216,17 @@ Project source panel now exposes file upload and link preview. YouTube, Kick and
 
 Existing 132 unit cases passed; two source-link syntax cases passed after correcting the new test's Angular compiler bootstrap. Typecheck and production build passed. URL feedback validates syntax only; activation and provider-specific acceptance remain pending a published backend contract.
 
+## Local file flow and official link preview — 2026-10-18
+
+29 focused project/workbench/link cases passed, including pre-upload validation, blob URL cleanup, reader/design write guards, source filename provenance, restored-source restrictions, returned pipeline spec handoff, exact provider host allowlists, malicious/ambiguous URLs, explicit preview consent, and preview loading/ready/error handling. Final typecheck and production build passed. The existing signed upload and draft APIs remain the integration path; no backend or gateway contract edits were included.
+
+Final visual review: desktop and 390×844 mobile at `/design/projects/structure`. Both mobile source modes measured document width 375px/viewport375px. Local synthetic `source.mp4` loaded as a blob, readyState4, duration15.791667s, 320×240, initially paused. No new server upload or pipeline was submitted. Public design allows local selection/preview only; processing and server writes remain disabled.
+
+YouTube's official documentation sample M7lc1UVf-VE played inside the real privacy-enhanced player: readyState4, pausedfalse, currentTime7.112741s, duration1343.661s. Twitch's documented sample clip IncredulousAbstemiousFennelImGlitch loaded with parent=localhost, readyState4, duration32.038678s, and played after its play control was clicked. Validation alone produced zero iframes. Closing the YouTube preview removed the iframe and returned focus to its load button. A lookalike YouTube domain was rejected. A Kick replay-shaped link produced the explicit unverifiable state and zero frames. Kick's live channel builder is covered by unit tests and official documentation; live availability was not exercised and replay/clip preview is not implemented. Narrow Twitch layouts show its minimum-width limitation without mounting an undersized iframe.
+
+The existing authenticated project route could not load the workspace during this review and redirected to login with a connection message. New server upload/render/draft acceptance was therefore not repeated; no backend runtime was modified. Editor handoff guards and exact returned spec are verified through the focused tests. URL import remains blocked on the backend contract for all three platforms equally.
+
+Evidence from the prior visual review: `C:/Users/USER/Documents/Codex/artifacts/autoclipper-source-flow-2026-10-18/` contains local-desktop.jpg, local-mobile.jpg, link-desktop.jpg, link-mobile.jpg, youtube-player.jpg and twitch-player.jpg. Browser inspection is currently disabled by Work settings, so this incremental provider-status and preview-state update could not receive a new screenshot review. Live iframe behavior with the added sandbox and deployment CSP remains to be confirmed when browser access is enabled.
+
+Provider import capabilities supplied by backend as preliminary findings: YouTube audiovisual import lacks an authorized route; Kick has no official media download API identified; Twitch Helix supports authorized clip downloads with OAuth/scope only, not VOD/live. These findings do not enable frontend import. The UI reports each separately and awaits the backend's published contract and authorization enforcement.
+

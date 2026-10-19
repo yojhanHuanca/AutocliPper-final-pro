@@ -21,6 +21,7 @@ import { SessionStore } from "../../../core/auth/session.store";
 import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { SourceLinkPreviewComponent } from '../components/source-link-preview.component';
+import { uploadContentType, type UploadPhase } from '../models/upload-file';
 
 type EditList = Response<"/v1/projects/{id}/edits">;
 @Component({
@@ -75,6 +76,14 @@ export class ProjectComponent {
     return this.workspace.workspaces().find((item) => item.id === project.workspaceId)?.role ?? "unavailable" as const;
   });
   file: File | null = null;
+  readonly selectionError = signal('');
+  readonly localPreview = signal('');
+  readonly previewUnavailable = signal(false);
+  readonly uploadPhase = signal<UploadPhase | null>(null);
+  readonly sourceFileName = signal('');
+  private namedUploadId = '';
+  private uploadedFile: File | null = null;
+  readonly sourceMilestones = ['Preparar', 'Transferir', 'Inspeccionar', 'Listo'];
   uploadId = "";
   pipelineId = "";
   private pipelineUploadId = '';
@@ -141,6 +150,7 @@ export class ProjectComponent {
       if (nextId !== this.id) this.switchProject(nextId);
     });
     this.destroy.onDestroy(() => {
+      this.releaseLocalPreview();
       this.disposed = true;
       this.projectGeneration++;
       this.uploadGeneration++;
@@ -184,6 +194,9 @@ export class ProjectComponent {
     }
   }
   private clearResumeReferences(): void {
+    this.sourceFileName.set('');
+    this.namedUploadId = '';
+    this.uploadedFile = null;
     this.uploadGeneration++;
     this.pipelineGeneration++;
     clearTimeout(this.timer);
@@ -210,6 +223,12 @@ export class ProjectComponent {
     this.handoffNotice.set('');
   }
   private switchProject(id: string): void {
+    this.releaseLocalPreview();
+    this.selectionError.set('');
+    this.sourceFileName.set('');
+    this.namedUploadId = '';
+    this.uploadedFile = null;
+    this.uploadPhase.set(null);
     this.sourceMode.set('file');
     this.workbench.set("source");
     if (this.activeUploadId) void this.api.abortUpload(this.activeUploadId).catch(() => undefined);
@@ -273,7 +292,7 @@ export class ProjectComponent {
     return status?.id === this.uploadId.trim() && status?.projectId === this.id && status.state === "confirmed" && status?.inspection?.status === 'succeeded';
   }
   roleNotice(): string {
-    if (this.design) return 'Vista de estructura. Abre un proyecto de tu cuenta para cargar material y crear un borrador.';
+    if (this.design) return 'Puedes revisar un archivo local en esta vista. Para cargarlo, procesarlo y crear un borrador, abre un proyecto de tu cuenta.';
     if (!this.project() && !this.busy() && this.error()) return 'No se pudo confirmar el acceso al proyecto. Vuelve a consultarlo antes de continuar.';
     const role = this.projectRole();
     if (role === "loading" || role === "loading-project") return "Comprobando el rol del espacio antes de habilitar cambios…";
@@ -282,6 +301,7 @@ export class ProjectComponent {
     return "";
   }
   selectUpload(id: string): void {
+    if (id.trim() !== this.namedUploadId) { this.sourceFileName.set(''); this.namedUploadId = ''; this.uploadedFile = null; }
     this.uploadId = id;
     this.uploadGeneration++;
     clearTimeout(this.inspectionTimer);
@@ -370,7 +390,39 @@ export class ProjectComponent {
     return ({ queued: "En cola", audio: "Preparando audio", analysis: "Transcribiendo", render: "Creando el clip", stopping: "Cancelación solicitada", succeeded: "Completado", failed: "Error", cancelled: "Cancelado" } as Record<string, string>)[state] ?? state;
   }
   choose(event: Event): void {
-    this.file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    if (this.busy() || (!this.design && !this.canEdit())) return;
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.releaseLocalPreview();
+    this.file = file;
+    this.selectionError.set('');
+    try { uploadContentType(file); }
+    catch (error) { this.selectionError.set(error instanceof Error ? error.message : 'Selecciona un archivo de video compatible.'); return; }
+    try { this.localPreview.set(URL.createObjectURL(file)); }
+    catch { this.previewUnavailable.set(true); }
+  }
+  clearSelectedFile(input: HTMLInputElement): void {
+    if (this.busy()) return;
+    this.releaseLocalPreview();
+    this.file = null;
+    this.selectionError.set('');
+    input.value = '';
+    input.focus();
+  }
+  private releaseLocalPreview(): void {
+    const url = this.localPreview();
+    if (url) URL.revokeObjectURL(url);
+    this.localPreview.set('');
+    this.previewUnavailable.set(false);
+  }
+  hasUnuploadedSelection(): boolean { return !!this.file && this.file !== this.uploadedFile; }
+  sourceStageIndex(): number {
+    if (this.uploading()) return this.uploadPhase() === 'transferring' ? 1 : this.uploadPhase() === 'confirming' ? 2 : 0;
+    const status = this.uploadStatus();
+    if (this.inspected()) return 3;
+    if (status?.state === 'confirmed') return 2;
+    if (status?.state === 'pending') return 1;
+    return -1;
   }
   setIntervalField(field: 'startSeconds' | 'endSeconds', value: number | null): void {
     if (this.busy() || !this.canEdit() || !this.inspected()) return;
@@ -434,6 +486,9 @@ export class ProjectComponent {
   }
   async upload(): Promise<void> {
     if (!this.file || this.busy() || !this.canEdit()) return;
+    try { uploadContentType(this.file); }
+    catch (error) { this.selectionError.set(error instanceof Error ? error.message : 'Selecciona un video compatible.'); return; }
+    this.selectionError.set('');
     const generation = this.projectGeneration;
     const file = this.file;
     const controller = new AbortController();
@@ -441,15 +496,19 @@ export class ProjectComponent {
     this.activeUploadId = "";
     this.cancellingUpload.set(false);
     this.uploading.set(true);
+    this.uploadPhase.set('hashing');
     await this.run(async () => {
       const status = await this.api.uploadFile(
         this.id,
         file,
-        (stage) => { if (this.isCurrentProject(generation)) this.message.set(stage); },
+        (stage, phase) => { if (this.isCurrentProject(generation)) { this.message.set(stage); if (phase) this.uploadPhase.set(phase); } },
         (id) => {
           if (!this.isCurrentProject(generation)) return;
           this.activeUploadId = id;
           this.selectUpload(id);
+          this.namedUploadId = id;
+          this.sourceFileName.set(file.name);
+          this.uploadedFile = file;
           this.remember();
         },
         controller.signal,
@@ -466,6 +525,7 @@ export class ProjectComponent {
     }
     if (!this.isCurrentProject(generation)) return;
     this.uploading.set(false);
+    this.uploadPhase.set(null);
     this.activeUploadController = undefined;
     this.activeUploadId = "";
     if (this.uploadStatus()) await this.inspect();
@@ -669,6 +729,17 @@ export class ProjectComponent {
       }
       await this.navigateToDraft(result, generation);
     });
+  }
+  async editPipelineResult(): Promise<void> {
+    const task = this.pipeline();
+    if (!task || task.id !== this.pipelineId.trim() || task.status !== 'succeeded' || !this.pipelineMatchesSelectedUpload() || !this.inspected() || !this.canEdit() || this.busy()) return;
+    // The visible result uses its submitted spec, not potentially changed form fields.
+    this.startSeconds = task.spec.startSeconds;
+    this.endSeconds = task.spec.endSeconds;
+    this.aspect = task.spec.aspect;
+    this.language = task.spec.language;
+    this.showWorkbench('drafts');
+    await this.createEdit();
   }
   private draftRequestBody(): Schema<'CreateEditDto'> {
     const analysisId = this.hasLinkedTranscript() ? this.pipeline()?.analysisId : null;

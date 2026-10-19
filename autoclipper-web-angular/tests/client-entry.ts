@@ -49,3 +49,5 @@ export { changesPage, focusMain, containTab } from '../src/app/core/a11y/navigat
 
 export { DashboardState } from '../src/app/features/dashboard/state/dashboard.state';
 export { sourceLinkFeedback } from '../src/app/features/projects/models/source-link';
+export { recognizeSourceLink, officialSourcePreview } from '../src/app/features/projects/models/source-link';
+export { SourceLinkPreviewComponent } from '../src/app/features/projects/components/source-link-preview.component';

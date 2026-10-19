@@ -1,5 +1,7 @@
 import type { Schema } from '../../../core/contracts/api-types';
 
+export type UploadPhase = 'hashing' | 'reserving' | 'transferring' | 'confirming';
+
 export function uploadContentType(file: Pick<File, 'type' | 'name' | 'size'>): Schema<'UploadDto'>['contentType'] {
   if (!file.size || file.size > 100 * 1024 * 1024) throw new Error('El video debe pesar entre 1 byte y 100 MiB.');
   const formats: Record<string, Schema<'UploadDto'>['contentType']> = {

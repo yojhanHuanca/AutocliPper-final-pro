@@ -1,7 +1,7 @@
 import { Injectable, inject } from "@angular/core";
 import type { Schema, Response } from "../../../core/contracts/api-types";
 import { ApiTransport } from "../../../core/http/api-transport.service";
-import { uploadContentType } from '../models/upload-file';
+import { uploadContentType, type UploadPhase } from '../models/upload-file';
 @Injectable({ providedIn: "root" })
 export class ProjectsApi {
   private readonly api = inject(ApiTransport);
@@ -61,13 +61,13 @@ export class ProjectsApi {
   async uploadFile(
     projectId: string,
     file: File,
-    progress: (stage: string) => void,
+    progress: (stage: string, phase?: UploadPhase) => void,
     remember: (id: string) => void,
     signal?: AbortSignal,
   ): Promise<Schema<"UploadStatusDto">> {
     signal?.throwIfAborted();
     const contentType = uploadContentType(file);
-    progress("Calculando SHA-256 del archivo…");
+    progress("Preparando y verificando tu archivo…", 'hashing');
     const digest = await crypto.subtle.digest(
       "SHA-256",
       await file.arrayBuffer(),
@@ -82,6 +82,7 @@ export class ProjectsApi {
       contentType,
       mode: "put",
     };
+    progress('Preparando la carga privada…', 'reserving');
     const intent = await this.api.post<Schema<"PutUploadIntentDto">>(
       `/projects/${encodeURIComponent(projectId)}/uploads`,
       body,
@@ -93,7 +94,7 @@ export class ProjectsApi {
       catch { throw new Error(`Se canceló la transferencia, pero no pudimos liberar la carga ${intent.id}. Consulta su estado para reintentar la cancelación.`); }
       signal.throwIfAborted();
     }
-    progress("Enviando archivo al almacenamiento privado…");
+    progress("Enviando archivo al almacenamiento privado…", 'transferring');
     // Native fetch deliberately avoids API credentials, CSRF, and Angular interceptors.
     const result = await fetch(intent.url, {
       method: "PUT",
@@ -108,7 +109,7 @@ export class ProjectsApi {
         `La carga falló (${result.status}). Puedes consultar o abortar la intención creada.`,
       );
     signal?.throwIfAborted();
-    progress("Confirmando archivo e iniciando inspección…");
+    progress("Confirmando archivo e iniciando inspección…", 'confirming');
     await this.api.post(`/uploads/${intent.id}/confirm`, {});
     return this.api.get<Schema<"UploadStatusDto">>(`/uploads/${intent.id}`);
   }

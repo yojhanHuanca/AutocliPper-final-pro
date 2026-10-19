@@ -1,0 +1,44 @@
+<section class="link-source" aria-labelledby="link-source-title">
+  <header><span class="link-overline">DESDE UNA PLATAFORMA</span><span class="link-import-status">Importación pendiente</span></header>
+  <h3 id="link-source-title">Primero, encuentra tu video.</h3>
+  <p class="link-intro">Valida el enlace y revisa una vista previa oficial. La importación requiere acceso autorizado y un contrato del servidor; sigue pendiente.</p>
+  <ul class="link-platforms" aria-label="Capacidad por plataforma">
+    <li><strong>YouTube</strong><span>Vista previa · importación no disponible</span></li>
+    <li><strong>Kick</strong><span>Vista previa de directo · sin importador oficial identificado</span></li>
+    <li><strong>Twitch</strong><span>Vista previa de clips y videos · descarga de clips autorizados por OAuth en revisión</span></li>
+  </ul>
+  <form (submit)="$event.preventDefault(); validate()" novalidate>
+    <label for="source-video-link">Enlace del video</label>
+    <div class="link-input-row"><span class="link-input-icon" aria-hidden="true"><ac-icon name="play" /></span><input id="source-video-link" type="url" autocomplete="off" spellcheck="false" placeholder="https://…" maxlength="2049"
+      [value]="value()" (input)="update($event)" aria-describedby="source-link-help source-link-feedback"
+      [attr.aria-invalid]="result() && ['empty','invalid','unsupported'].includes(result()!.state) ? 'true' : null" /><button class="button primary" type="submit">Validar enlace<ac-icon name="arrow" /></button></div>
+    <p id="source-link-help" class="link-help">La validación ocurre en este navegador. No envía ni guarda el enlace en nuestro servidor.</p>
+  </form>
+  <div id="source-link-feedback" class="link-feedback" aria-live="polite" aria-atomic="true">
+    @if (result(); as checked) {
+      <div class="link-feedback-heading" [class.link-feedback-error]="['empty','invalid','unsupported'].includes(checked.state)" [class.link-feedback-neutral]="checked.state === 'unverifiable'"><ac-icon [name]="checked.target ? 'check' : 'shield'" /><strong>{{ checked.title }}</strong></div>
+      <p>{{ checked.message }}</p>
+    } @else { <p>Pega el enlace y pulsa «Validar enlace» para revisar la plataforma y el formato.</p> }
+  </div>
+  @if (result()?.target; as target) {
+    <article class="link-preview-card" aria-labelledby="link-preview-title">
+      <div class="link-preview-meta"><span class="link-platform-mark" aria-hidden="true"><ac-icon name="film" /></span><div><span class="link-overline">{{ target.platform }} · {{ target.kind === 'live' ? 'DIRECTO' : target.kind === 'clip' ? 'CLIP' : 'VIDEO' }}</span><h4 id="link-preview-title">Vista previa oficial</h4></div><span class="link-unverified">Video sin verificar</span></div>
+      @if (previewState() === 'error') {
+        <div class="link-player-error" role="alert"><ac-icon name="shield" /><div><strong>No pudimos mostrar la vista previa.</strong><p>{{ previewError() }}</p><button type="button" class="button" (click)="loadPreview()">Intentar de nuevo</button></div></div>
+      }
+      @if (activeFrame(); as frame) {
+        @if (previewState() === 'loading') { <p class="link-player-status" role="status"><span class="link-spinner" aria-hidden="true"></span>Conectando con {{ target.platform }}…</p> }
+        @if (previewState() === 'ready') { <p class="link-player-status link-player-status-ready" role="status"><ac-icon name="check" />Reproductor abierto. Comprueba dentro si el video se puede reproducir.</p> }
+        <iframe class="link-official-player" [src]="frame" [title]="'Reproductor oficial de ' + target.platform" sandbox="allow-scripts allow-same-origin allow-presentation" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" (load)="previewLoaded()" (error)="previewFailed()"></iframe>
+        <div class="link-player-note"><p>El reproductor oficial comprueba la reproducción. Un formato reconocido no acredita que el video exista, esté autorizado o pueda importarse.</p><button type="button" class="text-link" (click)="closePreview(true)">Cerrar vista previa</button></div>
+      } @else {
+        @if (previewState() !== 'error') { <div class="link-preview-placeholder"><span class="link-preview-symbol"><ac-icon name="play" /></span><strong>{{ target.kind === 'live' ? 'Vista previa del canal en directo' : 'Vista previa del video original' }}</strong><p>Al cargar el reproductor, {{ target.platform }} recibe el identificador y datos de conexión de tu navegador. No se envía el enlace a AutoClipper ni se importa el video.</p>
+          @if (previewFits()) { <button class="button" type="button" (click)="loadPreview()">Cargar vista previa de {{ target.platform }}</button> }
+          @else { <p class="link-size-notice">{{ target.platform }} necesita un reproductor de al menos {{ target.platform === 'Twitch' ? '400' : '200' }} px de ancho. Amplía esta ventana para mostrarlo.</p> }
+        </div> }
+      }
+      <footer><ac-icon name="shield" /><p>Ver el reproductor no confirma derechos ni concede acceso al audiovisual. La importación solo se habilitará cuando el servidor valide el proveedor, el tipo de video y tu autorización. Para crear un clip ahora, sube un archivo propio.</p></footer>
+    </article>
+  }
+  <div class="link-local-fallback"><div><strong>¿Ya tienes el archivo?</strong><p>Continúa con la carga privada disponible.</p></div><button class="button" type="button" (click)="useFile.emit()">Subir un archivo<ac-icon name="upload" /></button></div>
+</section>
