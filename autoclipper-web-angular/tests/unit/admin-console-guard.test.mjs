@@ -19,6 +19,9 @@ function subject(access) {
   ];
   component.availableSections = computed(() => component.sections.filter(item => component.access()?.permissions.includes(item.permission)));
   component.workspaceFilter = signal('');
+  component.localSearch = signal('');
+  component.jobKindFilter = signal('');
+  component.jobStatusFilter = signal('');
   component.loadingPage = signal(false);
   component.pageFailed = signal(false);
   component.message = signal('');
@@ -141,6 +144,34 @@ test('overview links open only permissioned sections and return to summary witho
   component.showSummary();
   assert.equal(component.activeView(), 'summary');
   assert.equal(component.apiCalls, 1, 'returning to overview performs no extra reads');
+});
+
+test('local search and job filters apply only to authorized rows already loaded', () => {
+  const component = subject(access({ permissions: ['jobs.read'] }));
+  component.section.set('jobs');
+  component.jobs.set([
+    { id: 'job-1', workspaceId: 'w-1', kind: 'pipeline', status: 'failed', errorCode: 'RENDER_FAILED', createdAt: '2026-10-18T00:00:00Z', finishedAt: null },
+    { id: 'job-2', workspaceId: 'w-2', kind: 'render', status: 'succeeded', errorCode: null, createdAt: '2026-10-18T00:00:00Z', finishedAt: '2026-10-18T00:01:00Z' },
+  ]);
+  component.localSearch.set('render_failed');
+  assert.deepEqual(component.visibleJobs().map(job => job.id), ['job-1']);
+  component.localSearch.set('');
+  component.jobKindFilter.set('pipeline');
+  component.jobStatusFilter.set('succeeded');
+  assert.deepEqual(component.visibleJobs(), []);
+  assert.equal(component.loadedRowCount(), 2);
+  assert.equal(component.visibleRowCount(), 0);
+  assert.equal(component.noRowsMessage(), 'Ninguna fila consultada coincide con estos filtros.');
+});
+
+test('job status colors distinguish active, complete, failed, cancelled and unknown server states', () => {
+  const component = subject(access({ permissions: ['jobs.read'] }));
+  assert.equal(component.jobStatusTone('queued'), 'queued');
+  assert.equal(component.jobStatusTone('transcribing'), 'active');
+  assert.equal(component.jobStatusTone('succeeded'), 'success');
+  assert.equal(component.jobStatusTone('failed'), 'error');
+  assert.equal(component.jobStatusTone('cancelled'), 'stopped');
+  assert.equal(component.jobStatusTone('unrecognized'), 'unknown');
 });
 
 test('a late page cannot repopulate rows after a capability refresh starts', async () => {

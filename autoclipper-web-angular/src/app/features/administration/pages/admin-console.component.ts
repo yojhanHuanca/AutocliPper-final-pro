@@ -51,6 +51,9 @@ export class AdminConsoleComponent {
   readonly message = signal("");
   readonly mutationBusy = signal(false);
   readonly workspaceFilter = signal("");
+  readonly localSearch = signal("");
+  readonly jobKindFilter = signal("");
+  readonly jobStatusFilter = signal("");
   password = "";
   factor = "";
   private accessVersion = 0;
@@ -165,6 +168,46 @@ export class AdminConsoleComponent {
   showSummary(): void {
     if (this.isElevated()) this.activeView.set("summary");
   }
+  visibleUsers(): Schema<"AdminUserDto">[] {
+    const query = this.localSearch().trim().toLowerCase();
+    return this.users().filter((user) => !query || [user.id, user.verified ? "verificada" : "sin verificar", user.mfaEnabled ? "mfa activo" : "sin mfa", user.createdAt].join(" ").toLowerCase().includes(query));
+  }
+  visibleWorkspaces(): Schema<"AdminWorkspaceDto">[] {
+    const query = this.localSearch().trim().toLowerCase();
+    return this.workspaces().filter((item) => !query || [item.id, item.kind, item.memberCount, item.createdAt].join(" ").toLowerCase().includes(query));
+  }
+  visibleJobs(): Schema<"AdminJobDto">[] {
+    const query = this.localSearch().trim().toLowerCase();
+    return this.jobs().filter((job) => (!query || [job.id, job.workspaceId, job.kind, job.status, job.errorCode, job.createdAt, job.finishedAt].join(" ").toLowerCase().includes(query)) && (!this.jobKindFilter() || job.kind === this.jobKindFilter()) && (!this.jobStatusFilter() || job.status === this.jobStatusFilter()));
+  }
+  visibleConsumption(): Schema<"AdminConsumptionDto">[] {
+    const query = this.localSearch().trim().toLowerCase();
+    return this.consumption().filter((item) => !query || [item.id, item.planVersion, item.unit, item.periodStart, item.periodEnd, item.budgetSeconds, item.consumedSeconds, item.reservedSeconds].join(" ").toLowerCase().includes(query));
+  }
+  loadedRowCount(): number {
+    switch (this.section()) {
+      case "users": return this.users().length;
+      case "workspaces": return this.workspaces().length;
+      case "jobs": return this.jobs().length;
+      case "consumption": return this.consumption().length;
+      default: return 0;
+    }
+  }
+  visibleRowCount(): number {
+    switch (this.section()) {
+      case "users": return this.visibleUsers().length;
+      case "workspaces": return this.visibleWorkspaces().length;
+      case "jobs": return this.visibleJobs().length;
+      case "consumption": return this.visibleConsumption().length;
+      default: return 0;
+    }
+  }
+  hasLocalFilters(): boolean {
+    return !!this.localSearch().trim() || !!this.jobKindFilter() || !!this.jobStatusFilter();
+  }
+  noRowsMessage(): string {
+    return this.hasLocalFilters() ? "Ninguna fila consultada coincide con estos filtros." : "No hay filas en esta página autorizada.";
+  }
   async setWorkspaceFilter(value: string): Promise<void> {
     this.workspaceFilter.set(value.trim());
     this.clearData();
@@ -253,6 +296,13 @@ export class AdminConsoleComponent {
   jobStatus(value: string): string {
     return ({ queued: "En espera", running: "En curso", transcribing: "Transcribiendo", selecting: "Seleccionando", audio: "Preparando audio", analysis: "Analizando", render: "Exportando", stopping: "Deteniéndose", succeeded: "Completado", failed: "Fallido", cancelled: "Cancelado" } as Record<string, string>)[value] ?? "Sin clasificar";
   }
+  jobStatusTone(value: string): string {
+    if (value === "succeeded") return "success";
+    if (value === "failed") return "error";
+    if (value === "cancelled" || value === "stopping") return "stopped";
+    if (["running", "transcribing", "selecting", "audio", "analysis", "render"].includes(value)) return "active";
+    return value === "queued" ? "queued" : "unknown";
+  }
   private errorIsForbidden(error: unknown): boolean {
     return this.httpStatus(error) === 403;
   }
@@ -273,6 +323,9 @@ export class AdminConsoleComponent {
     this.jobs.set([]);
     this.consumption.set([]);
     this.nextBeforeId.set(null);
+    this.localSearch.set("");
+    this.jobKindFilter.set("");
+    this.jobStatusFilter.set("");
     this.loadingPage.set(false);
     this.pageFailed.set(false);
   }
