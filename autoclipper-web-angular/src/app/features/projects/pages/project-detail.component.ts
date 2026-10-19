@@ -145,6 +145,21 @@ export class ProjectComponent {
     this.showWorkbench(this.inspected() ? "processing" : "source", true);
   }
   hasActiveUpload(): boolean { return !!this.activeUploadId; }
+  uploadBlocked(): boolean {
+    if (!this.file || !this.hasUnuploadedSelection()) return true;
+    const id = this.uploadId.trim();
+    if (!id) return false;
+    const status = this.uploadStatus();
+    return !status || status.id !== id || status.state === 'pending';
+  }
+  uploadRecoveryLabel(): string {
+    const id = this.uploadId.trim();
+    if (!id || !this.uploadBlocked() || !this.file || !this.hasUnuploadedSelection()) return '';
+    const status = this.uploadStatus();
+    return status?.id === id && status.state === 'pending'
+      ? 'Hay una carga temporal pendiente. Abórtala para liberar su reserva antes de volver a cargar.'
+      : 'Consulta la carga seleccionada antes de iniciar otra transferencia.';
+  }
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
       const nextId = params.get("id") ?? "";
@@ -497,11 +512,20 @@ export class ProjectComponent {
   }
   async upload(): Promise<void> {
     if (!this.file || this.busy() || !this.canEdit()) return;
+    if (!this.hasUnuploadedSelection()) {
+      this.message.set('Este archivo ya está asociado a una carga confirmada. Selecciona otro archivo para iniciar una nueva carga.');
+      return;
+    }
+    if (this.uploadBlocked()) {
+      this.uploadError.set(this.uploadRecoveryLabel() || 'Consulta o libera la carga anterior antes de volver a transferir.');
+      return;
+    }
     try { uploadContentType(this.file); }
     catch (error) { this.selectionError.set(error instanceof Error ? error.message : 'Selecciona un video compatible.'); return; }
     this.selectionError.set('');
     const generation = this.projectGeneration;
     const file = this.file;
+    let createdIntent = false;
     const controller = new AbortController();
     this.activeUploadController = controller;
     this.activeUploadId = "";
@@ -515,17 +539,20 @@ export class ProjectComponent {
         (stage, phase) => { if (this.isCurrentProject(generation)) { this.message.set(stage); if (phase) this.uploadPhase.set(phase); } },
         (id) => {
           if (!this.isCurrentProject(generation)) return;
+          createdIntent = true;
           this.activeUploadId = id;
           this.selectUpload(id);
-          this.namedUploadId = id;
-          this.sourceFileName.set(file.name);
-          this.uploadedFile = file;
           this.remember();
         },
         controller.signal,
       );
       if (!this.isCurrentProject(generation)) return;
       this.uploadStatus.set(status);
+      if (status.state === 'confirmed' && this.uploadId.trim() === status.id) {
+        this.namedUploadId = status.id;
+        this.sourceFileName.set(file.name);
+        this.uploadedFile = file;
+      }
       this.message.set(
         "Carga confirmada. Consulta abajo el estado de inspección antes de continuar.",
       );
@@ -539,7 +566,7 @@ export class ProjectComponent {
     this.uploadPhase.set(null);
     this.activeUploadController = undefined;
     this.activeUploadId = "";
-    if (this.uploadStatus()) await this.inspect();
+    if (this.uploadStatus() || (createdIntent && this.uploadId.trim())) await this.inspect();
   }
   async inspect(): Promise<void> {
     clearTimeout(this.inspectionTimer);

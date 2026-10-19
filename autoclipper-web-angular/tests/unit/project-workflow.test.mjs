@@ -164,7 +164,7 @@ test('confirmed filename follows the upload reference, never an untransferred re
   try {
     const {state,api}=await handoffSetup();
     state.file=new File(['x'],'accepted.mp4',{type:'video/mp4'});
-    api.uploadFile=async(project,file,progress,remember)=>{ progress('Transfiriendo','transferring'); assert.equal(state.sourceStageIndex(),1); remember('new-upload'); return {id:'new-upload',projectId:'project-fixture',state:'confirmed',inspection:{status:'succeeded'}}; };
+    api.uploadFile=async(project,file,progress,remember)=>{ progress('Transfiriendo','transferring'); assert.equal(state.sourceStageIndex(),1); remember('new-upload'); assert.equal(state.sourceFileName(),''); assert.equal(state.hasUnuploadedSelection(),true); return {id:'new-upload',projectId:'project-fixture',state:'confirmed',inspection:{status:'succeeded'}}; };
     await state.upload(); assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.hasUnuploadedSelection(),false); assert.equal(state.sourceStageIndex(),3);
     state.choose({target:{files:[new File(['y'],'replacement.mp4',{type:'video/mp4'})]}});
     assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.hasUnuploadedSelection(),true);
@@ -172,6 +172,28 @@ test('confirmed filename follows the upload reference, never an untransferred re
     assert.equal(state.sourceFileName(),'accepted.mp4'); assert.equal(state.uploadId,'new-upload');
     state.selectUpload('other-upload'); assert.equal(state.sourceFileName(),'');
     state.releaseLocalPreview();
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('a failed transfer is inspected before retry, blocks duplicate pending intents and requires explicit release',async()=>{
+  try {
+    const {state,api}=await handoffSetup();
+    state.choose({target:{files:[new File(['video'],'retry.mp4',{type:'video/mp4'})]}});
+    api.uploadFile=async(_project,_file,_progress,remember)=>{remember('pending-upload');throw new Error('storage unavailable');};
+    api.upload=async id=>({id,projectId:'project-fixture',state:'pending',inspection:null});
+    await state.upload();
+    assert.equal(state.uploadId,'pending-upload');
+    assert.equal(state.uploadStatus().state,'pending');
+    assert.equal(state.sourceFileName(),'');
+    assert.equal(state.hasUnuploadedSelection(),true);
+    assert.equal(state.uploadBlocked(),true);
+    assert.match(state.uploadRecoveryLabel(),/Abórtala/);
+    api.uploadFile=async()=>{throw new Error('No debe crear una segunda intención');};
+    await state.upload();
+    assert.match(state.uploadError(),/Abórtala para liberar su reserva/);
+    await state.abortUpload();
+    assert.equal(state.uploadStatus().state,'aborted');
+    assert.equal(state.uploadBlocked(),false);
   } finally {TestBed.resetTestingModule();}
 });
 

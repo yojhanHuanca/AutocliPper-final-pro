@@ -79,6 +79,7 @@
     }
     <p id="selected-video-feedback" class="selection-feedback" [class.invalid]="selectionError()" [attr.role]="selectionError() ? 'alert' : 'status'">
       @if (selectionError()) { {{ selectionError() }} }
+      @else if (hasUnuploadedSelection() && uploadRecoveryLabel()) { {{ uploadRecoveryLabel() }} }
       @else if (hasUnuploadedSelection()) { La vista previa permanece en tu equipo. {{ design ? 'Abre un proyecto de tu cuenta para enviar el archivo.' : 'Pulsa «Cargar archivo privado» para enviarlo.' }} @if (uploadStatus()) { Esta selección todavía no sustituye el origen consultado. } }
       @else if (file) { La selección está vinculada a la carga iniciada. Consulta su estado abajo. }
     </p>
@@ -86,11 +87,12 @@
       class="button primary"
       type="button"
       (click)="upload()"
-      [disabled]="!file || !!selectionError() || busy() || !canEdit()"
+      [disabled]="!file || !!selectionError() || busy() || !canEdit() || uploadBlocked()"
     >
-      {{ uploading() ? "Cargando…" : "Cargar archivo privado"
+      {{ uploading() ? "Cargando…" : hasUnuploadedSelection() ? "Cargar archivo privado" : "Archivo ya cargado"
       }}<ac-icon name="upload" />
     </button>
+    @if (file && uploadBlocked() && uploadId && !uploadStatus() && !uploadError()) { <button class="button small" type="button" (click)="inspect()" [disabled]="inspecting()">{{ inspecting() ? 'Consultando carga…' : 'Consultar carga seleccionada' }}</button> }
     </div>
     @if (uploading() || uploadStatus()) {
       <ol class="source-milestones" aria-label="Etapas de la carga">

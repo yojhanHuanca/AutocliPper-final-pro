@@ -260,3 +260,6 @@ Si la creación del espacio se acepta pero falla la consulta posterior de la lis
 ## Continuidad al abrir el primer proyecto — 2026-10-19
 
 Si la API confirma la creación del proyecto y falla/cancela la navegación, el cliente conserva el ID y convierte el siguiente envío de la misma solicitud en una navegación de reintento, sin volver a crear. 21 pruebas de creación/handoff/workflow aprobadas; typecheck y build aprobados. No se realizaron escrituras en runtime.
+## Reintento de carga privada — 2026-10-19
+
+El archivo seleccionado solo se marca como cargado cuando la API devuelve estado confirmado. Tras fallo luego de crear intención, se consulta su estado y una intención pendiente debe liberarse explícitamente antes de crear otra; así no se duplica la reserva ni se presenta un archivo no transferido como confirmado. El botón se deshabilita para archivos ya confirmados. 22 pruebas de workflow/handoff aprobadas; typecheck y build aprobados. Sin cargas nuevas a runtime.
