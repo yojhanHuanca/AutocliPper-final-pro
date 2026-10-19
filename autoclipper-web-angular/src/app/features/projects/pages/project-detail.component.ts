@@ -547,6 +547,8 @@ export class ProjectComponent {
         controller.signal,
       );
       if (!this.isCurrentProject(generation)) return;
+      if (status.id !== this.uploadId.trim() || status.projectId !== this.id)
+        throw new Error('La respuesta de carga no corresponde al proyecto y al ID consultados.');
       this.uploadStatus.set(status);
       if (status.state === 'confirmed' && this.uploadId.trim() === status.id) {
         this.namedUploadId = status.id;
@@ -578,8 +580,8 @@ export class ProjectComponent {
     try {
       const status = await this.api.upload(id);
       if (generation !== this.uploadGeneration || !this.isCurrentProject(projectGeneration)) return;
-      if (status.projectId !== this.id)
-        throw new Error("La carga consultada pertenece a otro proyecto.");
+      if (status.id !== id || status.projectId !== this.id)
+        throw new Error("La carga consultada no corresponde al ID y proyecto solicitados.");
       this.uploadStatus.set(status);
       this.uploadError.set("");
       const duration = status.inspection?.result?.durationSeconds;
@@ -694,6 +696,7 @@ export class ProjectComponent {
     try {
       const task = await this.api.pipeline(id);
       if (generation !== this.pipelineGeneration || !this.isCurrentProject(projectGeneration)) return;
+      if (task.id !== id) throw new Error('La respuesta no corresponde al pipeline consultado.');
       this.pipeline.set(task);
       this.pipelineError.set("");
       this.remember();

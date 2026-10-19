@@ -263,3 +263,6 @@ Si la API confirma la creación del proyecto y falla/cancela la navegación, el 
 ## Reintento de carga privada — 2026-10-19
 
 El archivo seleccionado solo se marca como cargado cuando la API devuelve estado confirmado. Tras fallo luego de crear intención, se consulta su estado y una intención pendiente debe liberarse explícitamente antes de crear otra; así no se duplica la reserva ni se presenta un archivo no transferido como confirmado. El botón se deshabilita para archivos ya confirmados. 22 pruebas de workflow/handoff aprobadas; typecheck y build aprobados. Sin cargas nuevas a runtime.
+## Consistencia de estados de carga y pipeline — 2026-10-19
+
+Las respuestas de consulta deben conservar el ID pedido y el proyecto actual antes de reemplazar estado de carga/procesamiento. Una respuesta cruzada se descarta y deja disponibles los datos previos y el reintento; nunca habilita inspección, vinculación de transcripción o apertura de editor. 24 pruebas de workflow/progreso aprobadas; typecheck y build aprobados. No se consultó un runtime compartido.

@@ -197,6 +197,29 @@ test('a failed transfer is inspected before retry, blocks duplicate pending inte
   } finally {TestBed.resetTestingModule();}
 });
 
+test('upload and pipeline responses must match their requested IDs before enabling the next step',async()=>{
+  try {
+    const {state,api}=await handoffSetup();
+    state.selectUpload('requested-upload');
+    api.upload=async()=>({id:'other-upload',projectId:'project-fixture',state:'confirmed',inspection:{status:'succeeded',result:{durationSeconds:20}}});
+    await state.inspect();
+    assert.equal(state.uploadStatus(),null);
+    assert.match(state.uploadError(),/no corresponde al ID y proyecto/);
+    assert.equal(state.inspected(),false);
+
+    state.selectUpload('upload-fixture');
+    state.selectPipeline('requested-pipeline');
+    state.pipelineUploadId='upload-fixture';
+    state.pipeline.set({id:'requested-pipeline',status:'queued',events:[]});
+    api.pipeline=async()=>({id:'other-pipeline',status:'succeeded',analysisId:'untrusted-analysis',events:[]});
+    await state.pollPipeline();
+    assert.equal(state.pipeline().id,'requested-pipeline');
+    assert.equal(state.pipeline().status,'queued');
+    assert.equal(state.hasLinkedTranscript(),false);
+    assert.match(state.pipelineError(),/no corresponde al pipeline consultado/);
+  } finally {TestBed.resetTestingModule();}
+});
+
 test('editing a completed clip uses its returned spec and cannot claim an unknown or different source',async()=>{
   try {
     const {state,calls}=await handoffSetup();
