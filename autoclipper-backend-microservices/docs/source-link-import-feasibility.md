@@ -1,0 +1,40 @@
+# Importación de enlaces: factibilidad y contrato
+
+Fecha de revisión: 18 de octubre de 2026. Este documento distingue reconocimiento de URL, vista previa oficial y obtención de bytes. Que un enlace se reconozca o se reproduzca en un embed no implica que pueda importarse al almacenamiento de AutocliPper.
+
+## Hallazgo por proveedor
+
+| Proveedor y alcance del enlace | Metadata / preview oficial | Obtención oficial de medios | Decisión actual |
+| --- | --- | --- | --- |
+| YouTube: video, Short o live/VOD | YouTube Data API ofrece datos sujetos a cuotas y su IFrame Player API permite playback en un reproductor oficial sujeto a sus políticas. El embed no entrega el archivo al backend. | Las políticas de API prohíben descargar, importar, respaldar, cachear o almacenar copias audiovisuales sin aprobación previa escrita de YouTube. La API de datos no ofrece una ruta genérica para exportar medios de URLs arbitrarias. | Permitir referencia/reproducción embebida conforme a política. Responder `unsupported` para importación de video, sin intentar extraer el stream. Solo reconsiderar con una aprobación escrita aplicable a este producto y ruta. |
+| Twitch: clip concreto | Helix `Get Clips` puede resolver metadatos por ID; el reproductor de clips es el preview del proveedor. | `GET /helix/clips/downloads` entrega URLs temporales para clips. Requiere token OAuth con `channel:manage:clips` o `editor:manage:clips`; `editor_id` debe ser el usuario del token y la API devuelve 403 si no es editor del broadcaster. Hasta 10 clip IDs por request; 100 requests/minuto. | Única ruta candidata de importación: clips existentes de canales donde la cuenta Twitch conectada sea el broadcaster o editor autorizado. El servidor aún no implementa la vinculación OAuth social ni la ingestión; por eso está `unavailable` hasta completar ambos. No habilitar VOD, directo, ni clips ajenos solo por tener URL pública. |
+| Kick: canal/directo | El API público documenta metadata de canales y livestreams activos; el canal puede usar el embed oficial de Kick. Un livestream activo no es un archivo VOD. | El índice y OpenAPI públicos revisados enumeran canales, usuarios, livestreams activos, categorías, chat, moderación y OAuth, pero no una operación para descargar clips/video/VOD ni una URL oficial de medios. Los scopes publicados tampoco incluyen lectura/descarga de medios. | Admitir la referencia y preview de directo en Kick si el canal está disponible. Importar video es `unsupported` por falta de una API oficial de obtención. No convertir una URL de video/clip a un canal en vivo. |
+
+Los límites y permisos son los que muestran las fuentes oficiales consultadas; deben revisarse nuevamente antes de activar producción. YouTube Data API publica una cuota predeterminada de 10,000 unidades/día para la mayoría de métodos y buckets propios para `search.list` y `videos.insert`. Kick no publica una cuota de media porque no se encontró endpoint de media; la documentación pública consultada no especifica una cuota única por endpoint en estas operaciones.
+
+Fuentes primarias:
+
+- [Políticas para desarrolladores de YouTube (español)](https://developers.google.com/youtube/terms/developer-policies?hl=es) y [cuotas de YouTube Data API](https://developers.google.com/youtube/v3/determine_quota_cost).
+- [Twitch Helix API Reference — Get Clips Download](https://dev.twitch.tv/docs/api/reference/#get-clips-download), [scopes OAuth](https://dev.twitch.tv/docs/authentication/scopes/) y [clips](https://dev.twitch.tv/docs/api/clips/).
+- [Índice oficial de Kick Dev](https://docs.kick.com/llms.txt), [API de livestreams](https://docs.kick.com/apis/livestreams) y [scopes OAuth](https://docs.kick.com/getting-started/scopes).
+
+## Contrato sugerido para el cliente
+
+La pantalla actual reconoce formato localmente y muestra embeds del proveedor. La validación remota y la importación deben ser acciones separadas: validar un enlace comprueba proveedor/ID/metadata y permiso actual, mientras importar exige una nueva solicitud autorizada del usuario y una clave de idempotencia. No persistir la URL pegada ni tratar el preview como autorización o promesa de importación.
+
+Estados públicos sugeridos para ambos contratos: `pending`, `unsupported`, `unavailable`, `queued` y `failed`. La validación devuelve solo estado, proveedor, ID canónico, metadata mínima para preview oficial y una capacidad `importable`/`reasonCode`; nunca URLs firmadas de Twitch. La importación de Twitch devuelve un identificador de trabajo `queued` solo después de admitir propiedad/edición, autorización de workspace, límites e idempotencia. El trabajo obtiene de nuevo la URL temporal desde Helix y se conecta al flujo existente de carga/inspección. No devolver el enlace temporal al navegador.
+
+Bloqueo de activación de Twitch: el servicio Identity actual solo vincula Google. Falta un flujo OAuth Twitch de Authorization Code, state de un uso/PKCE y callback de confianza; tokens de acceso/refresh cifrados y revocables ligados a la cuenta AutocliPper; consentimiento exacto del scope requerido; validación del usuario/editor contra `editor_id`; y un worker durable que transfiera el medio a la intención existente de Project sin exponer la URL temporal. No aceptar tokens Twitch aportados como campos del request ni tratar el login Google como autorización Twitch. Se requiere registrar y configurar una aplicación de Twitch antes de aceptación externa real; sus secretos van en el almacén de secretos, nunca en este repositorio.
+
+## Requisitos de seguridad para la futura ruta Twitch
+
+- Analizar una URL HTTPS bajo una lista cerrada de hosts/rutas Twitch (`clips.twitch.tv` y `www.twitch.tv/{canal}/clip/{slug}`); rechazar userinfo, puertos, IPs literales, query/hash inesperados y redirects de entrada. Obtener el `clip_id` canónico y broadcaster por Helix, no desde metadata confiada del browser.
+- Autorizar proyecto/workspace antes de encolar, comprobar la cuenta conectada y membresía editorial vigente, ligar el trabajo al principal autenticado y aplicar límites del plan. Idempotencia por principal/workspace/clip; auditoría con ID/resultado/correlation, sin token ni URL firmada.
+- Pedir una URL de descarga temporal justo antes de transferir. Egress con lista cerrada hacia `api.twitch.tv` y el hostname CDN permitido/configurado a partir del contrato oficial; HTTPS solamente. Resolver DNS y rechazar direcciones loopback, privadas, link-local, multicast, reservadas y cambios DNS; revalidar cada destino/redirect y desactivar redirects automáticos. No descargar una URL arbitraria enviada por el cliente.
+- Red restringida a los destinos aprobados además del chequeo DNS en aplicación. Timeout total y de inactividad, máximo de bytes/duración según política del producto, límite de concurrencia y cuota por workspace, cancelación y limpieza de objetos parciales. Content-Length no es suficiente: contar bytes al transmitir, verificar contenedor/MIME con inspector actual, hash SHA-256 y `ffprobe` existente.
+- Pasar por reserva, cuota, object key del servidor, estado de upload y confirmación/inspección existentes. Un fallo después de la carga debe dejar un estado durable recuperable o una limpieza idempotente; nunca afirmar éxito previo a confirmar el objeto e inspección.
+- No cachear metadata de YouTube fuera de sus políticas; no importar directos en curso de ningún proveedor. Los jobs y artefactos deben respetar la autorización de autor y el workspace durante cada transición.
+
+## Verificación pendiente de la característica
+
+No se afirma soporte backend de importación: no se añadió un endpoint ficticio y no se activó el runtime compartido. Antes de anunciar `queued` para Twitch se requieren pruebas de integración HTTP con el proveedor aislado por fixture, el worker, `uploads`/storage/inspection reales, aislamiento entre workspaces, OAuth/editor revocado, replay/concurrencia, expiración de URL, DNS/SSRF/redirect, bytes/timeout/cuota y compensación de objetos. Las pruebas no sustituyen la aceptación con una aplicación Twitch configurada y una cuenta autorizada real.
