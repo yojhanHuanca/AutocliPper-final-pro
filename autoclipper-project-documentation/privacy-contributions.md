@@ -1,6 +1,6 @@
 # Aportes por dueño para la exportación de privacidad
 
-Fecha: 18 de octubre de 2026. Incremento actual: membresías de Workspace. Continúa el [perfil propio de Identity](privacy-lifecycle.md); la exportación integral y el borrado siguen pendientes. No se fija una política de retención ni se activa el runtime compartido mientras frontend trabaja en su dashboard.
+Fecha: 19 de octubre de 2026. Incrementos verificados: perfil propio de Identity, membresías de Workspace y referencias Project. CI [39202680454](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39202680454) aprobó los tres jobs; la prueba aislada registró 22 comprobaciones HTTP de Project, tres recibos inmutables, `storedPersonalPayloads=0`, recuperación tras reinicio y rechazo del exceso de alcance. La exportación integral y el borrado siguen pendientes; no se fija una política de retención ni se activa el runtime compartido durante el trabajo de frontend.
 
 ## Alcance por servicio
 
@@ -8,7 +8,7 @@ Implementados: `identity-profile-v1`, perfil y vínculo Google del propio solici
 
 Diseño de los siguientes aportes, sin endpoints o integraciones ficticios:
 
-- **Project — project-attribution-v1:** referencias de proyectos/cargas/revisiones/intenciones asociadas al solicitante, con UUIDs y versiones/estados. Separar autoría histórica de acceso actual al contenido. Producir un manifiesto autoritativo de fuentes y trabajos para los otros dueños; los casos compartidos sin política quedan bloqueados, no se interpretan como ausencia de datos.
+- **Project — project-attribution-v1 (implementado y verificado):** referencias de proyectos, cargas, trabajos, pipelines y revisiones asociadas al solicitante, con UUIDs y versiones/estados. Separa autoría histórica de acceso actual al contenido. El aporte no constituye aún un manifiesto global autoritativo; los casos compartidos sin política quedan bloqueados, no se interpretan como ausencia de datos. Ver [detalle de alcance, permisos y límites](privacy-project-attribution.md).
 - **Media — media-intentions-v1:** metadatos de las inspecciones/renders referidos por ese manifiesto, con fuente/digest/estado comprobados por Media. No listar todo el workspace ni aceptar claves de objetos elegidas por el navegador. La transferencia de MP4/WAV/SRT/VTT y fuentes requiere su propio alcance autorizado y todavía no está implementada para privacidad.
 - **Analysis — analysis-attribution-v1:** trabajos/transcripciones/selecciones asociados a referencias autorizadas, con revisión/modelo/estado y resultado incierto identificado. El texto compartido o que menciona a terceros necesita decisiones adicionales; este nombre de alcance no acredita exportación de transcripciones ni eliminación de intentos externos.
 - **Billing — consumption-attribution-v1:** reservas y movimientos atribuibles a los pipelines del solicitante, sin incluir indiscriminadamente el consumo del equipo. No inventa precios ni decide retención de ledger. Reservas abiertas e intentos inciertos necesitan conciliación antes de cualquier eliminación.
