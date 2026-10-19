@@ -1,4 +1,4 @@
-export const AUTH_STORY_ACCENTS = ["#2354BB", "#B83381", "#7543B0", "#3B68C0", "#9A397D"] as const;
+export const AUTH_STORY_ACCENTS = ["#2354BB", "#183E90", "#315FAE", "#244B9D", "#416BB6"] as const;
 
 export const AUTH_STORY_SCENES = [
   { label: "Sube tu grabación", micro: "PASO 1 · MATERIAL DE EJEMPLO", cue: "Un video local corto, listo para editar.", time: "00:15", playhead: "00:15", file: "episodio-demo.mp4" },

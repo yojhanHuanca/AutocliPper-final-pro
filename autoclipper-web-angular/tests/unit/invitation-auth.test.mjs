@@ -28,6 +28,7 @@ test('invitation sign-in sends the factor and keeps the invitation token for exp
   component.busy = signal(false);
   component.error = signal('');
   component.message = signal('');
+  component.authCompleted = signal(false);
   component.session = { user: () => null, login: async payload => { submitted = payload; } };
   component.email = ' person@example.com ';
   component.password = 'short existing password';
@@ -50,6 +51,7 @@ test('changing accounts preserves the in-memory invitation token and acceptance 
   component.busy = signal(false);
   component.error = signal('');
   component.message = signal('');
+  component.authCompleted = signal(false);
   component.session = { user: () => ({ email: 'person@example.com' }), logout: async () => { logouts++; } };
   component.workspaces = { acceptInvitation: async token => { accepted.push(token); } };
   component.router = { navigateByUrl: async url => { navigated.push(url); } };

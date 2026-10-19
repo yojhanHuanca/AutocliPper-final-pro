@@ -13,11 +13,27 @@ function registerComponent(register) {
   component.error = signal('');
   component.message = signal('');
   component.registerAccepted = signal(false);
+  component.authCompleted = signal(false);
   component.registeredEmail = signal('');
   component.name = '  Yojhan Huanca  ';
   component.email = ' yojhan@example.com ';
   component.password = 'long-enough-pass';
   component.passwordConfirmation = 'long-enough-pass';
+  return component;
+}
+
+function authComponent(mode, api) {
+  const component = Object.create(AuthComponent.prototype);
+  component.route = { snapshot: { data: { mode }, queryParamMap: { get: () => null } } };
+  component.api = api;
+  component.busy = signal(false);
+  component.error = signal('');
+  component.message = signal('');
+  component.authCompleted = signal(false);
+  component.registerAccepted = signal(false);
+  component.email = 'person@example.test';
+  component.password = 'long-enough-password';
+  component.token = 'one-use-token';
   return component;
 }
 
@@ -51,7 +67,7 @@ test('network failure does not expose account existence or return server detail'
   const component = registerComponent(async () => { throw new HttpErrorResponse({ status: 0, statusText: 'Network Error' }); });
   await component.submit();
   assert.equal(component.registerAccepted(), false);
-  assert.match(component.error(), /no confirmamos si ya existe una cuenta asociada/);
+  assert.match(component.error(), /por privacidad, no confirmamos si existe una cuenta asociada/);
   assert.doesNotMatch(component.error(), /yojhan@example\.com|Network Error/);
 });
 
@@ -66,4 +82,34 @@ test('invalid client values do not call the registration endpoint', async () => 
   await component.submit();
   assert.equal(calls, 0);
   assert.match(component.error(), /Revisa los campos/);
+});
+
+test('verification, recovery and reset success become final states and cannot be submitted twice', async () => {
+  for (const [mode, method, message] of [
+    ['verify', 'verify', 'Correo verificado. Ya puedes iniciar sesión.'],
+    ['forgot', 'forgot', 'Si la cuenta corresponde, recibirás las instrucciones por correo.'],
+    ['reset', 'reset', 'Contraseña actualizada. Inicia sesión de nuevo.'],
+  ]) {
+    let calls = 0;
+    const api = { [method]: async () => { calls++; return {}; } };
+    const component = authComponent(mode, api);
+    await component.submit();
+    assert.equal(component.authCompleted(), true, `${mode} presents a terminal success state`);
+    assert.equal(component.message(), message);
+    assert.equal(component.completionTitle().length > 0, true);
+    await component.submit();
+    assert.equal(calls, 1, `${mode} cannot replay after success`);
+  }
+});
+
+test('verification and recovery errors are actionable without exposing backend codes or account existence', async () => {
+  const verify = authComponent('verify', { verify: async () => { throw new HttpErrorResponse({ status: 400, error: { code: 'TOKEN_EXPIRED' } }); } });
+  await verify.submit();
+  assert.match(verify.error(), /puede haber vencido/i);
+  assert.match(verify.error(), /no puede reenviar/);
+  assert.doesNotMatch(verify.error(), /TOKEN_EXPIRED/);
+  const forgot = authComponent('forgot', { forgot: async () => { throw new HttpErrorResponse({ status: 400, error: { code: 'EMAIL_UNKNOWN' } }); } });
+  await forgot.submit();
+  assert.match(forgot.error(), /por privacidad no confirmamos cuentas/);
+  assert.doesNotMatch(forgot.error(), /EMAIL_UNKNOWN|person@example\.test/);
 });

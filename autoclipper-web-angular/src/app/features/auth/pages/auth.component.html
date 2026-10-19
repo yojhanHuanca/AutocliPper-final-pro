@@ -7,7 +7,7 @@
       @if (error()) {
         <div id="auth-form-error" class="alert error" role="alert">{{ error() }}</div>
       }
-      @if (message()) {
+      @if (message() && !authCompleted()) {
         <div class="alert success" role="status">{{ message() }}</div>
       }
       @if (mode === "invitation" && invitationChecking()) {
@@ -32,6 +32,18 @@
             <a class="button full" routerLink="/login">Ir a iniciar sesión</a>
           </div>
         </section>
+      } @else if (authCompleted()) {
+        <section class="auth-completion" role="status" aria-live="polite" aria-labelledby="auth-completion-title">
+          <span class="auth-completion-icon"><ac-icon name="check" /></span>
+          <span class="eyebrow">SIGUIENTE PASO</span>
+          <h2 id="auth-completion-title">{{ completionTitle() }}</h2>
+          <p>{{ message() }}</p>
+          <div class="auth-completion-actions">
+            <a class="button primary full" routerLink="/login">{{ mode === 'forgot' ? 'Volver a iniciar sesión' : 'Continuar al acceso' }}<ac-icon name="arrow" /></a>
+            @if (mode === 'forgot') { <a class="button full" routerLink="/verify">Ya tengo un token de verificación</a> }
+            @if (mode === 'verify') { <a class="button full" routerLink="/forgot">¿Olvidaste tu contraseña?</a> }
+          </div>
+        </section>
       } @else {
       @if (mode === "register") {
         <ol class="register-steps" aria-label="Pasos para empezar">
@@ -40,7 +52,7 @@
           <li><span>3</span><div><strong>Crea un proyecto</strong><small>Entra con tu cuenta.</small></div></li>
         </ol>
       }
-      <form [attr.aria-busy]="busy()" [attr.aria-describedby]="error() ? 'auth-form-error' : null" #form="ngForm" (ngSubmit)="form.valid && submit()">
+      <form [attr.aria-busy]="busy()" [attr.aria-describedby]="error() ? 'auth-form-error' : null" #form="ngForm" (input)="clearError()" (ngSubmit)="form.valid && submit()">
         @if (mode === "register") {
           <label
             >Nombre<input
@@ -70,10 +82,10 @@
               placeholder="tu@correo.com"
               #emailModel="ngModel"
               [attr.aria-invalid]="emailModel.touched && emailModel.invalid"
-              [attr.aria-describedby]="emailModel.touched && emailModel.invalid ? 'register-email-error' : null"
+              [attr.aria-describedby]="emailModel.touched && emailModel.invalid ? 'auth-email-error' : null"
           /></label>
           @if (emailModel.touched && emailModel.invalid) {
-            <span class="auth-field-error" id="register-email-error" role="alert">{{ emailModel.errors?.['required'] ? "Escribe tu correo electrónico." : "Revisa el formato del correo." }}</span>
+            <span class="auth-field-error" id="auth-email-error" role="alert">{{ emailModel.errors?.['required'] ? "Escribe tu correo electrónico." : "Revisa el formato del correo." }}</span>
           }
         }
         @if (mode === "verify" || mode === "reset") {
@@ -82,7 +94,7 @@
               name="token"
               [(ngModel)]="token"
               required
-              autocomplete="off"
+              autocomplete="one-time-code"
               spellcheck="false"
           /></label>
         }
@@ -90,7 +102,7 @@
           <label
             >{{ mode === "reset" ? "Nueva contraseña" : "Contraseña"
             }}<span class="auth-password-field"><input
-              [type]="mode === 'register' && showPassword() ? 'text' : 'password'"
+              [type]="showPassword() ? 'text' : 'password'"
               name="password"
               [(ngModel)]="password"
               required
@@ -102,7 +114,7 @@
               #passwordModel="ngModel"
               [attr.aria-invalid]="passwordModel.touched && passwordModel.invalid"
               [attr.aria-describedby]="mode === 'register' ? 'register-password-help' + (passwordModel.touched && passwordModel.invalid ? ' auth-password-error' : '') : passwordModel.touched && passwordModel.invalid ? 'auth-password-error' : null"
-          />@if (mode === "register") { <button class="auth-password-toggle" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
+          />@if (mode === "login" || mode === "register" || mode === "reset") { <button class="auth-password-toggle" type="button" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="showPassword()" (click)="showPassword.set(!showPassword())">{{ showPassword() ? "Ocultar" : "Mostrar" }}</button> }</span></label>
           @if ((mode === "login" || mode === "invitation" || mode === "reset") && passwordModel.touched && passwordModel.invalid) { <span id="auth-password-error" class="auth-field-error" role="alert">{{ passwordModel.errors?.["required"] ? "Escribe tu contraseña." : "Revisa la longitud de la contraseña." }}</span> }
           @if (mode !== "login" && mode !== "invitation") {
             @if (mode === "register") {
@@ -127,7 +139,14 @@
                 name="factor"
                 [(ngModel)]="factor"
                 autocomplete="one-time-code"
+                pattern="([0-9]{6}|[a-f0-9]{24})"
+                maxlength="24"
+                #factorModel="ngModel"
+                [attr.aria-invalid]="factorModel.touched && factorModel.invalid"
+                [attr.aria-describedby]="factorModel.touched && factorModel.invalid ? 'auth-factor-error' : 'auth-factor-help'"
             /></label>
+            <small id="auth-factor-help" class="muted">Opcional si no tienes 2FA. Usa 6 dígitos o un código de recuperación de 24 caracteres.</small>
+            @if (factorModel.touched && factorModel.invalid) { <span id="auth-factor-error" class="auth-field-error" role="alert">Escribe un código TOTP de 6 dígitos o uno de recuperación válido.</span> }
           </details>
         }
         @if (mode === "login") {
@@ -154,8 +173,12 @@
         } @else {
           <a routerLink="/login">Volver a iniciar sesión</a>
         }
-        @if (mode !== "register") {
-          <a routerLink="/verify">Verificar correo</a><a routerLink="/reset">Tengo un token de recuperación</a>
+        @if (mode === "verify") {
+          <a routerLink="/forgot">Olvidé mi contraseña</a>
+        } @else if (mode === "forgot") {
+          <a routerLink="/verify">Ya tengo un token de verificación</a><a routerLink="/reset">Ya tengo un token de recuperación</a>
+        } @else if (mode === "reset") {
+          <a routerLink="/forgot">Solicitar otro enlace de recuperación</a>
         }
       </div>
       }

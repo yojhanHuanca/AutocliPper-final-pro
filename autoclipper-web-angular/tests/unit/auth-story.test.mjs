@@ -14,6 +14,10 @@ test('login story has five concrete, honest stages and coordinated accents', () 
     return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
   };
   for (const accent of AUTH_STORY_ACCENTS) assert.ok(1.05 / (luminance(accent) + .05) >= 4.5, accent);
+  for (const accent of AUTH_STORY_ACCENTS) {
+    const [red, green, blue] = accent.slice(1).match(/../g).map(value => parseInt(value, 16));
+    assert.ok(blue > red && blue > green, `${accent} stays in the approved cobalt family`);
+  }
   assert.ok(AUTH_STORY_SCENES[0].file.endsWith('.mp4'));
   assert.match(AUTH_STORY_SCENES[2].micro, /MANUAL/);
   assert.match(AUTH_STORY_SCENES[4].cue, /privada/);

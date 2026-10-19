@@ -100,6 +100,24 @@
 .register-accepted strong { color: #263e70; letter-spacing: .02em; }
 .register-next-actions { display: grid; gap: 9px; margin-top: 20px; }
 .register-next-actions .button { justify-content: center; }
+.auth-completion {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin: 28px 0 14px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #d7e2f4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 32px #1936630b;
+}
+.auth-completion-icon { display:grid; place-items:center; width:42px; height:42px; margin-bottom:4px; border-radius:12px; color:#fff; background:#2354bb; }
+.auth-completion-icon ac-icon { width:21px; height:21px; }
+.auth-completion h2 { margin:0; color:#1e3156; font-size:23px; letter-spacing:-.03em; }
+.auth-completion p { margin:0; color:#586984; font-size:13px; line-height:1.65; }
+.auth-completion-actions { display:grid; width:100%; gap:9px; margin-top:10px; }
+.auth-completion-actions .button { justify-content:center; }
+.auth-completion-actions .button:focus-visible { outline:3px solid #8daff5; outline-offset:3px; }
 
 /* The demo is one continuous edit: source → words → cut → portrait → deliverable. */
 .auth-visual {
@@ -554,6 +572,7 @@
   .register-steps li { align-items: center; padding: 8px 10px; }
   .register-steps li div { grid-template-columns: 1fr; }
   .register-accepted { margin-top: 22px; padding: 20px 17px; }
+  .auth-completion { margin-top:22px; padding:20px 17px; }
   .auth-form h1 { font-size: 34px; }
   .auth-visual { margin: 0 11px 18px; padding: 16px 13px; }
   .auth-visual-content { gap: 12px; }
