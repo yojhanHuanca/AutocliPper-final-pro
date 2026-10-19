@@ -10,6 +10,14 @@ function subject(access) {
   component.now = signal(Date.now());
   component.isElevated = computed(() => !!component.access()?.elevatedUntil && Date.parse(component.access().elevatedUntil) > component.now());
   component.section = signal('users');
+  component.activeView = signal('summary');
+  component.sections = [
+    { id: 'users', permission: 'users.read', label: 'Usuarios', icon: 'users' },
+    { id: 'workspaces', permission: 'workspaces.read', label: 'Espacios', icon: 'folder' },
+    { id: 'jobs', permission: 'jobs.read', label: 'Procesamiento', icon: 'film' },
+    { id: 'consumption', permission: 'consumption.read', label: 'Consumo', icon: 'chart' },
+  ];
+  component.availableSections = computed(() => component.sections.filter(item => component.access()?.permissions.includes(item.permission)));
   component.workspaceFilter = signal('');
   component.loadingPage = signal(false);
   component.pageFailed = signal(false);
@@ -120,6 +128,19 @@ test('an authorized, elevated read calls only its permitted data endpoint', asyn
   await component.loadSection();
   assert.equal(component.apiCalls, 1);
   assert.equal(component.loadingPage(), false);
+});
+
+test('overview links open only permissioned sections and return to summary without querying audit', async () => {
+  const component = subject(access());
+  await component.selectSection('jobs');
+  assert.equal(component.activeView(), 'summary', 'a section without an explicit read grant stays closed');
+  assert.equal(component.apiCalls, 0);
+  await component.selectSection('users');
+  assert.equal(component.activeView(), 'users');
+  assert.equal(component.apiCalls, 1);
+  component.showSummary();
+  assert.equal(component.activeView(), 'summary');
+  assert.equal(component.apiCalls, 1, 'returning to overview performs no extra reads');
 });
 
 test('a late page cannot repopulate rows after a capability refresh starts', async () => {

@@ -9,6 +9,7 @@ import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import { AdminApi } from "../data-access/admin-api.service";
 
 type AdminSection = "users" | "workspaces" | "jobs" | "consumption";
+type AdminView = "summary" | AdminSection;
 type AdminPermission = Schema<"AdminAccessDto">["permissions"][number];
 
 @Component({
@@ -37,6 +38,7 @@ export class AdminConsoleComponent {
     { id: "consumption", permission: "consumption.read", label: "Consumo", icon: "chart" },
   ] as const satisfies ReadonlyArray<{ id: AdminSection; permission: AdminPermission; label: string; icon: string }>;
   readonly availableSections = computed(() => this.sections.filter((item) => this.access()?.permissions.includes(item.permission)));
+  readonly activeView = signal<AdminView>("summary");
   readonly section = signal<AdminSection | null>(null);
   readonly users = signal<Schema<"AdminUserDto">[]>([]);
   readonly workspaces = signal<Schema<"AdminWorkspaceDto">[]>([]);
@@ -89,6 +91,7 @@ export class AdminConsoleComponent {
     const previous = this.access();
     this.clearData();
     this.access.set(null);
+    this.activeView.set("summary");
     this.message.set("");
     this.loadingAccess.set(true);
     this.error.set("");
@@ -155,8 +158,12 @@ export class AdminConsoleComponent {
   async selectSection(section: AdminSection): Promise<void> {
     if (!this.availableSections().some((item) => item.id === section) || !this.isElevated()) return;
     this.section.set(section);
+    this.activeView.set(section);
     this.clearData();
     await this.loadSection();
+  }
+  showSummary(): void {
+    if (this.isElevated()) this.activeView.set("summary");
   }
   async setWorkspaceFilter(value: string): Promise<void> {
     this.workspaceFilter.set(value.trim());

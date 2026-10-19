@@ -62,15 +62,38 @@
       } @else {
         <section class="admin-data-panel panel" aria-labelledby="admin-data-heading">
           <div class="admin-data-heading">
-            <div><span class="eyebrow">DATOS REDACTADOS POR EL SERVIDOR</span><h2 id="admin-data-heading">{{ activeSectionLabel }}</h2></div>
+            <div><span class="eyebrow">DATOS REDACTADOS POR EL SERVIDOR</span><h2 id="admin-data-heading">{{ activeView() === "summary" ? "Resumen operativo" : activeSectionLabel }}</h2></div>
             <span class="admin-elevated-badge"><i></i> Elevado hasta {{ access()!.elevatedUntil | date: "shortTime" }}</span>
           </div>
           <nav class="admin-data-tabs" aria-label="Consultas disponibles">
+            <button type="button" [class.active]="activeView() === 'summary'" [attr.aria-current]="activeView() === 'summary' ? 'page' : null" (click)="showSummary()" [disabled]="loadingPage()"><ac-icon name="chart" />Resumen</button>
             @for (item of availableSections(); track item.id) {
-              <button type="button" [class.active]="section() === item.id" [attr.aria-current]="section() === item.id ? 'page' : null" (click)="selectSection(item.id)" [disabled]="loadingPage()"><ac-icon [name]="item.icon" />{{ item.label }}</button>
+              <button type="button" [class.active]="activeView() === item.id" [attr.aria-current]="activeView() === item.id ? 'page' : null" (click)="selectSection(item.id)" [disabled]="loadingPage()"><ac-icon [name]="item.icon" />{{ item.label }}</button>
             }
+            <button type="button" class="admin-tab-unavailable" disabled title="El backend no publica una consulta administrativa de auditoría"><ac-icon name="clock" />Auditoría <small>No disponible</small></button>
           </nav>
 
+          @if (activeView() === "summary") {
+            <section class="admin-overview" aria-labelledby="admin-overview-heading">
+              <div class="admin-overview-intro"><div><span class="eyebrow">ALCANCE VIGENTE</span><h3 id="admin-overview-heading">Áreas que puedes consultar</h3></div><p>{{ scopeLabel }} · los datos aparecen al abrir cada consulta y se limitan al alcance del servidor.</p></div>
+              <div class="admin-overview-grid">
+                @for (item of sections; track item.id) {
+                  <article class="admin-overview-card" [class.authorized]="canRead(item.permission)">
+                    <span class="admin-overview-icon"><ac-icon [name]="item.icon" /></span>
+                    <div><h4>{{ item.label }}</h4><p>{{ canRead(item.permission) ? 'Lectura autorizada por el servidor.' : 'Esta cuenta no tiene permiso de lectura.' }}</p></div>
+                    @if (canRead(item.permission)) { <button type="button" (click)="selectSection(item.id)" [disabled]="loadingPage()">Abrir consulta<ac-icon name="arrow" /></button> }
+                    @else { <span class="admin-overview-locked">Sin permiso</span> }
+                  </article>
+                }
+                <article class="admin-overview-card admin-audit-unavailable">
+                  <span class="admin-overview-icon"><ac-icon name="clock" /></span>
+                  <div><h4>Auditoría</h4><p>No está disponible: el contrato público no expone un endpoint de lectura administrativa para eventos de auditoría.</p></div>
+                  <span class="admin-overview-locked">No disponible</span>
+                </article>
+              </div>
+              <p class="admin-overview-note">El resumen muestra permisos y capacidades, no totales del sistema. Las cifras aparecen solo dentro de las páginas que devuelve cada endpoint autorizado.</p>
+            </section>
+          } @else {
           @if (section() && section() !== "users") {
             <div class="admin-filter">
               <label for="admin-workspace-filter">Filtrar por UUID del espacio</label>
@@ -108,6 +131,7 @@
             <p>Las filas siguen el orden de identificador del contrato. No se muestran nombres, correos ni contenido privado.</p>
             @if (nextBeforeId()) { <button class="button" type="button" (click)="loadNextPage()" [disabled]="loadingPage()">{{ loadingPage() ? "Cargando…" : "Cargar siguiente página" }}<ac-icon name="arrow" /></button> }
           </div>
+          }
         </section>
       }
     }
