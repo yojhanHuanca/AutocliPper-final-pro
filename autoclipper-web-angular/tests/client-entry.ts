@@ -51,4 +51,5 @@ export { DashboardState } from '../src/app/features/dashboard/state/dashboard.st
 export { sourceLinkFeedback } from '../src/app/features/projects/models/source-link';
 export { recognizeSourceLink, officialSourcePreview } from '../src/app/features/projects/models/source-link';
 export { SourceLinkPreviewComponent } from '../src/app/features/projects/components/source-link-preview.component';
+export { exportFailureMessage } from '../src/app/features/editor/models/export-error';
 export { pipelineProgress } from '../src/app/features/projects/models/pipeline-progress';

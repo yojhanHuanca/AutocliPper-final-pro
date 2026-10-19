@@ -249,4 +249,8 @@ La validación del cliente distingue el canal Kick (único formato con reproduct
 
 ## Alta y verificación accesibles — 2026-10-19
 
-El formulario de alta deja enviar una solicitud incompleta al validador local para mostrar errores por campo con ria-invalid/ria-describedby; no llama a la API hasta corregir nombre, correo, contraseña y confirmación. El token de verificación/restablecimiento se valida contra el contrato real (43 caracteres URL-safe), con un error asociado al campo y sin enviar tokens mal formados. El backend solo expone POST /auth/register y POST /auth/verify; registro devuelve aceptación anti-enumeración y genera correo solo para cuentas nuevas, sin endpoint de reenvío. No se simuló correo ni OAuth. Una verificación focalizada: 7 pruebas de registro/verificación, typecheck Angular y build de producción aprobados.
+El formulario de alta deja enviar una solicitud incompleta al validador local para mostrar errores por campo con aria-invalid/ria-describedby; no llama a la API hasta corregir nombre, correo, contraseña y confirmación. El token de verificación/restablecimiento se valida contra el contrato real (43 caracteres URL-safe), con un error asociado al campo y sin enviar tokens mal formados. El backend solo expone POST /auth/register y POST /auth/verify; registro devuelve aceptación anti-enumeración y genera correo solo para cuentas nuevas, sin endpoint de reenvío. No se simuló correo ni OAuth. Una verificación focalizada: 7 pruebas de registro/verificación, typecheck Angular y build de producción aprobados.
+
+## Mensaje de exportación fallida en editor — 2026-10-19
+
+La lista ya no presenta los códigos del procesador directamente a creadores; muestra un mensaje neutral y mantiene el reintento contractual cuando se trata de la revisión actual. Una prueba comprueba códigos conocidos, desconocidos y contenido sensible simulado; typecheck y build aprobados. No se modificó la API ni el render.

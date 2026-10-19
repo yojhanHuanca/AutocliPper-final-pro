@@ -39,8 +39,8 @@
   <article class="export-item">
     <strong>{{ vm.exportStatusLabel(item.status) }}</strong
     ><small [class.current-revision]="!!item.editorRevisionId && item.editorRevisionId === vm.draft()?.revision?.id">Revisión: {{ vm.revisionLabel(item.editorRevisionId) }}@if (!!item.editorRevisionId && item.editorRevisionId === vm.draft()?.revision?.id) { · Actual }</small>
-    @if (item.errorCode) {
-      <p class="muted">Código de error: {{ item.errorCode }}</p>
+    @if (item.status === 'failed') {
+      <p class="muted">{{ exportFailureMessage(item.errorCode) }}</p>
     }
     @if ((item.status === 'failed' || item.status === 'cancelled') && item.editorRevisionId === vm.draft()?.revision?.id && !!item.editorRevisionId) {
       <button class="button small" type="button" (click)="vm.render()" [disabled]="!vm.canEditCollaboration() || vm.busy() || vm.dirty() || vm.currentRenderPending()">Volver a exportar esta revisión</button>
