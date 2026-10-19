@@ -41,6 +41,7 @@ export class ProjectCollectionComponent {
   readonly loaded = signal(false);
   readonly error = signal("");
   readonly newProject = signal(false);
+  private createdProjectReceipt: { id: string; request: string } | null = null;
   projectName = "";
   search = "";
   private generation = 0;
@@ -105,6 +106,15 @@ export class ProjectCollectionComponent {
       workspaceId,
       this.projectName.trim(),
     ]);
+    if (this.createdProjectReceipt?.request === serialized) {
+      try {
+        const navigated = await this.router.navigate(["/app/projects", this.createdProjectReceipt.id]);
+        if (!navigated) this.error.set("El proyecto ya está creado, pero no se pudo abrir. Vuelve a intentarlo; no se creará otro.");
+      } catch {
+        this.error.set("El proyecto ya está creado, pero no se pudo abrir. Vuelve a intentarlo; no se creará otro.");
+      } finally { this.busy.set(false); }
+      return;
+    }
     if (serialized !== this.creationBody) {
       this.creationBody = serialized;
       this.creationKey = crypto.randomUUID();
@@ -119,12 +129,17 @@ export class ProjectCollectionComponent {
       );
       this.creationKey = "";
       if (workspaceId !== this.workspace.workspaceId()) return;
-      await this.router.navigate(["/app/projects", result.id]);
+      this.createdProjectReceipt = { id: result.id, request: serialized };
+      const navigated = await this.router.navigate(["/app/projects", result.id]);
+      if (!navigated) this.error.set("El proyecto ya está creado, pero no se pudo abrir. Vuelve a intentarlo; no se creará otro.");
     } catch (error) {
       this.error.set(errorMessage(error));
     } finally {
       this.busy.set(false);
     }
+  }
+  hasCreatedProjectForCurrentInput(): boolean {
+    return this.createdProjectReceipt?.request === JSON.stringify([this.workspace.workspaceId(), this.projectName.trim()]);
   }
   clearSearch(): void {
     this.search = "";

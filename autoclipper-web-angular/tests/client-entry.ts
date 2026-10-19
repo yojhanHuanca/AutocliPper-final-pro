@@ -52,4 +52,5 @@ export { sourceLinkFeedback } from '../src/app/features/projects/models/source-l
 export { recognizeSourceLink, officialSourcePreview } from '../src/app/features/projects/models/source-link';
 export { SourceLinkPreviewComponent } from '../src/app/features/projects/components/source-link-preview.component';
 export { exportFailureMessage } from '../src/app/features/editor/models/export-error';
+export { ProjectCollectionComponent } from '../src/app/features/projects/components/project-collection/project-collection.component';
 export { pipelineProgress } from '../src/app/features/projects/models/pipeline-progress';

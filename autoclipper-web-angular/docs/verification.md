@@ -257,3 +257,6 @@ La lista ya no presenta los códigos del procesador directamente a creadores; mu
 ## Alta del primer espacio de trabajo — 2026-10-19
 
 Si la creación del espacio se acepta pero falla la consulta posterior de la lista, el cliente conserva la referencia de esa creación y reintenta primero la lectura; no vuelve a crear otro espacio. Un caso prueba una falla de lectura tras el POST y confirma una sola escritura/idempotency key al reintentar. Typecheck y build aprobados. Sin llamadas a runtime compartido.
+## Continuidad al abrir el primer proyecto — 2026-10-19
+
+Si la API confirma la creación del proyecto y falla/cancela la navegación, el cliente conserva el ID y convierte el siguiente envío de la misma solicitud en una navegación de reintento, sin volver a crear. 21 pruebas de creación/handoff/workflow aprobadas; typecheck y build aprobados. No se realizaron escrituras en runtime.
