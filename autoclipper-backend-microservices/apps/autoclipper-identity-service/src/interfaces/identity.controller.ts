@@ -40,6 +40,7 @@ import {
   PrivacyListResponseDto,
   PrivacyProfileProofDto,
   PrivacyProfileExportDto,
+  PrivacyWorkspaceExportDto,
 } from "@autoclipper/api-contracts";
 class RegistrationDto {
   @ApiProperty({ format: "email" }) email!: string;
@@ -197,6 +198,17 @@ export class IdentityController {
     res.setHeader('Cache-Control','private, no-store');
     return this.service.privacyProfileExport(req,uuid(id),input,String(res.locals['correlationId']));
   }
+  @Post('auth/privacy-requests/:id/workspace-export')
+  @HttpCode(200)
+  @ApiHeader({name:'Idempotency-Key',required:true,description:'UUID for this Workspace membership snapshot.'})
+  @ApiBody({type:PrivacyProfileProofDto})
+  @ApiOkResponse({type:PrivacyWorkspaceExportDto,description:'Partial current-membership contribution; global privacy request remains pending.'})
+  privacyWorkspaceExport(@Req()req:Request,@Param('id')id:string,@Body()input:PrivacyProfileProofDto,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyWorkspaceExport(req,uuid(id),input,String(res.locals['correlationId']));
+  }
+  @Post('internal/privacy-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
+  privacyWorkspaceAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyWorkspaceAuthority(req,input);}
   @Get("auth/privacy-requests")
   @ApiOkResponse({ type: PrivacyListResponseDto })
   privacyRequests(@Req() req: Request) {

@@ -1,6 +1,6 @@
 # AutoClipper
 
-Privacidad: nuevo [aporte del perfil propio de Identity](autoclipper-project-documentation/privacy-lifecycle.md) mediante API, con contraseña/MFA, CSRF, idempotencia y recibos auditables sin guardar otra copia del JSON personal. Es una exportación parcial; la solicitud global sigue pendiente. El inventario versionado cubre las 55 tablas de seis bases y sus dependencias con objetos/grants/backups; eliminación coordinada y política de retención pendientes. Este incremento se verifica en un laboratorio aislado y su activación en el runtime compartido requiere una ventana coordinada.
+Privacidad: [aporte del perfil propio de Identity](autoclipper-project-documentation/privacy-lifecycle.md) y nuevo [aporte de membresías actuales de Workspace](autoclipper-project-documentation/privacy-contributions.md), con contraseña/MFA, CSRF, idempotencia y recibos auditables sin otra copia del payload. Son parciales; la solicitud global sigue pendiente. El inventario versionado cubre ahora 58 tablas de seis bases y sus dependencias con objetos/grants/backups; eliminación coordinada y política de retención pendientes. La activación del runtime compartido requiere una ventana coordinada con frontend.
 
 [CI de privacidad 39170681668](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39170681668) aprobó los tres jobs para `b50850a`: 34 unitarias/HTTP, 34 infraestructura, regresión de negocio y aceptación aislada del aporte mediante 26 peticiones HTTP, sin fallos ni omisiones.
 

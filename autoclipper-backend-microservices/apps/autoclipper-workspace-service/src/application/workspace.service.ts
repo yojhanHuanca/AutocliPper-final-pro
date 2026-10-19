@@ -26,10 +26,17 @@ import {
 } from "@autoclipper/http-security";
 import { permits, type Role } from "../domain/permissions.js";
 import { logger } from "@autoclipper/observability";
-import {adminOwnerRequest,adminAuthority,adminWorkspacesPage} from "@autoclipper/api-contracts";
+import {adminOwnerRequest,adminAuthority,adminWorkspacesPage,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthority} from "@autoclipper/api-contracts";
+import {prepareWorkspaceExport} from './privacy-exports.js';
 
 @Injectable()
 export class WorkspaceService implements OnModuleInit, OnModuleDestroy {
+  async privacyWorkspaceExport(req:Request,input:unknown){
+    requireInternal(req,this.config);
+    const data=body(privacyWorkspaceOwnerRequest,input);
+    const authority=body(privacyWorkspaceAuthority,await internalJson(this.config.IDENTITY_URL,'/v1/internal/privacy-export-authorize',this.config,{...data,scope:'workspace-memberships-v1'}));
+    return prepareWorkspaceExport(this.pool,authority.userId,authority.requestId,data.idempotencyKey,data.correlationId);
+  }
   async adminWorkspaces(req:Request,input:unknown){
     requireInternal(req,this.config);const {token,query,correlationId}=body(adminOwnerRequest,input);
     const authority=body(adminAuthority,await adminAuthorization(this.config,{token,permission:"workspaces.read",correlationId,workspaceId:query.workspaceId}));

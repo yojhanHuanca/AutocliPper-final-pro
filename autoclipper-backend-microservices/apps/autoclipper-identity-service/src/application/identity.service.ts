@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   HttpException,
   ConflictException,
+  ServiceUnavailableException,
+  PayloadTooLargeException,
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
@@ -23,6 +25,7 @@ import {
   body,
   requireCsrf,
   requireInternal,
+  internalJson,
 } from "@autoclipper/http-security";
 import { logger } from "@autoclipper/observability";
 import {
@@ -37,9 +40,10 @@ import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
 import { GoogleIdentityAdapter } from "../infrastructure/google.js";
 import { googleProof } from "../domain/google-identity.js";
-import {adminReauth,privacyProfileProof} from "@autoclipper/api-contracts";
+import {adminReauth,privacyProfileProof,privacyWorkspaceResult,privacyWorkspaceAuthorityRequest} from "@autoclipper/api-contracts";
 import {AdminManager} from "./admin.manager.js";
 import {preparePrivacyProfile} from "./privacy-exports.js";
+import {issueWorkspaceCapability,authorizeWorkspaceCapability} from "./privacy-capabilities.js";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -585,6 +589,29 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     });
     if(result.changed)throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
     return result.value;
+  }
+  async privacyWorkspaceExport(req:Request,requestId:string,input:unknown,correlationId:string){
+    requireCsrf(req,this.config);
+    const data=body(privacyProfileProof,input),key=body(z.uuid(),req.headers['idempotency-key']);
+    const authority=await this.sensitive(req,data.password,async(client,user)=>{
+      await this.mfa.verify(client,user.id,data.factor);
+      const capability=await issueWorkspaceCapability(client,user.id,requestId,cookie(req,'access'),key,correlationId);
+      return {capability,userId:user.id};
+    });
+    // Proof commits before the owner calls back to validate this capability.
+    // Never retain a user transaction/lock across an owner HTTP request.
+    const raw=await internalJson<unknown>(this.config.WORKSPACE_URL,'/v1/internal/privacy-workspace-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);
+    const parsed=privacyWorkspaceResult.safeParse(raw);
+    if(!parsed.success||parsed.data.requestId!==requestId)throw new ServiceUnavailableException();
+    const result=parsed.data;
+    if(result.state==='snapshot_changed')throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
+    if(result.state==='limit_exceeded')throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});
+    if(result.data.subjectId!==authority.userId)throw new ServiceUnavailableException();
+    return result;
+  }
+  async privacyWorkspaceAuthority(req:Request,input:unknown){
+    requireInternal(req,this.config);
+    return authorizeWorkspaceCapability(this.pool,body(privacyWorkspaceAuthorityRequest,input));
   }
   async privacyRequests(req: Request) {
     const user = await this.me(req);

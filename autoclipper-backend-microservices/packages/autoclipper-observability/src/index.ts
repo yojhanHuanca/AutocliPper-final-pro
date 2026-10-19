@@ -41,7 +41,7 @@ export class SafeExceptionFilter implements ExceptionFilter {
     if (status >= 500) logger.error({ code: 'REQUEST_FAILED', correlationId: response.locals['correlationId'], status });
     const detail = exception instanceof HttpException ? exception.getResponse() : undefined;
     const explicit = typeof detail === 'object' && detail !== null && 'code' in detail ? detail.code : undefined;
-    const safeCodes: Record<string, number> = { GOOGLE_NOT_CONFIGURED: 503, ACCOUNT_LINK_REQUIRED: 409, TRANSCRIPTION_NOT_CONFIGURED:503, SELECTION_NOT_CONFIGURED:503, AI_BUDGET_NOT_AUTHORIZED:503, LOCAL_TRANSCRIPTION_DURATION_LIMIT:400, INVALID_SELECTION_REQUEST:400, MANUAL_PROCESSING_NOT_ADMITTED:403, PRIVACY_SNAPSHOT_CHANGED:409, PRIVACY_EXPORT_NOT_PENDING:409 };
+    const safeCodes: Record<string, number> = { GOOGLE_NOT_CONFIGURED: 503, ACCOUNT_LINK_REQUIRED: 409, TRANSCRIPTION_NOT_CONFIGURED:503, SELECTION_NOT_CONFIGURED:503, AI_BUDGET_NOT_AUTHORIZED:503, LOCAL_TRANSCRIPTION_DURATION_LIMIT:400, INVALID_SELECTION_REQUEST:400, MANUAL_PROCESSING_NOT_ADMITTED:403, PRIVACY_SNAPSHOT_CHANGED:409, PRIVACY_EXPORT_NOT_PENDING:409, PRIVACY_EXPORT_SCOPE_TOO_LARGE:413 };
     const code = typeof explicit === 'string' && safeCodes[explicit] === status ? explicit : codes[status] ?? 'INTERNAL_ERROR';
     response.status(status).json({ code, message: 'Request could not be completed', correlationId: response.locals['correlationId'] });
   }

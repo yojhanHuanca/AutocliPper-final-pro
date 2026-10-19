@@ -51,3 +51,36 @@ export class PrivacyProfileExportDto {
   @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
   @ApiProperty({type:PrivacyIdentityProfileDto}) data!:PrivacyIdentityProfileDto;
 }
+
+export const privacyWorkspaceOwnerRequest=z.object({capability:z.string().regex(/^[A-Za-z0-9_-]{43}$/u),idempotencyKey:z.uuid(),correlationId:z.uuid()}).strict();
+export const privacyWorkspaceAuthorityRequest=privacyWorkspaceOwnerRequest.extend({scope:z.literal('workspace-memberships-v1')}).strict();
+export const privacyWorkspaceAuthority=z.object({userId:z.uuid(),requestId:z.uuid(),scope:z.literal('workspace-memberships-v1')}).strict();
+export const privacyWorkspaceMembership=z.object({workspaceId:z.uuid(),kind:z.enum(['personal','team']),role:z.enum(['owner','admin','editor','reader']),isOwner:z.boolean(),workspaceCreatedAt:z.iso.datetime(),joinedAt:z.iso.datetime()}).strict().refine(value=>value.isOwner===(value.role==='owner'));
+export const privacyWorkspaceData=z.object({schemaVersion:z.literal(1),subjectId:z.uuid(),memberships:z.array(privacyWorkspaceMembership).max(500)}).strict();
+export const privacyWorkspaceExport=z.object({requestId:z.uuid(),receiptId:z.uuid(),scope:z.literal('workspace-memberships-v1'),state:z.literal('prepared'),fulfillment:z.literal('partial'),globalFulfillment:z.literal('pending'),createdAt:z.iso.datetime(),capturedAt:z.iso.datetime(),sha256:z.string().regex(/^[a-f0-9]{64}$/u),data:privacyWorkspaceData}).strict();
+export const privacyWorkspaceResult=z.union([privacyWorkspaceExport,z.object({state:z.literal('snapshot_changed'),requestId:z.uuid()}).strict(),z.object({state:z.literal('limit_exceeded'),requestId:z.uuid()}).strict()]);
+export class PrivacyWorkspaceMembershipDto {
+  @ApiProperty({format:'uuid'}) workspaceId!:string;
+  @ApiProperty({enum:['personal','team']}) kind!:string;
+  @ApiProperty({enum:['owner','admin','editor','reader']}) role!:string;
+  @ApiProperty() isOwner!:boolean;
+  @ApiProperty({format:'date-time'}) workspaceCreatedAt!:string;
+  @ApiProperty({format:'date-time'}) joinedAt!:string;
+}
+export class PrivacyWorkspaceDataDto {
+  @ApiProperty({enum:[1]}) schemaVersion!:number;
+  @ApiProperty({format:'uuid'}) subjectId!:string;
+  @ApiProperty({type:[PrivacyWorkspaceMembershipDto],maxItems:500}) memberships!:PrivacyWorkspaceMembershipDto[];
+}
+export class PrivacyWorkspaceExportDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;
+  @ApiProperty({format:'uuid'}) receiptId!:string;
+  @ApiProperty({enum:['workspace-memberships-v1']}) scope!:string;
+  @ApiProperty({enum:['prepared']}) state!:string;
+  @ApiProperty({enum:['partial']}) fulfillment!:string;
+  @ApiProperty({enum:['pending']}) globalFulfillment!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;
+  @ApiProperty({format:'date-time'}) capturedAt!:string;
+  @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
+  @ApiProperty({type:PrivacyWorkspaceDataDto}) data!:PrivacyWorkspaceDataDto;
+}

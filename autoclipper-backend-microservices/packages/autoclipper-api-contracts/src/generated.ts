@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/privacy-requests/{id}/workspace-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IdentityController_privacyWorkspaceExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/security-events": {
         parameters: {
             query?: never;
@@ -1384,6 +1400,46 @@ export interface components {
             createdAt: string;
             sha256: string;
             data: components["schemas"]["PrivacyIdentityProfileDto"];
+        };
+        PrivacyWorkspaceMembershipDto: {
+            /** Format: uuid */
+            workspaceId: string;
+            /** @enum {string} */
+            kind: "personal" | "team";
+            /** @enum {string} */
+            role: "owner" | "admin" | "editor" | "reader";
+            isOwner: boolean;
+            /** Format: date-time */
+            workspaceCreatedAt: string;
+            /** Format: date-time */
+            joinedAt: string;
+        };
+        PrivacyWorkspaceDataDto: {
+            /** @enum {number} */
+            schemaVersion: 1;
+            /** Format: uuid */
+            subjectId: string;
+            memberships: components["schemas"]["PrivacyWorkspaceMembershipDto"][];
+        };
+        PrivacyWorkspaceExportDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: uuid */
+            receiptId: string;
+            /** @enum {string} */
+            scope: "workspace-memberships-v1";
+            /** @enum {string} */
+            state: "prepared";
+            /** @enum {string} */
+            fulfillment: "partial";
+            /** @enum {string} */
+            globalFulfillment: "pending";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            capturedAt: string;
+            sha256: string;
+            data: components["schemas"]["PrivacyWorkspaceDataDto"];
         };
         PrivacyStatusResponseDto: {
             /** Format: uuid */
@@ -3839,6 +3895,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivacyProfileExportDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    IdentityController_privacyWorkspaceExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description UUID for this Workspace membership snapshot. */
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyProfileProofDto"];
+            };
+        };
+        responses: {
+            /** @description Partial current-membership contribution; global privacy request remains pending. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyWorkspaceExportDto"];
                 };
             };
             /** @description Classified error with a safe correlation identifier */
