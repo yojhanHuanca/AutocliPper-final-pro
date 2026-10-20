@@ -21,7 +21,7 @@ export async function verifyPrivacyProfileExports(config){
   let app;
   const password=`Fixture-${randomBytes(18).toString('hex')}`,canary=`PRIVACY_${randomUUID()}`;
   const userId=randomUUID(),otherId=randomUUID(),email=`profile-${randomUUID()}@example.test`,otherEmail=`other-${randomUUID()}@example.test`;
-  const factors=Array.from({length:30},()=>randomBytes(12).toString('hex'));
+  const factors=Array.from({length:120},()=>randomBytes(12).toString('hex'));
   const hash=value=>createHash('sha256').update(value).digest('hex');
   let httpChecks=0;
   let checkpoint='SEED';
@@ -103,10 +103,12 @@ export async function verifyPrivacyProfileExports(config){
     assert.equal((await a.request('/auth/logout','POST')).status,200);
     assert.equal((await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':key})).status,401);
     const profileChecks=httpChecks;
-    const workspaceContribution=await verifyWorkspacePrivacy(config,base,client,encryptionKey);
-    const projectContribution=await verifyProjectPrivacy(config,base,client,encryptionKey);
-    const billingContribution=await verifyBillingPrivacy(config,base,client,db,owner,a,b,anonymous,userId,otherId,password,factors);
-    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution,billingContribution};
+    const sharedContext={userId,otherId,password,email,otherEmail,factors,a,b,anonymous,requestId:request.value.id};
+    const workspaceContribution=await verifyWorkspacePrivacy(config,base,client,encryptionKey,sharedContext);
+    const projectContribution=await verifyProjectPrivacy(config,base,client,encryptionKey,sharedContext);
+    const billingContribution=await verifyBillingPrivacy(config,base,client,db,owner,a,b,anonymous,userId,otherId,password,factors,request.value.id);
+    const manifest=await a.request(`/auth/privacy-requests/${request.value.id}/manifest`);assert.equal(manifest.status,200);assert.equal(manifest.value.globalFulfillment,'pending');assert.equal(manifest.value.requiredScopes,6);assert.equal(manifest.value.preparedScopes,4);assert.equal(manifest.value.data,undefined);assert.ok(manifest.value.scopes.filter(value=>value.supported).every(value=>value.status==='prepared'));assert.ok(manifest.value.scopes.filter(value=>!value.supported).every(value=>value.status==='not_implemented'));
+    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution,billingContribution,privacyReconciliation:{status:'passed',requiredScopes:manifest.value.requiredScopes,preparedScopes:manifest.value.preparedScopes,pendingScopes:manifest.value.scopes.filter(value=>value.status!=='prepared').map(value=>value.scope),noGlobalPayload:true,noDeletion:true}};
   }catch(error){if(!error.privacyCheckpoint)error.privacyCheckpoint=checkpoint;throw error;}
   finally{if(app)await app.close();await db.end();await owner.end();}
 }

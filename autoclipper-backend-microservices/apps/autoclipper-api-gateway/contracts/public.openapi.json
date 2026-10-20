@@ -2413,6 +2413,131 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/manifest": {
+      "get": {
+        "operationId": "IdentityController_privacyRequestManifest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner scope reconciliation only; no data payload and no global export or deletion claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestManifestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
     "/v1/auth/security-events": {
       "get": {
         "operationId": "IdentityController_securityEvents",
@@ -14487,6 +14612,126 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "PrivacyScopeStatusDto": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "identity-profile-v1",
+              "workspace-memberships-v1",
+              "project-attribution-v1",
+              "media-task-attribution-v1",
+              "analysis-attribution-v1",
+              "consumption-attribution-v1"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "supported": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "prepared",
+              "owner_unavailable",
+              "snapshot_changed",
+              "limit_exceeded",
+              "not_implemented"
+            ]
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "nullable": true
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastErrorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempts": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "scope",
+          "required",
+          "supported",
+          "status",
+          "receiptId",
+          "sha256",
+          "capturedAt",
+          "lastErrorCode",
+          "attempts"
+        ]
+      },
+      "PrivacyRequestManifestDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "export"
+            ]
+          },
+          "requestState": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "processing"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready_for_assembly"
+            ]
+          },
+          "requiredScopes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "preparedScopes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "scopes": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyScopeStatusDto"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "kind",
+          "requestState",
+          "globalFulfillment",
+          "requiredScopes",
+          "preparedScopes",
+          "scopes"
         ]
       },
       "SecurityEventResponseDto": {

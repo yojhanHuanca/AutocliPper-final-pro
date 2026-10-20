@@ -194,3 +194,29 @@ export class PrivacyBillingExportDto {
   @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
   @ApiProperty({type:PrivacyBillingDataDto}) data!:PrivacyBillingDataDto;
 }
+
+export const privacyRequestManifest= z.object({
+  requestId:z.uuid(),kind:z.literal('export'),requestState:z.enum(['requested','processing']),
+  globalFulfillment:z.enum(['pending','ready_for_assembly']),requiredScopes:z.number().int().nonnegative(),preparedScopes:z.number().int().nonnegative(),
+  scopes:z.array(z.object({scope:z.enum(['identity-profile-v1','workspace-memberships-v1','project-attribution-v1','media-task-attribution-v1','analysis-attribution-v1','consumption-attribution-v1']),required:z.boolean(),supported:z.boolean(),status:z.enum(['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','not_implemented']),receiptId:z.uuid().nullable(),sha256:z.string().regex(/^[a-f0-9]{64}$/u).nullable(),capturedAt:z.iso.datetime().nullable(),lastErrorCode:z.enum(['OWNER_UNAVAILABLE','OWNER_REJECTED','INVALID_OWNER_RECEIPT','SNAPSHOT_CHANGED','SCOPE_TOO_LARGE','NOT_IMPLEMENTED']).nullable(),attempts:z.number().int().nonnegative()}).strict()).max(20),
+}).strict().superRefine((value,ctx)=>{const prepared=value.scopes.filter(scope=>scope.required&&scope.status==='prepared'&&scope.receiptId!==null&&scope.sha256!==null);if(value.preparedScopes!==prepared.length||value.requiredScopes!==value.scopes.filter(scope=>scope.required).length||value.globalFulfillment!==(prepared.length===value.requiredScopes?'ready_for_assembly':'pending'))ctx.addIssue({code:'custom',message:'Privacy scope reconciliation counters do not match valid receipts'});});
+export class PrivacyScopeStatusDto {
+  @ApiProperty({enum:['identity-profile-v1','workspace-memberships-v1','project-attribution-v1','media-task-attribution-v1','analysis-attribution-v1','consumption-attribution-v1']}) scope!:string;
+  @ApiProperty() required!:boolean;
+  @ApiProperty() supported!:boolean;
+  @ApiProperty({enum:['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','not_implemented']}) status!:string;
+  @ApiProperty({type:String,format:'uuid',nullable:true}) receiptId!:string|null;
+  @ApiProperty({type:String,pattern:'^[a-f0-9]{64}$',nullable:true}) sha256!:string|null;
+  @ApiProperty({type:String,format:'date-time',nullable:true}) capturedAt!:string|null;
+  @ApiProperty({type:String,nullable:true}) lastErrorCode!:string|null;
+  @ApiProperty({minimum:0}) attempts!:number;
+}
+export class PrivacyRequestManifestDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;
+  @ApiProperty({enum:['export']}) kind!:string;
+  @ApiProperty({enum:['requested','processing']}) requestState!:string;
+  @ApiProperty({enum:['pending','ready_for_assembly']}) globalFulfillment!:string;
+  @ApiProperty({minimum:0}) requiredScopes!:number;
+  @ApiProperty({minimum:0}) preparedScopes!:number;
+  @ApiProperty({type:[PrivacyScopeStatusDto],maxItems:20}) scopes!:PrivacyScopeStatusDto[];
+}

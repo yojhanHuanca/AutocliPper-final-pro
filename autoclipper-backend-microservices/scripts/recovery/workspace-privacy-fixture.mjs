@@ -10,16 +10,17 @@ import {issueWorkspaceCapability} from '../../apps/autoclipper-identity-service/
 
 // All subject, membership and capability fixtures live in the private target DBs.
 // This tests real HTTP owner delegation, not a mocked Identity or Workspace.
-export async function verifyWorkspacePrivacy(config,identityBase,clientFactory,encryptionKey){
+export async function verifyWorkspacePrivacy(config,identityBase,clientFactory,encryptionKey,sharedContext){
   const url=(service,role='runtime')=>`postgresql://autoclipper_${service}_${role}:${config.password}@target-pg:5432/autoclipper_${service}`;
   const identity=new pg.Pool({connectionString:url('identity')}),identityOwner=new pg.Pool({connectionString:url('identity','owner')}),workspace=new pg.Pool({connectionString:url('workspace')}),workspaceOwner=new pg.Pool({connectionString:url('workspace','owner')});
   let app,httpChecks=0,checkpoint='STARTUP';
-  const userId=randomUUID(),otherId=randomUUID(),own=randomUUID(),shared=randomUUID(),former=randomUUID();
+  const userId=sharedContext?.userId??randomUUID(),otherId=sharedContext?.otherId??randomUUID(),own=randomUUID(),shared=randomUUID(),former=randomUUID();
   const key=()=>randomUUID(),hash=value=>createHash('sha256').update(value).digest('hex');
-  const password=`Workspace-${randomBytes(18).toString('hex')}`,email=`workspace-${key()}@example.test`,otherEmail=`peer-${key()}@example.test`,privateName=`PRIVATE_TEAM_${key()}`;
-  const factors=Array.from({length:30},()=>randomBytes(12).toString('hex'));
+  const password=sharedContext?.password??`Workspace-${randomBytes(18).toString('hex')}`,email=sharedContext?.email??`workspace-${key()}@example.test`,otherEmail=sharedContext?.otherEmail??`peer-${key()}@example.test`,privateName=`PRIVATE_TEAM_${key()}`;
+  const factors=sharedContext?.factors??Array.from({length:30},()=>randomBytes(12).toString('hex'));
   const wsBase='http://127.0.0.1:3203/v1';
   const client=()=>{const value=clientFactory();return{jar:value.jar,async request(...args){httpChecks++;return value.request(...args);}};};
+  const tracked=value=>({jar:value.jar,async request(...args){httpChecks++;return value.request(...args);}});
   async function internal(base,path,input,authenticated=true){
     httpChecks++;
     const response=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json',...(authenticated?{'x-service-token':config.internalToken}:{})},body:JSON.stringify(input),signal:AbortSignal.timeout(10000)});
@@ -32,10 +33,8 @@ export async function verifyWorkspacePrivacy(config,identityBase,clientFactory,e
   try{
     await startOwner();
     checkpoint='SUBJECT_FIXTURES';
-    const passwordHash=await argon2.hash(password,{type:argon2.argon2id,memoryCost:19456,timeCost:2,parallelism:1});
-    for(const[id,address]of[[userId,email],[otherId,otherEmail]])await identity.query('INSERT INTO users(id,email,name,password_hash,verified_at) VALUES($1,$2,$3,$4,now())',[id,address,privateName,passwordHash]);
-    await identity.query('INSERT INTO user_mfa(user_id,secret_cipher,enabled) VALUES($1,$2,true)',[userId,seal('JBSWY3DPEHPK3PXP',encryptionKey,`mfa:${userId}`)]);
-    for(const factor of factors)await identity.query('INSERT INTO recovery_codes(user_id,code_hash) VALUES($1,$2)',[userId,hash(factor)]);
+    const passwordHash=sharedContext?'shared-fixture-session':await argon2.hash(password,{type:argon2.argon2id,memoryCost:19456,timeCost:2,parallelism:1});
+    if(!sharedContext){for(const[id,address]of[[userId,email],[otherId,otherEmail]])await identity.query('INSERT INTO users(id,email,name,password_hash,verified_at) VALUES($1,$2,$3,$4,now())',[id,address,privateName,passwordHash]);await identity.query('INSERT INTO user_mfa(user_id,secret_cipher,enabled) VALUES($1,$2,true)',[userId,seal('JBSWY3DPEHPK3PXP',encryptionKey,`mfa:${userId}`)]);for(const factor of factors)await identity.query('INSERT INTO recovery_codes(user_id,code_hash) VALUES($1,$2)',[userId,hash(factor)]);}
     const transaction=await workspace.connect();
     try{
       await transaction.query('BEGIN');
@@ -46,13 +45,18 @@ export async function verifyWorkspacePrivacy(config,identityBase,clientFactory,e
       await transaction.query("INSERT INTO memberships(workspace_id,user_id,role) VALUES($1,$2,'reader')",[shared,userId]);
       await transaction.query('COMMIT');
     }catch(error){await transaction.query('ROLLBACK');throw error;}finally{transaction.release();}
-    const a=client(),b=client(),anonymous=client();
-    for(const c of[a,b])assert.equal((await c.request('/auth/csrf')).status,200);
-    assert.equal((await a.request('/auth/login','POST',{email,password,factor:factors.shift()})).status,200);
-    assert.equal((await b.request('/auth/login','POST',{email:otherEmail,password})).status,200);
-    const request=await a.request('/auth/privacy-requests','POST',{kind:'export',password,factor:factors.shift()});assert.equal(request.status,202);
-    const requestId=request.value.id,path=`/auth/privacy-requests/${requestId}/workspace-export`,firstKey=key();
-    const profile=await a.request(`/auth/privacy-requests/${requestId}/identity-export`,'POST',{password,factor:factors.shift()},{'idempotency-key':firstKey});assert.equal(profile.status,200);assert.equal(profile.value.scope,'identity-profile-v1');
+    const a=sharedContext?tracked(sharedContext.a):client(),b=sharedContext?tracked(sharedContext.b):client(),anonymous=sharedContext?tracked(sharedContext.anonymous):client();
+    if(!sharedContext){for(const c of[a,b])assert.equal((await c.request('/auth/csrf')).status,200);assert.equal((await a.request('/auth/login','POST',{email,password,factor:factors.shift()})).status,200);assert.equal((await b.request('/auth/login','POST',{email:otherEmail,password})).status,200);}
+    let requestId=sharedContext?.requestId;let profile;
+    if(!sharedContext){const request=await a.request('/auth/privacy-requests','POST',{kind:'export',password,factor:factors.shift()});assert.equal(request.status,202);requestId=request.value.id;const firstKey=key();profile=await a.request(`/auth/privacy-requests/${requestId}/identity-export`,'POST',{password,factor:factors.shift()},{'idempotency-key':firstKey});assert.equal(profile.status,200);assert.equal(profile.value.scope,'identity-profile-v1');}
+    const path=`/auth/privacy-requests/${requestId}/workspace-export`,firstKey=key();
+    if(sharedContext){
+      checkpoint='SHARED_SCOPE_RECEIPT';
+      const first=await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':firstKey});assert.equal(first.status,200);assert.equal(first.value.scope,'workspace-memberships-v1');assert.equal(first.value.data.subjectId,userId);assert.equal(first.value.requestId,requestId);assert.equal(first.value.sha256,hash(JSON.stringify(first.value.data)));
+      assert.deepEqual(new Set(first.value.data.memberships.map(value=>value.workspaceId)),new Set([own,shared]));
+      const manifest=await a.request(`/auth/privacy-requests/${requestId}/manifest`);assert.equal(manifest.status,200);assert.equal(manifest.value.scopes.find(value=>value.scope==='workspace-memberships-v1').status,'prepared');
+      return{status:'passed',scope:'workspace-memberships-v1',sharedRequest:true,receiptRecorded:true,globalFulfillment:manifest.value.globalFulfillment};
+    }
     checkpoint='PUBLIC_AUTHORIZATION';
     assert.equal((await anonymous.request(path,'POST',{password},{'idempotency-key':key()})).status,403);
     assert.equal((await a.request(path,'POST',{password},{'idempotency-key':key(),'x-csrf-token':'invalid'})).status,403);
@@ -61,7 +65,7 @@ export async function verifyWorkspacePrivacy(config,identityBase,clientFactory,e
     assert.equal((await b.request(path,'POST',{password},{'idempotency-key':key()})).status,404);
     checkpoint='FIRST_EXPORT';
     const first=await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':firstKey});assert.equal(first.status,200);assert.equal(first.value.scope,'workspace-memberships-v1');assert.equal(first.value.globalFulfillment,'pending');assert.equal(first.value.data.subjectId,userId);
-    assert.equal(first.value.requestId,profile.value.requestId);assert.notEqual(first.value.receiptId,profile.value.receiptId,'same request/key has independent receipts per owner');
+    assert.equal(first.value.requestId,requestId);if(profile)assert.notEqual(first.value.receiptId,profile.value.receiptId,'same request has independent receipts per owner');
     assert.equal(first.value.sha256,hash(JSON.stringify(first.value.data)));assert.ok(Number.isFinite(Date.parse(first.value.capturedAt)));assert.match(first.headers.get('cache-control'),/no-store/);
     const membership=new Map(first.value.data.memberships.map(value=>[value.workspaceId,value]));assert.equal(membership.size,2);assert.equal(membership.get(own).isOwner,true);assert.equal(membership.get(shared).isOwner,false);assert.equal(membership.has(former),false,'historical creator is not current ownership/membership');
     for(const secret of[privateName,email,otherEmail,password,passwordHash,otherId,...factors,...a.jar.values()])assert.equal(JSON.stringify(first.value).includes(secret),false);

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport,privacyBillingOwnerRequest,privacyBillingAuthorityRequest,privacyBillingData,privacyBillingExport } from '@autoclipper/api-contracts';
+import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport,privacyBillingOwnerRequest,privacyBillingAuthorityRequest,privacyBillingData,privacyBillingExport,privacyRequestManifest } from '@autoclipper/api-contracts';
 
 test('privacy contribution proof cannot select a different user, scope, state or stored artifact',()=>{
   assert.equal(privacyProfileProof.safeParse({password:'proof',factor:'123456'}).success,true);
@@ -59,4 +59,12 @@ test('Billing privacy contribution accepts only bounded own-pipeline consumption
   const receipt={requestId:randomUUID(),receiptId:randomUUID(),scope:'consumption-attribution-v1',state:'prepared',fulfillment:'partial',globalFulfillment:'pending',createdAt:now,capturedAt:now,sha256:'a'.repeat(64),data};
   assert.equal(privacyBillingExport.safeParse(receipt).success,true);
   assert.equal(privacyBillingExport.safeParse({...receipt,globalFulfillment:'completed'}).success,false);
+});
+test('privacy request manifest cannot advance while a required owner has no supported receipt',()=>{
+  const requestId=randomUUID(),scope=(name,values={})=>({scope:name,required:true,supported:true,status:'pending',receiptId:null,sha256:null,capturedAt:null,lastErrorCode:null,attempts:0,...values});
+  const manifest={requestId,kind:'export',requestState:'requested',globalFulfillment:'pending',requiredScopes:2,preparedScopes:1,scopes:[scope('identity-profile-v1',{status:'prepared',receiptId:randomUUID(),sha256:'a'.repeat(64)}),scope('media-task-attribution-v1',{supported:false,status:'not_implemented',lastErrorCode:'NOT_IMPLEMENTED'})]};
+  assert.equal(privacyRequestManifest.safeParse(manifest).success,true);
+  assert.equal(privacyRequestManifest.safeParse({...manifest,globalFulfillment:'ready_for_assembly'}).success,false);
+  assert.equal(privacyRequestManifest.safeParse({...manifest,preparedScopes:2}).success,false);
+  assert.equal(privacyRequestManifest.safeParse({...manifest,scopes:[...manifest.scopes,{...scope('analysis-attribution-v1'),payload:'must not be retained'}]}).success,false);
 });

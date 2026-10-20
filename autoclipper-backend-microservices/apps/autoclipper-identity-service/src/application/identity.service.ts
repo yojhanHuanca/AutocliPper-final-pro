@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   HttpException,
   ConflictException,
+  NotFoundException,
   ServiceUnavailableException,
   PayloadTooLargeException,
   type OnModuleDestroy,
@@ -40,7 +41,7 @@ import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
 import { GoogleIdentityAdapter } from "../infrastructure/google.js";
 import { googleProof } from "../domain/google-identity.js";
-import {adminReauth,privacyProfileProof,privacyWorkspaceResult,privacyWorkspaceAuthorityRequest,privacyProjectResult,privacyProjectAuthorityRequest,privacyBillingResult,privacyBillingAuthorityRequest} from "@autoclipper/api-contracts";
+import {adminReauth,privacyProfileProof,privacyWorkspaceResult,privacyWorkspaceAuthorityRequest,privacyProjectResult,privacyProjectAuthorityRequest,privacyBillingResult,privacyBillingAuthorityRequest,privacyRequestManifest} from "@autoclipper/api-contracts";
 import {AdminManager} from "./admin.manager.js";
 import {preparePrivacyProfile} from "./privacy-exports.js";
 import {issueWorkspaceCapability,authorizeWorkspaceCapability} from "./privacy-capabilities.js";
@@ -56,6 +57,7 @@ type SessionRow = {
   revoked_at: Date | null;
   expires_at: Date;
 };
+const privacyScopes=[['identity-profile-v1',true],['workspace-memberships-v1',true],['project-attribution-v1',true],['media-task-attribution-v1',false],['analysis-attribution-v1',false],['consumption-attribution-v1',true]] as const;
 @Injectable()
 export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly config = loadServiceConfig();
@@ -538,6 +540,26 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     if (!updated.rows[0]) throw new ConflictException();
     return { version: updated.rows[0].profile_version };
   }
+  private async ensurePrivacyScopes(client:pg.PoolClient,requestId:string){
+    for(const[scope,supported]of privacyScopes)await client.query("INSERT INTO privacy_request_scopes(request_id,scope,required,supported,status,last_error_code) VALUES($1,$2,true,$3,$4,$5) ON CONFLICT(request_id,scope) DO NOTHING",[requestId,scope,supported,supported?'pending':'not_implemented',supported?null:'NOT_IMPLEMENTED']);
+  }
+  private async recordPrivacyScopeReceipt(client:pg.PoolClient,userId:string,requestId:string,scope:string,ownerReceiptId:string,sha256:string,capturedAt:string|null){
+    const scopeRow=(await client.query("SELECT 1 FROM privacy_request_scopes s JOIN privacy_requests p ON p.id=s.request_id WHERE s.request_id=$1 AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope])).rows[0];
+    if(!scopeRow)throw new NotFoundException();
+    await client.query('INSERT INTO privacy_scope_receipts(id,request_id,scope,owner_receipt_id,content_sha256,captured_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(request_id,scope,owner_receipt_id) DO NOTHING',[randomUUID(),requestId,scope,ownerReceiptId,sha256,capturedAt]);
+    const receipt=(await client.query<{id:string;content_sha256:string;captured_at:Date|null}>('SELECT id,content_sha256,captured_at FROM privacy_scope_receipts WHERE request_id=$1 AND scope=$2 AND owner_receipt_id=$3',[requestId,scope,ownerReceiptId])).rows[0];
+    if(!receipt||receipt.content_sha256!==sha256||((receipt.captured_at?.toISOString()??null)!==(capturedAt??null)))throw new ServiceUnavailableException();
+    await client.query("UPDATE privacy_request_scopes s SET status='prepared',current_receipt_id=$4,last_error_code=NULL,attempts=attempts+1,updated_at=now() FROM privacy_requests p WHERE s.request_id=$1 AND p.id=s.request_id AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope,receipt.id]);
+  }
+  private async notePrivacyScopeFailure(client:pg.PoolClient,userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'pending',errorCode:string){
+    await client.query("UPDATE privacy_request_scopes s SET status=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded') THEN $4 WHEN s.current_receipt_id IS NOT NULL THEN 'prepared' ELSE $4 END,current_receipt_id=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded') THEN NULL ELSE s.current_receipt_id END,last_error_code=$5,attempts=attempts+1,updated_at=now() FROM privacy_requests p WHERE s.request_id=$1 AND p.id=s.request_id AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope,status,errorCode]);
+  }
+  private async notePrivacyScopeFailureOutsideTransaction(userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'pending',errorCode:string){
+    const client=await this.pool.connect();try{await client.query('BEGIN');await this.notePrivacyScopeFailure(client,userId,requestId,scope,status,errorCode);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  }
+  private async recordPrivacyScopeReceiptOutsideTransaction(userId:string,requestId:string,scope:string,ownerReceiptId:string,sha256:string,capturedAt:string|null){
+    const client=await this.pool.connect();try{await client.query('BEGIN');await this.recordPrivacyScopeReceipt(client,userId,requestId,scope,ownerReceiptId,sha256,capturedAt);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  }
   async privacy(req: Request, input: unknown) {
     requireCsrf(req, this.config);
     const data = body(
@@ -567,6 +589,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
             [user.id, data.kind],
           )
         ).rows[0]!;
+      if(data.kind==='export')await this.ensurePrivacyScopes(client,row.id);
       if (inserted.rows[0])
         await this.audit(
           client,
@@ -587,7 +610,10 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     const data=body(privacyProfileProof,input),key=body(z.uuid(),req.headers['idempotency-key']);
     const result=await this.sensitive(req,data.password,async(client,user)=>{
       await this.mfa.verify(client,user.id,data.factor);
-      return preparePrivacyProfile(client,user.id,requestId,key,correlationId);
+      const prepared=await preparePrivacyProfile(client,user.id,requestId,key,correlationId);
+      if(prepared.changed)await this.notePrivacyScopeFailure(client,user.id,requestId,'identity-profile-v1','snapshot_changed','SNAPSHOT_CHANGED');
+      else await this.recordPrivacyScopeReceipt(client,user.id,requestId,'identity-profile-v1',prepared.value.receiptId,prepared.value.sha256,null);
+      return prepared;
     });
     if(result.changed)throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
     return result.value;
@@ -602,13 +628,14 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     });
     // Proof commits before the owner calls back to validate this capability.
     // Never retain a user transaction/lock across an owner HTTP request.
-    const raw=await internalJson<unknown>(this.config.WORKSPACE_URL,'/v1/internal/privacy-workspace-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);
+    let raw:unknown;try{raw=await internalJson<unknown>(this.config.WORKSPACE_URL,'/v1/internal/privacy-workspace-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);}catch(error){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1','owner_unavailable',error instanceof ServiceUnavailableException?'OWNER_UNAVAILABLE':'OWNER_REJECTED');throw error;}
     const parsed=privacyWorkspaceResult.safeParse(raw);
-    if(!parsed.success||parsed.data.requestId!==requestId)throw new ServiceUnavailableException();
+    if(!parsed.success||parsed.data.requestId!==requestId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
     const result=parsed.data;
-    if(result.state==='snapshot_changed')throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
-    if(result.state==='limit_exceeded')throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});
-    if(result.data.subjectId!==authority.userId)throw new ServiceUnavailableException();
+    if(result.state==='snapshot_changed'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1','snapshot_changed','SNAPSHOT_CHANGED');throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});}
+    if(result.state==='limit_exceeded'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1','limit_exceeded','SCOPE_TOO_LARGE');throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});}
+    if(result.data.subjectId!==authority.userId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
+    await this.recordPrivacyScopeReceiptOutsideTransaction(authority.userId,requestId,'workspace-memberships-v1',result.receiptId,result.sha256,result.capturedAt);
     return result;
   }
   async privacyWorkspaceAuthority(req:Request,input:unknown){
@@ -623,13 +650,14 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       const capability=await issueProjectCapability(client,user.id,requestId,cookie(req,'access'),key,correlationId);
       return {capability,userId:user.id};
     });
-    const raw=await internalJson<unknown>(process.env['PROJECT_URL']??'http://127.0.0.1:3004','/v1/internal/privacy-project-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);
+    let raw:unknown;try{raw=await internalJson<unknown>(process.env['PROJECT_URL']??'http://127.0.0.1:3004','/v1/internal/privacy-project-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);}catch(error){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'project-attribution-v1','owner_unavailable',error instanceof ServiceUnavailableException?'OWNER_UNAVAILABLE':'OWNER_REJECTED');throw error;}
     const parsed=privacyProjectResult.safeParse(raw);
-    if(!parsed.success||parsed.data.requestId!==requestId)throw new ServiceUnavailableException();
+    if(!parsed.success||parsed.data.requestId!==requestId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'project-attribution-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
     const result=parsed.data;
-    if(result.state==='snapshot_changed')throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
-    if(result.state==='limit_exceeded')throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});
-    if(result.data.subjectId!==authority.userId)throw new ServiceUnavailableException();
+    if(result.state==='snapshot_changed'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'project-attribution-v1','snapshot_changed','SNAPSHOT_CHANGED');throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});}
+    if(result.state==='limit_exceeded'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'project-attribution-v1','limit_exceeded','SCOPE_TOO_LARGE');throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});}
+    if(result.data.subjectId!==authority.userId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'project-attribution-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
+    await this.recordPrivacyScopeReceiptOutsideTransaction(authority.userId,requestId,'project-attribution-v1',result.receiptId,result.sha256,result.capturedAt);
     return result;
   }
   async privacyProjectAuthority(req:Request,input:unknown){
@@ -644,13 +672,14 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       const capability=await issueBillingCapability(client,user.id,requestId,cookie(req,'access'),key,correlationId);
       return{capability,userId:user.id};
     });
-    const raw=await internalJson<unknown>(process.env['BILLING_URL']??'http://127.0.0.1:3007','/v1/internal/privacy-billing-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);
+    let raw:unknown;try{raw=await internalJson<unknown>(process.env['BILLING_URL']??'http://127.0.0.1:3007','/v1/internal/privacy-billing-export',this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);}catch(error){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1','owner_unavailable',error instanceof ServiceUnavailableException?'OWNER_UNAVAILABLE':'OWNER_REJECTED');throw error;}
     const parsed=privacyBillingResult.safeParse(raw);
-    if(!parsed.success||parsed.data.requestId!==requestId)throw new ServiceUnavailableException();
+    if(!parsed.success||parsed.data.requestId!==requestId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
     const result=parsed.data;
-    if(result.state==='snapshot_changed')throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});
-    if(result.state==='limit_exceeded')throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});
-    if(result.data.subjectId!==authority.userId)throw new ServiceUnavailableException();
+    if(result.state==='snapshot_changed'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1','snapshot_changed','SNAPSHOT_CHANGED');throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});}
+    if(result.state==='limit_exceeded'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1','limit_exceeded','SCOPE_TOO_LARGE');throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});}
+    if(result.data.subjectId!==authority.userId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1','pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
+    await this.recordPrivacyScopeReceiptOutsideTransaction(authority.userId,requestId,'consumption-attribution-v1',result.receiptId,result.sha256,result.capturedAt);
     return result;
   }
   async privacyBillingAuthority(req:Request,input:unknown){
@@ -673,6 +702,17 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         completedAt: row.completed_at,
       })),
     };
+  }
+  async privacyRequestManifest(req:Request,requestId:string){
+    const user=await this.me(req),request=(await this.pool.query<{kind:string;state:string}>("SELECT kind,state FROM privacy_requests WHERE id=$1 AND user_id=$2",[requestId,user.id])).rows[0];
+    if(!request)throw new NotFoundException();
+    if(request.kind!=='export'||!['requested','processing'].includes(request.state))throw new ConflictException({code:'PRIVACY_EXPORT_NOT_PENDING'});
+    const rows=(await this.pool.query<{scope:string;required:boolean;supported:boolean;status:string;receipt_id:string|null;sha256:string|null;captured_at:Date|null;last_error_code:string|null;attempts:number}>(
+      `SELECT s.scope,s.required,s.supported,s.status,r.owner_receipt_id AS receipt_id,r.content_sha256 AS sha256,r.captured_at,s.last_error_code,s.attempts
+       FROM privacy_request_scopes s LEFT JOIN privacy_scope_receipts r ON r.id=s.current_receipt_id
+       WHERE s.request_id=$1 ORDER BY s.scope`,[requestId])).rows;
+    const required=rows.filter(row=>row.required),prepared=required.filter(row=>row.status==='prepared'&&row.receipt_id!==null&&row.sha256!==null);
+    return body(privacyRequestManifest,{requestId,kind:request.kind,requestState:request.state,globalFulfillment:required.length>0&&prepared.length===required.length?'ready_for_assembly':'pending',requiredScopes:required.length,preparedScopes:prepared.length,scopes:rows.map(row=>({scope:row.scope,required:row.required,supported:row.supported,status:row.status,receiptId:row.receipt_id,sha256:row.sha256,capturedAt:row.captured_at?.toISOString()??null,lastErrorCode:row.last_error_code,attempts:row.attempts}))});
   }
   async internal(req: Request, input: unknown) {
     requireInternal(req, this.config);

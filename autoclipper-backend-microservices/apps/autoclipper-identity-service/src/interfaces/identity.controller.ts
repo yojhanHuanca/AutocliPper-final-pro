@@ -43,6 +43,7 @@ import {
   PrivacyWorkspaceExportDto,
   PrivacyProjectExportDto,
   PrivacyBillingExportDto,
+  PrivacyRequestManifestDto,
 } from "@autoclipper/api-contracts";
 class RegistrationDto {
   @ApiProperty({ format: "email" }) email!: string;
@@ -237,6 +238,12 @@ export class IdentityController {
   @ApiOkResponse({ type: PrivacyListResponseDto })
   privacyRequests(@Req() req: Request) {
     return this.service.privacyRequests(req);
+  }
+  @Get('auth/privacy-requests/:id/manifest')
+  @ApiOkResponse({type:PrivacyRequestManifestDto,description:'Owner scope reconciliation only; no data payload and no global export or deletion claim.'})
+  privacyRequestManifest(@Req()req:Request,@Param('id')id:string,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyRequestManifest(req,uuid(id));
   }
   @Get("auth/security-events")
   @ApiOkResponse({ type: SecurityEventListResponseDto })

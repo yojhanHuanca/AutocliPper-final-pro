@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/privacy-requests/{id}/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IdentityController_privacyRequestManifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/security-events": {
         parameters: {
             query?: never;
@@ -1605,6 +1621,34 @@ export interface components {
         };
         PrivacyListResponseDto: {
             items: components["schemas"]["PrivacyStatusResponseDto"][];
+        };
+        PrivacyScopeStatusDto: {
+            /** @enum {string} */
+            scope: "identity-profile-v1" | "workspace-memberships-v1" | "project-attribution-v1" | "media-task-attribution-v1" | "analysis-attribution-v1" | "consumption-attribution-v1";
+            required: boolean;
+            supported: boolean;
+            /** @enum {string} */
+            status: "pending" | "prepared" | "owner_unavailable" | "snapshot_changed" | "limit_exceeded" | "not_implemented";
+            /** Format: uuid */
+            receiptId: string | null;
+            sha256: string | null;
+            /** Format: date-time */
+            capturedAt: string | null;
+            lastErrorCode: string | null;
+            attempts: number;
+        };
+        PrivacyRequestManifestDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @enum {string} */
+            kind: "export";
+            /** @enum {string} */
+            requestState: "requested" | "processing";
+            /** @enum {string} */
+            globalFulfillment: "pending" | "ready_for_assembly";
+            requiredScopes: number;
+            preparedScopes: number;
+            scopes: components["schemas"]["PrivacyScopeStatusDto"][];
         };
         SecurityEventResponseDto: {
             /** Format: uuid */
@@ -4381,6 +4425,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivacyBillingExportDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    IdentityController_privacyRequestManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owner scope reconciliation only; no data payload and no global export or deletion claim. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequestManifestDto"];
                 };
             };
             /** @description Classified error with a safe correlation identifier */
