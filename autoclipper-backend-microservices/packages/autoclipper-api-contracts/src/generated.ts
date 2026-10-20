@@ -260,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/privacy-requests/{id}/billing-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IdentityController_privacyBillingExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/security-events": {
         parameters: {
             query?: never;
@@ -1512,6 +1528,68 @@ export interface components {
             capturedAt: string;
             sha256: string;
             data: components["schemas"]["PrivacyProjectDataDto"];
+        };
+        PrivacyBillingReservationDto: {
+            /** Format: uuid */
+            pipelineId: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** Format: date-time */
+            periodStart: string;
+            budgets: {
+                audio?: number;
+                analysis?: number;
+                render?: number;
+            };
+            /** @enum {string} */
+            state: "open" | "settled";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            settledAt: string | null;
+        };
+        PrivacyBillingMovementDto: {
+            /** Format: uuid */
+            pipelineId: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** Format: date-time */
+            periodStart: string;
+            /** @enum {string} */
+            stage: "audio" | "analysis" | "render";
+            /** @enum {string} */
+            kind: "reserve" | "consume" | "release";
+            seconds: number;
+            /** Format: date-time */
+            at: string;
+        };
+        PrivacyBillingDataDto: {
+            /** @enum {number} */
+            schemaVersion: 1;
+            /** Format: uuid */
+            subjectId: string;
+            reservations: components["schemas"]["PrivacyBillingReservationDto"][];
+            movements: components["schemas"]["PrivacyBillingMovementDto"][];
+        };
+        PrivacyBillingExportDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: uuid */
+            receiptId: string;
+            /** @enum {string} */
+            scope: "consumption-attribution-v1";
+            /** @enum {string} */
+            state: "prepared";
+            /** @enum {string} */
+            fulfillment: "partial";
+            /** @enum {string} */
+            globalFulfillment: "pending";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            capturedAt: string;
+            sha256: string;
+            data: components["schemas"]["PrivacyBillingDataDto"];
         };
         PrivacyStatusResponseDto: {
             /** Format: uuid */
@@ -4191,6 +4269,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivacyProjectExportDto"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Classified error with a safe correlation identifier */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    IdentityController_privacyBillingExport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description UUID for this Billing attribution snapshot. */
+                "Idempotency-Key": string;
+                /** @description Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin. */
+                "X-CSRF-Token": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyProfileProofDto"];
+            };
+        };
+        responses: {
+            /** @description Partial own pipeline consumption contribution; global privacy request remains pending. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyBillingExportDto"];
                 };
             };
             /** @description Classified error with a safe correlation identifier */

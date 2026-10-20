@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport } from '@autoclipper/api-contracts';
+import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport,privacyBillingOwnerRequest,privacyBillingAuthorityRequest,privacyBillingData,privacyBillingExport } from '@autoclipper/api-contracts';
 
 test('privacy contribution proof cannot select a different user, scope, state or stored artifact',()=>{
   assert.equal(privacyProfileProof.safeParse({password:'proof',factor:'123456'}).success,true);
@@ -43,4 +43,20 @@ test('partial identity export is bounded and refuses credentials, global complet
   const receipt={requestId:randomUUID(),receiptId:randomUUID(),scope:'identity-profile-v1',state:'prepared',fulfillment:'partial',globalFulfillment:'pending',createdAt:new Date().toISOString(),sha256:'a'.repeat(64),data};
   assert.equal(privacyProfileExport.safeParse(receipt).success,true);
   for(const extra of[{globalFulfillment:'completed'},{fulfillment:'completed'},{scope:'all-services'},{data:{...data,workspaceVideos:['private']}}])assert.equal(privacyProfileExport.safeParse({...receipt,...extra}).success,false);
+});
+test('Billing privacy contribution accepts only bounded own-pipeline consumption attribution fields',()=>{
+  const request={capability:'a'.repeat(43),idempotencyKey:randomUUID(),correlationId:randomUUID()};
+  assert.equal(privacyBillingOwnerRequest.safeParse(request).success,true);
+  assert.equal(privacyBillingAuthorityRequest.safeParse({...request,scope:'consumption-attribution-v1'}).success,true);
+  assert.equal(privacyBillingAuthorityRequest.safeParse({...request,scope:'all'}).success,false);
+  const pipelineId=randomUUID(),workspaceId=randomUUID(),now=new Date().toISOString();
+  const reservation={pipelineId,workspaceId,periodStart:now,budgets:{audio:10,analysis:20,render:30},state:'open',createdAt:now,settledAt:null};
+  const movement={pipelineId,workspaceId,periodStart:now,stage:'audio',kind:'reserve',seconds:10,at:now};
+  const data={schemaVersion:1,subjectId:randomUUID(),reservations:[reservation],movements:[movement]};
+  assert.equal(privacyBillingData.safeParse(data).success,true);
+  for(const extra of[{creatorId:data.subjectId},{price:12},{subscription:'paid'},{planVersion:'commercial'},{settledAt:now}])assert.equal(privacyBillingData.safeParse({...data,reservations:[{...reservation,...extra}]}).success,false);
+  assert.equal(privacyBillingData.safeParse({...data,reservations:Array.from({length:251},()=>reservation),movements:Array.from({length:250},()=>movement)}).success,false);
+  const receipt={requestId:randomUUID(),receiptId:randomUUID(),scope:'consumption-attribution-v1',state:'prepared',fulfillment:'partial',globalFulfillment:'pending',createdAt:now,capturedAt:now,sha256:'a'.repeat(64),data};
+  assert.equal(privacyBillingExport.safeParse(receipt).success,true);
+  assert.equal(privacyBillingExport.safeParse({...receipt,globalFulfillment:'completed'}).success,false);
 });

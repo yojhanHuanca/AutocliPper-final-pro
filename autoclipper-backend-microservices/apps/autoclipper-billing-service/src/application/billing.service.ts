@@ -4,9 +4,10 @@ import {randomUUID} from "node:crypto";
 import pg from "pg";
 import {z} from "zod";
 import {usageReservation,usageReport,usageBudgets,type UsageStage} from "@autoclipper/api-contracts";
-import {authenticatedUser,body,digest,loadServiceConfig,workspaceAccess,requireInternal,adminAuthorization} from "@autoclipper/http-security";
-import {adminOwnerRequest,adminAuthority,adminConsumptionPage} from "@autoclipper/api-contracts";
+import {authenticatedUser,body,digest,loadServiceConfig,workspaceAccess,requireInternal,adminAuthorization,internalJson} from "@autoclipper/http-security";
+import {adminOwnerRequest,adminAuthority,adminConsumptionPage,privacyBillingOwnerRequest,privacyBillingAuthority} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
+import {prepareBillingExport} from './privacy-exports.js';
 
 type Plan={id:string;version:string;kind:"development";label:string;processing_seconds_per_month:number;active_pipelines:number};
 type Reservation={pipeline_id:string;workspace_id:string;period_start:Date;budgets:Record<UsageStage,number>;state:"open"|"settled"};
@@ -14,6 +15,12 @@ type Admission={request_hash:string;admitted:boolean;code:string|null};
 export function consumptionPeriod(now=new Date()){return{start:new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)),end:new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1))};}
 @Injectable()
 export class BillingService implements OnModuleInit,OnModuleDestroy {
+  async privacyBillingExport(req:Request,input:unknown){
+    requireInternal(req,this.config);
+    const data=body(privacyBillingOwnerRequest,input);
+    const authority=body(privacyBillingAuthority,await internalJson(this.config.IDENTITY_URL,'/v1/internal/privacy-billing-export-authorize',this.config,{...data,scope:'consumption-attribution-v1'}));
+    return prepareBillingExport(this.pool,authority.userId,authority.requestId,data.idempotencyKey,data.correlationId);
+  }
   async adminConsumption(req:Request,input:unknown){
     requireInternal(req,this.config);const {token,query,correlationId}=body(adminOwnerRequest,input);
     const authority=body(adminAuthority,await adminAuthorization(this.config,{token,permission:"consumption.read",correlationId,workspaceId:query.workspaceId})),period=consumptionPeriod();

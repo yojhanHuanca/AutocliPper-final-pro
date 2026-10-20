@@ -144,3 +144,53 @@ export class PrivacyProjectExportDto {
   @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
   @ApiProperty({type:PrivacyProjectDataDto}) data!:PrivacyProjectDataDto;
 }
+
+export const privacyBillingOwnerRequest=z.object({capability:z.string().regex(/^[A-Za-z0-9_-]{43}$/u),idempotencyKey:z.uuid(),correlationId:z.uuid()}).strict();
+export const privacyBillingAuthorityRequest=privacyBillingOwnerRequest.extend({scope:z.literal('consumption-attribution-v1')}).strict();
+export const privacyBillingAuthority=z.object({userId:z.uuid(),requestId:z.uuid(),scope:z.literal('consumption-attribution-v1')}).strict();
+const privacyBillingTimestamp=z.iso.datetime();
+const privacyBillingStage=z.enum(['audio','analysis','render']);
+export const privacyBillingBudgets=z.object({audio:z.number().int().nonnegative(),analysis:z.number().int().nonnegative(),render:z.number().int().nonnegative()}).strict();
+export const privacyBillingData=z.object({
+  schemaVersion:z.literal(1),subjectId:z.uuid(),
+  reservations:z.array(z.object({pipelineId:z.uuid(),workspaceId:z.uuid(),periodStart:privacyBillingTimestamp,budgets:privacyBillingBudgets,state:z.enum(['open','settled']),createdAt:privacyBillingTimestamp,settledAt:privacyBillingTimestamp.nullable()}).strict().refine(value=>(value.state==='open')===(value.settledAt===null))).max(500),
+  movements:z.array(z.object({pipelineId:z.uuid(),workspaceId:z.uuid(),periodStart:privacyBillingTimestamp,stage:privacyBillingStage,kind:z.enum(['reserve','consume','release']),seconds:z.number().int().nonnegative(),at:privacyBillingTimestamp}).strict()).max(500),
+}).strict().superRefine((data,ctx)=>{if(data.reservations.length+data.movements.length>500)ctx.addIssue({code:'custom',message:'Billing privacy export exceeds 500 attributable rows'});});
+export const privacyBillingExport=z.object({requestId:z.uuid(),receiptId:z.uuid(),scope:z.literal('consumption-attribution-v1'),state:z.literal('prepared'),fulfillment:z.literal('partial'),globalFulfillment:z.literal('pending'),createdAt:privacyBillingTimestamp,capturedAt:privacyBillingTimestamp,sha256:z.string().regex(/^[a-f0-9]{64}$/u),data:privacyBillingData}).strict();
+export const privacyBillingResult=z.union([privacyBillingExport,z.object({state:z.literal('snapshot_changed'),requestId:z.uuid()}).strict(),z.object({state:z.literal('limit_exceeded'),requestId:z.uuid()}).strict()]);
+export class PrivacyBillingReservationDto {
+  @ApiProperty({format:'uuid'}) pipelineId!:string;
+  @ApiProperty({format:'uuid'}) workspaceId!:string;
+  @ApiProperty({format:'date-time'}) periodStart!:string;
+  @ApiProperty({type:'object',properties:{audio:{type:'integer',minimum:0},analysis:{type:'integer',minimum:0},render:{type:'integer',minimum:0}}}) budgets!:Record<string,number>;
+  @ApiProperty({enum:['open','settled']}) state!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;
+  @ApiProperty({type:String,format:'date-time',nullable:true}) settledAt!:string|null;
+}
+export class PrivacyBillingMovementDto {
+  @ApiProperty({format:'uuid'}) pipelineId!:string;
+  @ApiProperty({format:'uuid'}) workspaceId!:string;
+  @ApiProperty({format:'date-time'}) periodStart!:string;
+  @ApiProperty({enum:['audio','analysis','render']}) stage!:string;
+  @ApiProperty({enum:['reserve','consume','release']}) kind!:string;
+  @ApiProperty({minimum:0}) seconds!:number;
+  @ApiProperty({format:'date-time'}) at!:string;
+}
+export class PrivacyBillingDataDto {
+  @ApiProperty({enum:[1]}) schemaVersion!:number;
+  @ApiProperty({format:'uuid'}) subjectId!:string;
+  @ApiProperty({type:[PrivacyBillingReservationDto],maxItems:500}) reservations!:PrivacyBillingReservationDto[];
+  @ApiProperty({type:[PrivacyBillingMovementDto],maxItems:500}) movements!:PrivacyBillingMovementDto[];
+}
+export class PrivacyBillingExportDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;
+  @ApiProperty({format:'uuid'}) receiptId!:string;
+  @ApiProperty({enum:['consumption-attribution-v1']}) scope!:string;
+  @ApiProperty({enum:['prepared']}) state!:string;
+  @ApiProperty({enum:['partial']}) fulfillment!:string;
+  @ApiProperty({enum:['pending']}) globalFulfillment!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;
+  @ApiProperty({format:'date-time'}) capturedAt!:string;
+  @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;
+  @ApiProperty({type:PrivacyBillingDataDto}) data!:PrivacyBillingDataDto;
+}

@@ -2260,6 +2260,159 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/billing-export": {
+      "post": {
+        "operationId": "IdentityController_privacyBillingExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Billing attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial own pipeline consumption contribution; global privacy request remains pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyBillingExportDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
     "/v1/auth/security-events": {
       "get": {
         "operationId": "IdentityController_securityEvents",
@@ -14058,6 +14211,214 @@
           },
           "data": {
             "$ref": "#/components/schemas/PrivacyProjectDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
+      "PrivacyBillingReservationDto": {
+        "type": "object",
+        "properties": {
+          "pipelineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "budgets": {
+            "type": "object",
+            "properties": {
+              "audio": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "analysis": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "render": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "settled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "settledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "pipelineId",
+          "workspaceId",
+          "periodStart",
+          "budgets",
+          "state",
+          "createdAt",
+          "settledAt"
+        ]
+      },
+      "PrivacyBillingMovementDto": {
+        "type": "object",
+        "properties": {
+          "pipelineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "analysis",
+              "render"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "reserve",
+              "consume",
+              "release"
+            ]
+          },
+          "seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "pipelineId",
+          "workspaceId",
+          "periodStart",
+          "stage",
+          "kind",
+          "seconds",
+          "at"
+        ]
+      },
+      "PrivacyBillingDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reservations": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyBillingReservationDto"
+            }
+          },
+          "movements": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyBillingMovementDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "reservations",
+          "movements"
+        ]
+      },
+      "PrivacyBillingExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "consumption-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyBillingDataDto"
           }
         },
         "required": [

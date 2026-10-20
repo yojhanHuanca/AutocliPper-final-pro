@@ -9,6 +9,7 @@ import { loadServiceConfig, seal } from '@autoclipper/http-security';
 import { AppModule } from '../../apps/autoclipper-identity-service/dist/app.module.js';
 import {verifyWorkspacePrivacy} from './workspace-privacy-fixture.mjs';
 import {verifyProjectPrivacy} from './project-privacy-fixture.mjs';
+import {verifyBillingPrivacy} from './billing-privacy-fixture.mjs';
 
 // Synthetic users/MFA/link state are SQL fixtures, not SMTP or Google acceptance.
 // The requests, authentication, CSRF, factor verification and database are real.
@@ -104,7 +105,8 @@ export async function verifyPrivacyProfileExports(config){
     const profileChecks=httpChecks;
     const workspaceContribution=await verifyWorkspacePrivacy(config,base,client,encryptionKey);
     const projectContribution=await verifyProjectPrivacy(config,base,client,encryptionKey);
-    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution};
+    const billingContribution=await verifyBillingPrivacy(config,base,client,db,owner,a,b,anonymous,userId,otherId,password,factors);
+    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution,billingContribution};
   }catch(error){if(!error.privacyCheckpoint)error.privacyCheckpoint=checkpoint;throw error;}
   finally{if(app)await app.close();await db.end();await owner.end();}
 }

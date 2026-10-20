@@ -42,6 +42,7 @@ import {
   PrivacyProfileExportDto,
   PrivacyWorkspaceExportDto,
   PrivacyProjectExportDto,
+  PrivacyBillingExportDto,
 } from "@autoclipper/api-contracts";
 class RegistrationDto {
   @ApiProperty({ format: "email" }) email!: string;
@@ -217,10 +218,21 @@ export class IdentityController {
     res.setHeader('Cache-Control','private, no-store');
     return this.service.privacyProjectExport(req,uuid(id),input,String(res.locals['correlationId']));
   }
+  @Post('auth/privacy-requests/:id/billing-export')
+  @HttpCode(200)
+  @ApiHeader({name:'Idempotency-Key',required:true,description:'UUID for this Billing attribution snapshot.'})
+  @ApiBody({type:PrivacyProfileProofDto})
+  @ApiOkResponse({type:PrivacyBillingExportDto,description:'Partial own pipeline consumption contribution; global privacy request remains pending.'})
+  privacyBillingExport(@Req()req:Request,@Param('id')id:string,@Body()input:PrivacyProfileProofDto,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyBillingExport(req,uuid(id),input,String(res.locals['correlationId']));
+  }
   @Post('internal/privacy-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
   privacyWorkspaceAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyWorkspaceAuthority(req,input);}
   @Post('internal/privacy-project-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
   privacyProjectAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyProjectAuthority(req,input);}
+  @Post('internal/privacy-billing-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
+  privacyBillingAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyBillingAuthority(req,input);}
   @Get("auth/privacy-requests")
   @ApiOkResponse({ type: PrivacyListResponseDto })
   privacyRequests(@Req() req: Request) {
