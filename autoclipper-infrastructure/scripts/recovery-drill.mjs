@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, open, unlink, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, join, sep } from 'node:path';
 import { Readable } from 'node:stream';
@@ -134,6 +134,13 @@ async function restoreArchive(archive, volumeName, kind, key) {
   await command(['start', '-a', '-i', helper], JSON.stringify({ key: key.toString('hex'), context: archive.context }));
   assert.equal((await assertOwned('container', helper)).State.ExitCode, 0);
 }
+async function assertVolumeEmpty(volumeName) {
+  const helper = `${prefix}-empty-check-${randomUUID()}`;
+  await command(['create', '--pull=never', '--name', helper, '--label', label, '--network', 'none', '--read-only', '--memory', '96m', '--cpus', '0.5', '--cap-drop', 'ALL', '--mount', `type=volume,source=${volumeName},target=/check,readonly`, '--entrypoint', 'bash', images.postgres, '-ceu', 'test -z "$(find /check -mindepth 1 -print -quit)"']);
+  containers.push(helper);
+  await command(['start', '-a', helper]);
+  assert.equal((await assertOwned('container', helper)).State.ExitCode, 0, 'failed archive validation must leave restore target empty');
+}
 async function clean() {
   const errors = [];
   for (const name of [...containers].reverse()) {
@@ -185,7 +192,16 @@ try {
   const backupSeconds = (Date.now() - backupStarted) / 1000;
   const restoreStarted = Date.now();
   stage='RESTORE';
-  // Prove wrong-key rejection without creating an extraction process.
+  // A tampered GCM tag must fail before an extraction helper can touch the target volume.
+  const tamperedArchive={...postgresArchive,path:join(directory,'postgres.tampered.enc')};
+  await copyFile(postgresArchive.path,tamperedArchive.path);
+  const tamperedFile=await open(tamperedArchive.path,'r+');
+  try{const size=(await tamperedFile.stat()).size,tagByte=Buffer.alloc(1);await tamperedFile.read(tagByte,0,1,size-1);tagByte[0]^=1;await tamperedFile.write(tagByte,0,1,size-1);await tamperedFile.sync();}finally{await tamperedFile.close();}
+  const helperCount=containers.length;
+  await assert.rejects(restoreArchive(tamperedArchive,`${prefix}-target-pg`,'postgres',key));
+  assert.equal(containers.length,helperCount,'invalid archive must be rejected before creating a restore helper');
+  await assertVolumeEmpty(`${prefix}-target-pg`);
+  await unlink(tamperedArchive.path);
   await assert.rejects(verifyArchive(postgresArchive.path, randomBytes(32), postgresArchive.context));
   await restoreArchive(postgresArchive, `${prefix}-target-pg`, 'postgres', key);
   await restoreArchive(storageArchive, `${prefix}-target-storage`, 'storage', key);
