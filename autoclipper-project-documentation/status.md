@@ -46,7 +46,7 @@ Entrega: etapas 1–2, multimedia/transcripción local real de etapa 3 y edició
 | Carpetas/etiquetas/favoritos y paginación por cursor completa | PD | Listado actual acotado a 100 y búsqueda; capacidades adicionales pendientes |
 | Upload firmado/multipart/reanudación/confirmación | IV | PUT y multipart de dos partes reales, tamaño firmado, HEAD y SHA-256 final en worker |
 | Cuota técnica de almacenamiento y reservas | IV | 11 reservas concurrentes: 10 admitidas y una rechazada; replay no duplica reserva |
-| Purga de objetos confirmados y cancelación de inspecciones | PD | Abortado/limpieza de cargas pendientes y cancelación de derivados/análisis implementados; cancelar inspecciones sigue pendiente |
+| Purga de objetos confirmados y cancelación de inspecciones | PD | El cleanup Project de cargas pendientes/abortadas expiradas tiene evidencia aislada de borrado S3→fallo SQL→reinicio/reintento, liberación única de reserva y aislamiento entre workspaces en [CI 39205001821](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39205001821), documentado en [detalle](../autoclipper-backend-microservices/docs/project-expired-upload-cleanup.md). No purga objetos confirmados ni equivale a eliminación de privacidad; cancelar inspecciones sigue pendiente |
 | Importación de proveedores / SSRF | PD + PC | Sin importador ni acceso universal anunciado |
 | Extracción de audio WAV | IV | Audio real PCM mono 16 kHz, fuente validada, download autorizado y prueba FFprobe |
 | Transcripción local con tiempos e idioma | IV | whisper.cpp/tiny fijados, fuente WAV comprobada, español detectado y aceptación real con MP4/SRT/VTT |

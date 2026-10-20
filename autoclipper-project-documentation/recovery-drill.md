@@ -1,6 +1,6 @@
 # Ensayo aislado de recuperación cifrada
 
-Fecha: 18 de octubre de 2026. Incremento de operación, separado de la arquitectura pública [Cloudflare](cloudflare-architecture.md). El ensayo de restauración local está aprobado con el alcance sintético descrito abajo; su CI se registra por separado. No reemplaza un sistema de backup de producción.
+Fecha: 19 de octubre de 2026. Incremento de operación, separado de la arquitectura pública [Cloudflare](cloudflare-architecture.md). El ensayo aislado de restore y cleanup Project está aprobado con el alcance sintético descrito abajo; su CI se registra por separado. No reemplaza un sistema de backup de producción.
 
 ## Alcance ejecutable
 

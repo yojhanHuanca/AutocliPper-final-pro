@@ -1,6 +1,6 @@
 # Project: cleanup of expired, unconfirmed uploads
 
-Status: implemented; isolated failure/restart acceptance is being added in the current increment. This is a bounded Project-owned cleanup, **not** fulfillment of a privacy erasure request.
+Status: implemented and verified in isolated CI. This is a bounded Project-owned cleanup, **not** fulfillment of a privacy erasure request.
 
 ## Scope and state
 
@@ -22,7 +22,7 @@ The object store and PostgreSQL cannot participate in one transaction. If the ob
 
 ## Acceptance evidence
 
-The isolated recovery fixture uses its own Project database and object-store volume. It injects a database failure after the object delete, verifies rollback retains the pending reference and reservation, destroys the first Project service instance, and runs the cleanup from a fresh instance. It then verifies `aborted`/`cleaned_at`, one reservation release, and that a confirmed upload and object in a different workspace remain unchanged. A further cleanup invocation verifies idempotency. CI acceptance is recorded in the launch backlog once the run passes.
+The isolated recovery fixture uses its own Project database and object-store volume. In CI [run 39205001821](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39205001821), all jobs passed. The fixture injected a database failure after object deletion, verified rollback retained the pending reference and reservation, destroyed the first Project service instance, and ran cleanup from a fresh instance. It verified `aborted`/`cleaned_at`, exactly one reservation release, and that a confirmed upload/object in a different workspace remained unchanged. A further invocation verified idempotency. The complete recovery report also passed and recorded `retryAfterObjectDelete`, `workspaceIsolation`, and `idempotentReservationRelease` as true. This is isolated fixture evidence, not a production RPO/RTO claim.
 
 ## Explicit limits
 
