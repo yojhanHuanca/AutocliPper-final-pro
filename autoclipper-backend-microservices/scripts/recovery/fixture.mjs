@@ -11,6 +11,7 @@ import { S3Client, CreateBucketCommand, PutObjectCommand, CreateMultipartUploadC
 import { Queue } from 'bullmq';
 import { INSPECTION_QUEUE } from '@autoclipper/event-contracts';
 import { InspectionRuntime } from '../../apps/autoclipper-media-processing-service/dist/application/inspection-runtime.js';
+import { verifyMediaCleanup } from './media-cleanup-fixture.mjs';
 import { verifyPrivacyProfileExports } from './privacy-fixture.mjs';
 
 const services = ['media', 'identity', 'workspace', 'project', 'analysis', 'billing'];
@@ -130,6 +131,8 @@ try {
       assert.ok(result.result.durationSeconds >= 1.9 && result.result.durationSeconds <= 2.1);
       report.replayedInspection = { status: result.status, attempts: result.attempts };
     } finally { await runtime.onModuleDestroy(); await queue.close(); }
+    checkpoint = 'MEDIA_DERIVATIVE_CLEANUP';
+    report.mediaCleanup = await verifyMediaCleanup(config,endpoint,bucket,config.expected.taskId);
     report.objects = config.expected.objects.map(({ bytes, sha256 }) => ({ bytes, sha256 }));
     report.crossDatabaseDenials = 30;
     report.runtimeDdlDenials = 6;

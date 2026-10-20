@@ -218,7 +218,7 @@ try {
   await waitReady(`${prefix}-target-pg`);
   stage='VERIFY_FIXTURE';
   const verified = await fixture({ ...restoredConfig, phase: 'verify', pgHost: 'target-pg', storageHost: 'target-storage' });
-  result = { runId: id, status: 'passed', checkpointAt: expected.checkpointAt, backupSeconds, restoreAndVerifySeconds: (Date.now() - restoreStarted) / 1000, elapsedSeconds: (Date.now() - started) / 1000, databaseCount: verified.databases.length, objectCount: verified.objects.length, crossDatabaseDenials: verified.crossDatabaseDenials, runtimeDdlDenials: verified.runtimeDdlDenials, adminGrantWriteDenied: verified.adminGrantWriteDenied, replayedInspection: verified.replayedInspection, privacyProfileExport: verified.privacyProfileExport, images, archiveContexts: { postgres: postgresArchive.context, storage: storageArchive.context }, productionRpoRtoValidated: false };
+  result = { runId: id, status: 'passed', checkpointAt: expected.checkpointAt, backupSeconds, restoreAndVerifySeconds: (Date.now() - restoreStarted) / 1000, elapsedSeconds: (Date.now() - started) / 1000, databaseCount: verified.databases.length, objectCount: verified.objects.length, crossDatabaseDenials: verified.crossDatabaseDenials, runtimeDdlDenials: verified.runtimeDdlDenials, adminGrantWriteDenied: verified.adminGrantWriteDenied, replayedInspection: verified.replayedInspection, mediaCleanup: verified.mediaCleanup, privacyProfileExport: verified.privacyProfileExport, images, archiveContexts: { postgres: postgresArchive.context, storage: storageArchive.context }, productionRpoRtoValidated: false };
 } catch (error) { failure = error; }
 const cleanupErrors = await clean();
 for (const filename of ['fixture.env', 'restored-storage.env']) {
