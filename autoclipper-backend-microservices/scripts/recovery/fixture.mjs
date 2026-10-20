@@ -12,6 +12,7 @@ import { Queue } from 'bullmq';
 import { INSPECTION_QUEUE } from '@autoclipper/event-contracts';
 import { InspectionRuntime } from '../../apps/autoclipper-media-processing-service/dist/application/inspection-runtime.js';
 import { verifyMediaCleanup } from './media-cleanup-fixture.mjs';
+import { verifyAnalysisCleanup } from './analysis-cleanup-fixture.mjs';
 import { verifyPrivacyProfileExports } from './privacy-fixture.mjs';
 
 const services = ['media', 'identity', 'workspace', 'project', 'analysis', 'billing'];
@@ -133,6 +134,8 @@ try {
     } finally { await runtime.onModuleDestroy(); await queue.close(); }
     checkpoint = 'MEDIA_DERIVATIVE_CLEANUP';
     report.mediaCleanup = await verifyMediaCleanup(config,endpoint,bucket,config.expected.taskId);
+    checkpoint = 'ANALYSIS_FAILED_ARTIFACT_CLEANUP';
+    report.analysisCleanup = await verifyAnalysisCleanup(config,endpoint,bucket);
     report.objects = config.expected.objects.map(({ bytes, sha256 }) => ({ bytes, sha256 }));
     report.crossDatabaseDenials = 30;
     report.runtimeDdlDenials = 6;

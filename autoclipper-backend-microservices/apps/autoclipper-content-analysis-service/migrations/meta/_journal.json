@@ -1,1 +1,1 @@
-{"version":"7","dialect":"postgresql","entries":[{"idx":0,"version":"7","when":1791990000000,"tag":"0000_content_analysis","breakpoints":true}]}
+{"version":"7","dialect":"postgresql","entries":[{"idx":0,"version":"7","when":1791990000000,"tag":"0000_content_analysis","breakpoints":true},{"idx":1,"version":"7","when":1791990100000,"tag":"0001_failed_artifact_cleanup","breakpoints":true}]}

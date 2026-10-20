@@ -43,9 +43,17 @@ export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
   async onModuleInit(){
     this.pool.on("error",()=>logger.error({code:"ANALYSIS_DATABASE_ERROR"}));this.redis.on("error",()=>logger.error({code:"ANALYSIS_REDIS_ERROR"}));this.queue.on("error",()=>logger.error({code:"ANALYSIS_QUEUE_ERROR"}));
     if(this.config.ANALYSIS_WORKER_ENABLED){this.worker=new Worker(queueName,job=>this.process(job),{connection:{...redisConnection(this.config.REDIS_URL),maxRetriesPerRequest:null},concurrency:1,lockDuration:30000,maxStalledCount:2});this.worker.on("error",()=>logger.error({code:"ANALYSIS_WORKER_ERROR"}));}await this.queue.waitUntilReady();
-    this.timer=setInterval(()=>{if(!this.stopping&&!this.working)this.working=this.dispatch().catch(()=>logger.warn({code:"ANALYSIS_OUTBOX_RETRY"})).finally(()=>{this.working=undefined;});},1000);this.timer.unref();
+    this.timer=setInterval(()=>{if(!this.stopping&&!this.working)this.working=Promise.all([this.dispatch(),this.cleanupFailedArtifacts()]).catch(()=>logger.warn({code:"ANALYSIS_BACKGROUND_RETRY"})).then(()=>{}).finally(()=>{this.working=undefined;});},1000);this.timer.unref();
   }
   private async tx<T>(work:(client:pg.PoolClient)=>Promise<T>){const client=await this.pool.connect();try{await client.query("BEGIN");const value=await work(client);await client.query("COMMIT");return value;}catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}}
+  private async cleanupFailedArtifacts(){
+    const pending=(await this.pool.query<{id:string}>("SELECT id FROM analysis_jobs WHERE cleanup_pending=true ORDER BY finished_at,id LIMIT 50")).rows;
+    for(const row of pending)await this.tx(async client=>{
+      await client.query("DELETE FROM segment_selections WHERE job_id=$1",[row.id]);
+      await client.query("DELETE FROM transcripts WHERE job_id=$1",[row.id]);
+      await client.query("UPDATE analysis_jobs SET cleanup_pending=false WHERE id=$1 AND cleanup_pending=true",[row.id]);
+    });
+  }
   async submit(input:{id:string;workspaceId:string;creatorId:string;correlationId:string;source:unknown;spec:unknown;cancelRequested:boolean}){
     const spec=body(analysisSpec,input.spec),source=body(sourceSchema,input.source);
     if(source.objectKey!==`workspaces/${input.workspaceId}/media/derivatives/${source.audioProcessingId}/audio.wav`)throw new BadRequestException();
@@ -75,7 +83,7 @@ export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
   private async dispatch(){
     const rows=(await this.pool.query<Row>("SELECT * FROM analysis_jobs WHERE status IN ('queued','transcribing','selecting') AND ($1::uuid IS NULL OR id>$1) ORDER BY id LIMIT 100",[this.cursor??null])).rows;this.cursor=rows.length===100?rows.at(-1)?.id:undefined;
     for(const row of rows){const job=await this.queue.getJob(row.id);if(!job)await this.pool.query("UPDATE analysis_outbox SET delivered_at=NULL WHERE job_id=$1",[row.id]);else if(await job.getState()==="failed"){
-      const lease=await this.pool.connect();try{const locked=(await lease.query<{locked:boolean}>("SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked",[`analysis:${row.id}`])).rows[0]?.locked;if(locked)await lease.query("UPDATE analysis_jobs SET status='failed',error_code='RECOVERY_RETRIES_EXHAUSTED',finished_at=now() WHERE id=$1 AND status IN ('queued','transcribing','selecting')",[row.id]);}finally{try{await lease.query("SELECT pg_advisory_unlock(hashtextextended($1,0))",[`analysis:${row.id}`]);}finally{lease.release();}}
+      const lease=await this.pool.connect();try{const locked=(await lease.query<{locked:boolean}>("SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked",[`analysis:${row.id}`])).rows[0]?.locked;if(locked)await lease.query("UPDATE analysis_jobs SET status='failed',error_code='RECOVERY_RETRIES_EXHAUSTED',finished_at=now(),cleanup_pending=true WHERE id=$1 AND status IN ('queued','transcribing','selecting')",[row.id]);}finally{try{await lease.query("SELECT pg_advisory_unlock(hashtextextended($1,0))",[`analysis:${row.id}`]);}finally{lease.release();}}
     }}
     const pending=(await this.pool.query<{job_id:string}>("SELECT job_id FROM analysis_outbox WHERE delivered_at IS NULL ORDER BY created_at LIMIT 50")).rows;
     for(const row of pending){await this.queue.add("analyze",{version:1,jobId:row.job_id},{jobId:row.job_id,attempts:3,backoff:{type:"exponential",delay:1000},removeOnComplete:false,removeOnFail:false});await this.pool.query("UPDATE analysis_outbox SET delivered_at=now() WHERE job_id=$1 AND delivered_at IS NULL",[row.job_id]);}
@@ -122,7 +130,7 @@ export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
         const terminal=!known.retryable||attempt>=3;
         recordAnalysisAttempt(task.spec.provider,terminal?(known.code==="CANCELLED"?"cancelled":"failed"):"retry",(performance.now()-started)/1000);
         await lease.query("UPDATE analysis_phase_attempts SET finished_at=COALESCE(finished_at,now()),error_code=$3 WHERE job_id=$1 AND phase=$2 AND attempt=$4 AND finished_at IS NULL",[id,phase,known.code,attempt]);
-        await lease.query("UPDATE analysis_jobs SET status=$2,error_code=$3,provider_outcome_unknown=$4,finished_at=$5 WHERE id=$1",[id,terminal?(known.code==="CANCELLED"?"cancelled":"failed"):"queued",known.code,known.outcomeUnknown,terminal?new Date():null]);logger.warn({code:known.code,jobId:id,correlationId:task.correlation_id});
+        await lease.query("UPDATE analysis_jobs SET status=$2,error_code=$3,provider_outcome_unknown=$4,finished_at=$5,cleanup_pending=$6 WHERE id=$1",[id,terminal?(known.code==="CANCELLED"?"cancelled":"failed"):"queued",known.code,known.outcomeUnknown,terminal?new Date():null,terminal]);logger.warn({code:known.code,jobId:id,correlationId:task.correlation_id});
         if(terminal)throw new UnrecoverableError(known.code);
         // eslint-disable-next-line preserve-caught-error
         throw new Error(known.code);
