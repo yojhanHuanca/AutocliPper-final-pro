@@ -1,33 +1,92 @@
 # AutoClipper
 
-Privacidad: [aporte del perfil propio de Identity](autoclipper-project-documentation/privacy-lifecycle.md) y nuevo [aporte de membresías actuales de Workspace](autoclipper-project-documentation/privacy-contributions.md), con contraseña/MFA, CSRF, idempotencia y recibos auditables sin otra copia del payload. Son parciales; la solicitud global sigue pendiente. El inventario versionado cubre ahora 58 tablas de seis bases y sus dependencias con objetos/grants/backups; eliminación coordinada y política de retención pendientes. La activación del runtime compartido requiere una ventana coordinada con frontend.
+AutoClipper runs locally with **Docker Compose**: the Angular web app, API, worker, databases, Redis, and private object storage all run in containers. The browser uses the existing `http://localhost:4200`; the API gateway uses `http://localhost:3005`. Do not start a second frontend server.
 
-[CI de privacidad 39170681668](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39170681668) aprobó los tres jobs para `b50850a`: 34 unitarias/HTTP, 34 infraestructura, regresión de negocio y aceptación aislada del aporte mediante 26 peticiones HTTP, sin fallos ni omisiones.
+## Requirements
 
-Primera presentación: [arquitectura y entrada pública Cloudflare](autoclipper-project-documentation/cloudflare-architecture.md), con contexto, servicios, seis bases, procesamiento y despliegue previsto. La propuesta separa Tunnel web/API de medios privados mediante R2/Worker; implementación y aceptación de nube pendientes. [Ensayo de recuperación cifrada](autoclipper-project-documentation/recovery-drill.md): restauración aislada local verificada con seis bases, objetos y replay de inspección; no acredita RPO/RTO de producción.
+- Windows 10/11 with Docker Desktop using the **Linux** engine (WSL 2 backend).
+- Docker Compose v2 (`docker compose`, not the legacy `docker-compose`).
+- Git and PowerShell.
+- Ports `4200`, `3001`–`3005`, `3007`, `11025`, `15432`, `16379`, `19000`, and `19025` available on loopback.
 
-[CI final del ensayo 39158379956](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39158379956) aprobó quality/infrastructure/business para `7f86090`: 31 unitarias/HTTP, 34 infraestructura y todas las suites de negocio, administración, análisis, orquestación y admisión, sin fallos ni omisiones; restore cifrado remoto aprobado.
+The first run downloads pinned Docker images and builds the API and web images. No host Node.js, npm, or FFmpeg installation is needed. A short-lived official Node container creates local secrets; it does not run the application.
 
-Último incremento backend: [administración mínima de solo lectura](autoclipper-project-documentation/stage-7-administration-read-only.md), con grants por operador, MFA/reauth y alcance por permiso/workspace. [CI 39089615290](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39089615290) aprobó los tres jobs para `457ff9d`: 30 unitarias/HTTP, 34 infraestructura, 62 negocio, diez administración y suites de recuperación/admisión sin fallos ni omisiones. Acciones administrativas, configuración global y soporte siguen pendientes.
+## First run
 
-Nueva implementación independiente del backend. **Entrega actual: admisión de procesamiento por configuración del servidor**, sobre planes de desarrollo versionados y ledger de nuevos pipelines. `PROCESSING_ADMISSION_MODE=development` conserva las rutas manuales bajo cuotas técnicas; `commercial` bloquea la creación manual de audio/análisis/render/exportación y permite pipelines sujetos al ledger. Consultas, descargas, cancelación e historial permanecen autorizados, sin consumo retroactivo. Billing mide segundos de material por etapa y tiene base propia, sin pagos, precios ni créditos públicos. Conserva orquestación audio → ASR local → render, intervalo manual explícito, edición versionada, pantalla dividida, colaboración, identidad, workspaces y cargas. Selección automática LLM, traducción y diarización externa real siguen pendientes. [Política, inventario de rutas y evidencia](autoclipper-project-documentation/stage-6-commercial-admission.md).
+In PowerShell, clone the private repository and enter its root:
 
-Ver [pantalla dividida, políticas y evidencia](autoclipper-project-documentation/stage-4-split-screen.md), [colaboración](autoclipper-project-documentation/stage-4-collaboration.md) y [edición/API](autoclipper-project-documentation/stage-4-editor.md). Verificación propia: 26 unitarias/HTTP, 34 infraestructura, 7 recuperación de análisis con fixtures explícitos, 14 aceptación conjunta y 6 del flujo con ASR real; los conteos incluyen padres. [CI 38669973228](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38669973228) aprobó los tres jobs para `02003a2`, incluida la regresión completa de 55 tests de negocio. La corrección del 429 entre pruebas está documentada. CI usa fixtures de análisis; whisper.cpp real se verificó localmente. Marca, mezcla avanzada y preview siguen pendientes. [Backlog priorizado para lanzamiento](autoclipper-project-documentation/launch-backlog.md), sin declarar producción lista.
+```powershell
+git clone https://github.com/yojhanHuanca/AutocliPper-final-pro.git
+Set-Location .\AutocliPper-final-pro
+docker info
+docker compose version
+```
 
-Identidad incluye 2FA TOTP, recuperación, perfil y solicitudes de privacidad. El adaptador Google valida credenciales en servidor; su prueba externa con una cuenta real sigue pendiente. Ver [límites de Google](autoclipper-project-documentation/google-identity.md) y [seguridad de identidad](autoclipper-project-documentation/identity-security.md).
+Generate ignored local credentials once. This command mounts the checkout into a temporary Node container; it does not print credentials:
 
-La [entrega de orquestación](autoclipper-project-documentation/stage-3-orchestration.md) pasó localmente 27 unitarias/HTTP, 34 infraestructura, 7 recuperación de análisis con fixtures, 7 orquestación con estados explícitos, 7 del flujo whisper.cpp real y una de frontera HTTP. Incluye SIGKILL únicamente del proceso orquestador aislado; los fixtures no acreditan inferencia. [CI 38673694628](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38673694628) aprobó los tres jobs para `c38afee`, incluida la regresión completa de 56 tests de negocio y las dos suites de siete fixtures.
+```powershell
+$repoRoot = (Get-Location).Path
+docker run --rm --mount "type=bind,source=$repoRoot,target=/workspace" `
+  --workdir /workspace/autoclipper-infrastructure `
+  node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 `
+  node setup-local.mjs
+```
 
-El [incremento de consumo](autoclipper-project-documentation/stage-6-consumption.md) pasó 28 unitarias/HTTP, 7 de ledger/aislamiento, 8 de recuperación de orquestación, 7 del flujo con whisper.cpp real y 2 de alcance manual/legacy/frontera HTTP. Los eventos/estados explícitos de tests no se presentan como IA real. [CI 38677679024](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38677679024) aprobó los tres jobs para `1069fb0`, incluidos 62 tests de negocio. El bloqueo posterior de rutas manuales cierra esa vía de admisión fuera del ledger; los demás [gates de lanzamiento](autoclipper-project-documentation/launch-backlog.md) siguen pendientes.
+On an existing checkout, do **not** run setup again if its `.env` files already exist. The setup scripts intentionally refuse to overwrite credentials. Never delete `.env` files or Docker volumes to troubleshoot without first checking whether they contain data you need.
 
-La etapa 1 está publicada en `cf6912b`, con CI remoto aprobado. La entrega de etapa 2 y sus verificaciones se describen en [stage-2.md](autoclipper-project-documentation/stage-2.md). Swagger público en [gateway](http://localhost:3000/docs); correo de desarrollo en [Mailpit](http://localhost:19025).
+Build and start the application from the infrastructure directory:
 
-La [admisión por modo](autoclipper-project-documentation/stage-6-commercial-admission.md) quedó cerrada con [CI 38837993047](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38837993047) para `c9e57aa`, los tres jobs aprobados: 29 unitarias/HTTP, 34 infraestructura, 62 negocio, 7 Analysis fixtures, 8 orquestación commercial y 8 admisión HTTP, sin fallos/omisiones. Se verificó además una matriz local con whisper.cpp real y ledger; CI usa fixtures explícitos y no descarga modelos. Bootstrap limpio de seis bases/doce roles sin reinicios aprobado. El stack local conserva development por defecto; el modo commercial no habilita pagos ni producción.
+```powershell
+Set-Location .\autoclipper-infrastructure
+$compose = @('-f', 'compose.yaml', '-f', 'compose.business.yaml', '-f', 'compose.web.yaml', '--profile', 'app')
+docker compose @compose up -d --build
+docker compose @compose ps
+```
 
-- [Guía local](autoclipper-project-documentation/local-development.md)
-- [Arquitectura y decisiones](autoclipper-project-documentation/architecture.md)
-- [Estado por requisito](autoclipper-project-documentation/status.md)
-- [Evidencia de verificaciones](autoclipper-project-documentation/verification.md)
-- [Plan de entregas](autoclipper-project-documentation/scope.md)
+Wait until the `web`, `gateway`, `media`, `identity`, `workspace`, `project`, `analysis`, `billing`, `renderer`, `postgres`, `redis`, and `storage` services report healthy or completed successfully. Migration and storage initialization jobs run as one-shot containers during startup.
 
-El frontend Angular permanece separado y no se implementa aquí. No se reutilizaron archivos, secretos ni historia del proyecto Java anterior. Por autorización posterior del propietario se reutilizó únicamente su client ID público de Google, en configuración local ignorada. El repositorio remoto es privado; los commits se publican con autorización del usuario, sin desplegar producción.
+Open:
+
+- Web app: [http://localhost:4200](http://localhost:4200)
+- API health: [http://localhost:3005/v1/health/ready](http://localhost:3005/v1/health/ready)
+- API docs: [http://localhost:3005/docs](http://localhost:3005/docs)
+- Development email inbox (Mailpit): [http://localhost:19025](http://localhost:19025)
+
+## Local secrets and paid AI
+
+Generated credentials live in ignored `.env` files. Keep them on this machine; do not commit them or paste them into chat, tickets, or screenshots. Do not share the output of `docker compose config`, since it expands environment values.
+
+Paid AI is disabled by default (`PAID_AI_ENABLED=false`, `AI_MAX_ESTIMATED_USD_PER_JOB=0`), and the bootstrap does not configure an OpenAI key. Automatic AI selection will therefore remain unavailable until separately configured and authorized; ordinary startup makes no paid provider calls. Do not enable Ollama or paid calls as part of onboarding.
+
+## Current source limits
+
+- Local video upload is private and limited to 100 MiB.
+- YouTube links can be previewed, but are not imported as source video.
+- Kick preview is limited to live channels; VODs and clips are not imported.
+- Twitch import has not been verified with a real OAuth account; fixture tests are not proof of live support.
+- The Editor can use the private source-playback endpoint, but seeking in an existing storage bucket still requires its Range CORS configuration. Do not claim a real-storage end-to-end test until that is applied and tested.
+
+## Stop and resume
+
+From `autoclipper-infrastructure`, use the same Compose files to stop containers while preserving data:
+
+```powershell
+docker compose @compose down
+```
+
+Do not add `-v`; that would delete the database, Redis, and object-storage volumes. To resume later, repeat `docker compose @compose up -d` (add `--build` only when you intentionally need to rebuild changed images). Rebuilding an in-use stack can recreate services, so coordinate that window with the team.
+
+For service logs, inspect only the needed service and avoid sharing unreviewed output:
+
+```powershell
+docker compose @compose logs --tail 100 web gateway media
+```
+
+## Contributor references
+
+- [Docker and local development notes](autoclipper-project-documentation/local-development.md)
+- [Architecture](autoclipper-project-documentation/architecture.md)
+- [Current status and known limitations](autoclipper-project-documentation/status.md)
+- [Verification evidence](autoclipper-project-documentation/verification.md)
+- [Launch backlog](autoclipper-project-documentation/launch-backlog.md)
+- [Frontend development notes](autoclipper-web-angular/README.md)
