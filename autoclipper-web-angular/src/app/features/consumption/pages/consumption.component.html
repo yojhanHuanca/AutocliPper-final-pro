@@ -8,7 +8,11 @@
     Actualizar<ac-icon name="arrow" />
   </button>
 </section>
-@if (overviewError()) {
+@if (accessDenied()) {
+  <div class="alert error" role="alert">
+    No se pudo confirmar el acceso a todos los datos de consumo de este espacio. Verifica el espacio seleccionado y tus permisos de lectura.
+  </div>
+} @else if (overviewError()) {
   <div class="alert error" role="alert">
     El resumen de consumo no se pudo cargar: {{ overviewError() }}
   </div>
@@ -47,7 +51,7 @@
         ><strong
           >{{ usage.availableSeconds | number: "1.0-2" }}
           <small>s</small></strong
-        ><small>Según el plan de desarrollo actual</small>
+        ><small>{{ usage.plan ? "Según la asignación de desarrollo de este espacio" : "Valor disponible devuelto por la API; el espacio no tiene un límite asignado" }}</small>
       </div>
     </article>
   </div>
@@ -58,7 +62,7 @@
       Periodo UTC: {{ usage.periodStart | date: "mediumDate": "UTC" }} —
       {{ usage.periodEnd | date: "mediumDate": "UTC" }}
     </p>
-    <div class="quota-meter">
+    @if (usage.plan) { <div class="quota-meter">
       <div class="quota-meter-label">
         <strong>Uso de la asignación</strong>
         <span>{{ quotaProgress(usage) | number: "1.0-1" }} %</span>
@@ -73,35 +77,56 @@
         s usados o reservados de {{ quotaTotal(usage) | number: "1.0-2" }} s
         en este periodo.
       </p>
-    </div>
-    <p class="resource-id">
-      @if (usage.plan) { <details><summary>Versión del plan</summary>{{ usage.plan!.version }}</details> } @else { Sin plan asignado para este espacio. }
-    </p>
+    </div> } @else { <p class="resource-id">No hay un límite versionado asignado; se muestran únicamente los valores actuales devueltos por la API.</p> }
+    @if (usage.plan; as plan) {
+      <details class="plan-details">
+        <summary>Límites y versión de la asignación</summary>
+        <dl class="plan-limits">
+          <div><dt>Material de procesamiento por periodo</dt><dd>{{ plan.processingSecondsPerMonth | number: "1.0-0" }} s</dd></div>
+          <div><dt>Pipelines simultáneos permitidos</dt><dd>{{ plan.activePipelines | number: "1.0-0" }}</dd></div>
+          <div class="plan-version"><dt>Versión inmutable</dt><dd [title]="plan.version">{{ plan.version }}</dd></div>
+        </dl>
+      </details>
+    } @else {
+      <p class="resource-id">No hay una asignación versionada para este espacio; aquí se muestran solo los valores devueltos por el servicio.</p>
+    }
   </article>
 } @else {
   <div class="panel empty-inline">
     <ac-icon name="chart" />
     <p>
       {{
-        busy() ? "Consultando consumo…" : overviewError() ? "No fue posible consultar el resumen del periodo." : "No hay datos de consumo consultados."
+        !workspace.workspaceId() ? (workspace.loaded() ? (workspace.workspaces().length ? "Selecciona un espacio en la barra lateral para consultar su consumo." : "No hay espacios disponibles para consultar.") : "Consultando espacios…") : busy() ? "Consultando consumo…" : overviewError() ? "No fue posible consultar el resumen del periodo." : "No hay datos de consumo consultados."
       }}
     </p>
   </div>
 }
-<p class="alert">
-      Asignación local de desarrollo: no tiene precios, cobros ni créditos
-  comerciales. El uso suma el material procesado en cada etapa; las exportaciones manuales
-  y trabajos anteriores pueden seguir otra regla. El saldo mostrado pertenece a
-  este espacio y periodo, no a una cuota comercial global.
-</p>
-<section class="panel">
+@if (consumption()?.plan?.kind === 'development') {
+  <p class="alert">La asignación local de desarrollo no tiene precios, cobros ni créditos comerciales. El uso suma material procesado por etapa; algunos trabajos anteriores pueden seguir otra regla. El resumen corresponde a este espacio y periodo.</p>
+} @else if (!consumption()?.plan) {
+  <p class="alert">No se confirmó una asignación de desarrollo para este espacio. Se muestran únicamente los valores de consumo y reservas devueltos por el servicio; no se estiman precios ni cobros.</p>
+} @else {
+  <p class="alert">El resumen muestra los valores de consumo y reservas devueltos por el servicio. Esta pantalla no calcula precios ni facturas.</p>
+}
+<section class="panel" [attr.aria-busy]="busy() || loadingMore()">
   <div class="panel-heading">
-    <h2>Movimientos del espacio.</h2>
-    <span class="muted">Hasta 50 movimientos por página</span>
+    <div><span class="eyebrow">DETALLE POR ETAPA</span><h2>Movimientos del espacio.</h2></div>
+    <span class="muted">Hasta 50 por página · {{ ledger().length }} cargados</span>
   </div>
+  <div class="ledger-stage-filter" role="group" aria-label="Filtrar movimientos por etapa">
+    <span>Etapas en los movimientos cargados</span>
+    <div>
+      @for (filter of stageFilters; track filter.id) {
+        <button class="ledger-stage-chip" [class.active]="stageFilter() === filter.id" type="button" [attr.aria-pressed]="stageFilter() === filter.id" (click)="stageFilter.set(filter.id)">
+          {{ filter.label }} <span>{{ stageCount(filter.id) }}</span>
+        </button>
+      }
+    </div>
+  </div>
+  <p class="ledger-stage-note">El resumen de arriba muestra el periodo vigente. Este historial incluye los movimientos disponibles por páginas; la API no devuelve un total consolidado por etapa.</p>
   @if (ledgerError()) {
     <div class="alert error" role="alert">
-      No se pudieron actualizar los movimientos. {{ ledgerError() }}
+      @if (ledgerError().includes('cursor repetido')) { {{ ledgerError() }} } @else { {{ ledger().length ? "No se pudieron actualizar los movimientos." : "No se pudieron cargar los movimientos." }} {{ ledgerError() }} }
     </div>
   }
   <div class="table-scroll" tabindex="0" role="region" aria-label="Historial de movimientos; desplaza la tabla para ver todas las columnas">
@@ -110,6 +135,7 @@
       <thead>
         <tr>
           <th scope="col">Fecha</th>
+          <th scope="col">Inicio de periodo (UTC)</th>
           <th scope="col">Etapa</th>
           <th scope="col">Movimiento</th>
           <th scope="col">Segundos</th>
@@ -117,9 +143,10 @@
         </tr>
       </thead>
       <tbody>
-        @for (entry of ledger(); track entry.id) {
+        @for (entry of visibleLedger(); track entry.id) {
           <tr>
             <td>{{ entry.at | date: "medium" }}</td>
+            <td>{{ entry.periodStart | date: "mediumDate": "UTC" }}</td>
             <td>{{ stageLabel(entry.stage) }}</td>
             <td>
               <span class="badge">{{ kindLabel(entry.kind) }}</span>
@@ -128,9 +155,13 @@
             <td class="resource-id" [title]="entry.pipelineId">{{ shortPipelineId(entry.pipelineId) }}</td>
           </tr>
         } @empty {
-          <tr>
-            <td colspan="5">{{ busy() ? "Consultando movimientos…" : accessDenied() ? "Sin acceso confirmado a los movimientos." : ledgerError() ? "No fue posible consultar los movimientos." : "No hay movimientos registrados en este espacio." }}</td>
-          </tr>
+          @if (ledger().length) {
+            <tr><td colspan="6">No hay movimientos cargados para esta etapa. Prueba otra etapa o carga más movimientos.</td></tr>
+          } @else if (ledgerEmptyStateMessage(busy(), accessDenied(), !!ledgerError(), !!workspace.workspaceId(), workspace.loaded(), workspace.workspaces().length > 0); as emptyMessage) {
+            <tr>
+              <td colspan="6">{{ emptyMessage }}</td>
+            </tr>
+          }
         }
       </tbody>
     </table>
@@ -144,5 +175,6 @@
     >
       {{ loadingMore() ? "Cargando movimientos…" : "Más movimientos" }}
     </button>
+    @if (loadingMore()) { <p class="muted" role="status" aria-live="polite">Consultando la siguiente página de movimientos…</p> }
   }
 </section>

@@ -3,6 +3,7 @@ import { WorkspaceStore } from "../../workspaces/data-access/workspace.store";
 import {
   ViewEncapsulation,
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -15,11 +16,15 @@ import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import {
   consumptionKindLabel,
+  consumptionLedgerStageCount,
+  consumptionLedgerEmptyStateMessage,
   consumptionPlanLabel,
   consumptionQuotaProgress,
   consumptionQuotaTotal,
   consumptionStageLabel,
+  filterLedgerByStage,
   pipelineShortId,
+  type ConsumptionStageFilter,
 } from "../models/ledger-labels";
 
 export function loadConsumptionSections(
@@ -32,6 +37,13 @@ export function loadConsumptionSections(
   ]);
 }
 
+const consumptionStageFilters = [
+  { id: "all", label: "Todas" },
+  { id: "audio", label: "Audio" },
+  { id: "analysis", label: "Transcripción" },
+  { id: "render", label: "Renderizado" },
+] as const;
+
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-consumption",
@@ -40,8 +52,10 @@ export function loadConsumptionSections(
   styleUrl: "./consumption.component.css",
 })
 export class ConsumptionComponent {
+  readonly stageFilters = consumptionStageFilters;
   readonly stageLabel = consumptionStageLabel;
   readonly kindLabel = consumptionKindLabel;
+  readonly ledgerEmptyStateMessage = consumptionLedgerEmptyStateMessage;
   readonly planLabel = consumptionPlanLabel;
   readonly quotaProgress = consumptionQuotaProgress;
   readonly quotaTotal = consumptionQuotaTotal;
@@ -53,6 +67,10 @@ export class ConsumptionComponent {
   readonly session = inject(SessionStore);
   readonly consumption = signal<Schema<"ConsumptionDto"> | null>(null);
   readonly ledger = signal<Schema<"UsageLedgerEntryDto">[]>([]);
+  readonly stageFilter = signal<ConsumptionStageFilter>("all");
+  readonly visibleLedger = computed(() => {
+    return filterLedgerByStage(this.ledger(), this.stageFilter());
+  });
   readonly nextId = signal<string | null>(null);
   readonly overviewError = signal("");
   readonly ledgerError = signal("");
@@ -61,6 +79,10 @@ export class ConsumptionComponent {
   readonly accessDenied = signal(false);
   private generation = 0;
   private loadedWorkspaceId = "";
+  private seenLedgerCursors = new Set<string>();
+  stageCount(stage: ConsumptionStageFilter): number {
+    return consumptionLedgerStageCount(this.ledger(), stage);
+  }
   constructor() {
     effect(() => {
       const id = this.workspace.workspaceId();
@@ -74,6 +96,7 @@ export class ConsumptionComponent {
     this.accessDenied.set(false);
     if (id !== this.loadedWorkspaceId) {
       this.loadedWorkspaceId = id;
+      this.seenLedgerCursors.clear();
       this.loadingMore.set(false);
       this.consumption.set(null);
       this.ledger.set([]);
@@ -81,6 +104,7 @@ export class ConsumptionComponent {
     }
     this.overviewError.set("");
     this.ledgerError.set("");
+    this.seenLedgerCursors.clear();
     if (!id) { this.busy.set(false); return; }
     this.busy.set(true);
     try {
@@ -90,8 +114,10 @@ export class ConsumptionComponent {
           this.clearDenied();
           return;
         }
-        if (usage.status === "fulfilled") this.consumption.set(usage.value);
-        else this.overviewError.set(errorMessage(usage.reason));
+        if (usage.status === "fulfilled") {
+          if (usage.value.workspaceId === id) this.consumption.set(usage.value);
+          else this.overviewError.set("El resumen no corresponde al espacio seleccionado.");
+        } else this.overviewError.set(errorMessage(usage.reason));
         if (page.status === "fulfilled") {
           this.ledger.set(page.value.items);
           this.nextId.set(page.value.nextBeforeId);
@@ -106,13 +132,27 @@ export class ConsumptionComponent {
     const generation = this.generation;
     const id = this.workspace.workspaceId();
     if (!id || id !== this.loadedWorkspaceId) return;
+    const cursor = this.nextId();
+    this.seenLedgerCursors ??= new Set<string>();
     this.loadingMore.set(true);
     this.ledgerError.set("");
     try {
-      const page = await this.api.ledger(id, this.nextId());
+      const page = await this.api.ledger(id, cursor);
       if (generation === this.generation && id === this.workspace.workspaceId()) {
-        this.ledger.update((items) => [...items, ...page.items]);
-        this.nextId.set(page.nextBeforeId);
+        const knownIds = new Set(this.ledger().map((item) => item.id));
+        const freshItems = page.items.filter((item) => {
+          if (knownIds.has(item.id)) return false;
+          knownIds.add(item.id);
+          return true;
+        });
+        this.ledger.update((items) => [...items, ...freshItems]);
+        if (cursor) this.seenLedgerCursors.add(cursor);
+        if (page.nextBeforeId && this.seenLedgerCursors.has(page.nextBeforeId)) {
+          this.nextId.set(null);
+          this.ledgerError.set("La consulta devolvió un cursor repetido. Se detuvo la paginación para evitar repetir movimientos.");
+        } else {
+          this.nextId.set(page.nextBeforeId);
+        }
       }
     } catch (error) {
       if (generation === this.generation && id === this.workspace.workspaceId()) {
@@ -131,7 +171,7 @@ export class ConsumptionComponent {
     this.ledger.set([]);
     this.nextId.set(null);
     this.accessDenied.set(true);
-    this.overviewError.set("El servidor no confirmó acceso al consumo de este espacio. Actualiza tus espacios o vuelve a iniciar sesión.");
+    this.overviewError.set("");
     this.ledgerError.set("");
   }
 }

@@ -6,6 +6,42 @@ export function consumptionKindLabel(kind: string): string {
   return ({ reserve: 'Reserva', consume: 'Consumo', release: 'Liberación' } as Record<string, string>)[kind] ?? kind;
 }
 
+export type ConsumptionStageFilter = 'all' | 'audio' | 'analysis' | 'render';
+
+export function filterLedgerByStage<T extends { stage: string }>(
+  entries: readonly T[],
+  stage: ConsumptionStageFilter,
+): T[] {
+  return stage === 'all' ? [...entries] : entries.filter((entry) => entry.stage === stage);
+}
+
+export function consumptionLedgerStageCount(
+  entries: readonly { stage: string }[],
+  stage: ConsumptionStageFilter,
+): number {
+  return stage === 'all' ? entries.length : entries.filter((entry) => entry.stage === stage).length;
+}
+
+export function consumptionLedgerEmptyStateMessage(
+  busy: boolean,
+  accessDenied: boolean,
+  hasError: boolean,
+  hasWorkspace = true,
+  workspacesLoaded = true,
+  hasAvailableWorkspace = false,
+): string | null {
+  if (!hasWorkspace) {
+    if (!workspacesLoaded) return 'Consultando espacios…';
+    return hasAvailableWorkspace
+      ? 'Selecciona un espacio de trabajo en la barra lateral para consultar sus movimientos.'
+      : 'No hay espacios disponibles para consultar.';
+  }
+  if (busy) return 'Consultando movimientos…';
+  if (accessDenied) return 'Sin acceso confirmado a los movimientos.';
+  if (hasError) return null;
+  return 'No hay movimientos registrados en este espacio.';
+}
+
 export function pipelineShortId(id: string): string {
   return id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id;
 }
@@ -23,7 +59,11 @@ export function consumptionQuotaTotal(usage: {
   consumedSeconds: number;
   reservedSeconds: number;
   availableSeconds: number;
+  plan?: { kind: string; processingSecondsPerMonth: number } | null;
 }): number {
+  if (usage.plan?.kind === 'development') {
+    return Math.max(0, usage.plan.processingSecondsPerMonth);
+  }
   return Math.max(
     0,
     usage.consumedSeconds + usage.reservedSeconds + usage.availableSeconds,

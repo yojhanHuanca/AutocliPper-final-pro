@@ -1,8 +1,11 @@
 import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { signal } from '@angular/core';
 import { ConsumptionComponent, loadConsumptionSections } from '../../.local/tests/client.mjs';
+
+const template = readFileSync(new URL('../../src/app/features/consumption/pages/consumption.component.html', import.meta.url), 'utf8');
 
 test('consumption sections settle independently so one API failure preserves the successful result', async () => {
   const overview={consumedSeconds:12,consumedMinutes:0.2,reservedSeconds:2,availableSeconds:98};
@@ -15,7 +18,7 @@ test('consumption sections settle independently so one API failure preserves the
 
 function subject(api) {
   const state=Object.create(ConsumptionComponent.prototype);
-  Object.assign(state,{api,generation:0,loadedWorkspaceId:'alpha',workspace:{workspaceId:signal('alpha')}});
+  Object.assign(state,{api,generation:0,loadedWorkspaceId:'alpha',seenLedgerCursors:new Set(),workspace:{workspaceId:signal('alpha')}});
   for(const [key,value] of Object.entries({consumption:{consumedSeconds:12},ledger:[{id:'old'}],nextId:'cursor',overviewError:'',ledgerError:'',busy:false,loadingMore:false,accessDenied:false})) state[key]=signal(value);
   return state;
 }
@@ -28,7 +31,13 @@ test('consumption denial from either endpoint clears all cached totals, rows and
     assert.deepEqual(state.ledger(),[]);
     assert.equal(state.nextId(),null);
     assert.equal(state.accessDenied(),true);
+    assert.equal(state.overviewError(),'','Access denial is presented as a module-level state, never mislabeled as an overview failure.');
   }
+});
+
+test('consumption access denial has a distinct message from overview loading failures',()=>{
+  assert.match(template,/@if \(accessDenied\(\)\) \{[\s\S]*?No se pudo confirmar el acceso a todos los datos de consumo[\s\S]*?\} @else if \(overviewError\(\)\)/);
+  assert.match(template,/El resumen de consumo no se pudo cargar: \{\{ overviewError\(\) \}\}/);
 });
 
 test('a workspace change invalidates late consumption without querying an empty selection',async()=>{
@@ -44,6 +53,21 @@ test('a workspace change invalidates late consumption without querying an empty 
   assert.deepEqual(state.ledger(),[]);
 });
 
+test('overview responses from a different workspace never replace the selected workspace totals',async()=>{
+  const state=subject({
+    overview:async id=>({workspaceId:id==='alpha'?'beta':'alpha',consumedSeconds:900}),
+    ledger:async()=>({items:[],nextBeforeId:null}),
+  });
+  await state.load('alpha');
+  assert.equal(state.consumption().consumedSeconds,12,'The last confirmed same-workspace value remains available as stale data.');
+  assert.equal(state.overviewError(),'El resumen no corresponde al espacio seleccionado.');
+
+  state.workspace.workspaceId.set('beta');
+  await state.load('beta');
+  assert.equal(state.consumption(),null,'Values from the previous workspace are cleared before accepting a new scope.');
+  assert.equal(state.overviewError(),'El resumen no corresponde al espacio seleccionado.');
+});
+
 test('transient failures retain explicitly stale data but pagination denial removes it',async()=>{
   const state=subject({overview:async()=>{throw new Error('temporary');},ledger:async()=>{throw new Error('ledger temporary');}});
   await state.load();
@@ -53,6 +77,7 @@ test('transient failures retain explicitly stale data but pagination denial remo
   state.api.ledger=async()=>{throw {status:403};};
   await state.loadMore();
   assert.equal(state.accessDenied(),true);
+  assert.equal(state.overviewError(),'');
   assert.deepEqual(state.ledger(),[]);
   assert.equal(state.loadingMore(),false);
 });
@@ -63,4 +88,28 @@ test('pagination never applies an old workspace cursor to a newly selected works
   state.workspace.workspaceId.set('beta');
   await state.loadMore();
   assert.equal(calls,0);
+});
+
+test('pagination removes repeated movement rows and stops when the service repeats the same cursor',async()=>{
+  const state=subject({ledger:async()=>({items:[{id:'old'},{id:'new'}],nextBeforeId:'cursor'})});
+  await state.loadMore();
+  assert.deepEqual(state.ledger().map(item=>item.id),['old','new']);
+  assert.equal(state.nextId(),null);
+  assert.match(state.ledgerError(),/cursor repetido/);
+  assert.equal(state.loadingMore(),false);
+});
+
+test('pagination stops on a cursor cycle and allows a forward cursor only once',async()=>{
+  const responses=[
+    {items:[{id:'second'}],nextBeforeId:'cursor-two'},
+    {items:[{id:'third'}],nextBeforeId:'cursor-one'},
+  ];
+  const state=subject({ledger:async()=>responses.shift()});
+  state.nextId.set('cursor-one');
+  await state.loadMore();
+  assert.equal(state.nextId(),'cursor-two');
+  await state.loadMore();
+  assert.equal(state.nextId(),null);
+  assert.deepEqual(state.ledger().map(item=>item.id),['old','second','third']);
+  assert.match(state.ledgerError(),/cursor repetido/);
 });
