@@ -1,5 +1,68 @@
 # AutoClipper
 
+## Run locally (Docker Desktop)
+
+The complete local stack runs with Docker Compose, including the Angular web app, API, workers, PostgreSQL, Redis, and private object storage. Use the existing web address `http://localhost:4200`; do not start another frontend server.
+
+### Requirements
+
+- Windows 10/11, Docker Desktop with the Linux engine and WSL 2 backend.
+- Docker Compose v2 (`docker compose`).
+- Git and PowerShell.
+- Loopback ports 4200, 3001–3005, 3007, 11025, 15432, 16379, 19000, and 19025 available.
+
+No host Node.js, npm, or FFmpeg installation is needed. The first build downloads pinned images and builds the app. A temporary Node container only creates ignored local credentials.
+
+### First startup
+
+Clone the private repository and check Docker in PowerShell:
+
+```powershell
+git clone https://github.com/yojhanHuanca/AutocliPper-final-pro.git
+Set-Location .\AutocliPper-final-pro
+docker info
+docker compose version
+```
+
+Create local credentials once. The script refuses to overwrite existing `.env` files; skip it on an existing configured checkout:
+
+```powershell
+$repoRoot = (Get-Location).Path
+docker run --rm --mount "type=bind,source=$repoRoot,target=/workspace" `
+  --workdir /workspace/autoclipper-infrastructure `
+  node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 `
+  node setup-local.mjs
+```
+
+Start the stack from the infrastructure directory:
+
+```powershell
+Set-Location .\autoclipper-infrastructure
+$compose = @('-f', 'compose.yaml', '-f', 'compose.business.yaml', '-f', 'compose.web.yaml', '--profile', 'app')
+docker compose @compose up -d --build
+docker compose @compose ps
+```
+
+Wait for services to become healthy. Open the app at [http://localhost:4200](http://localhost:4200), API health at [http://localhost:3005/v1/health/ready](http://localhost:3005/v1/health/ready), API docs at [http://localhost:3005/docs](http://localhost:3005/docs), and the development inbox at [http://localhost:19025](http://localhost:19025).
+
+### Secrets, stopping, and resuming
+
+Generated `.env` files are local and ignored by Git. Do not share their values or the output of `docker compose config`. Paid AI is off by default; ordinary startup makes no paid provider calls. Do not enable Ollama or paid calls during collaborator onboarding.
+
+Stop containers while keeping local data:
+
+```powershell
+docker compose @compose down
+```
+
+Do not add `-v`: that removes database, Redis, and object-storage volumes. Resume with `docker compose @compose up -d` (add `--build` only when intentionally rebuilding changed images). Coordinate rebuilds of an in-use stack with the team because they can recreate services.
+
+For troubleshooting, inspect only the needed service and review logs before sharing:
+
+```powershell
+docker compose @compose logs --tail 100 web gateway media
+```
+
 Privacidad: [aporte del perfil propio de Identity](autoclipper-project-documentation/privacy-lifecycle.md) y nuevo [aporte de membresías actuales de Workspace](autoclipper-project-documentation/privacy-contributions.md), con contraseña/MFA, CSRF, idempotencia y recibos auditables sin otra copia del payload. Son parciales; la solicitud global sigue pendiente. El inventario versionado cubre ahora 58 tablas de seis bases y sus dependencias con objetos/grants/backups; eliminación coordinada y política de retención pendientes. La activación del runtime compartido requiere una ventana coordinada con frontend.
 
 [CI de privacidad 39170681668](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/39170681668) aprobó los tres jobs para `b50850a`: 34 unitarias/HTTP, 34 infraestructura, regresión de negocio y aceptación aislada del aporte mediante 26 peticiones HTTP, sin fallos ni omisiones.
@@ -20,7 +83,7 @@ La [entrega de orquestación](autoclipper-project-documentation/stage-3-orchestr
 
 El [incremento de consumo](autoclipper-project-documentation/stage-6-consumption.md) pasó 28 unitarias/HTTP, 7 de ledger/aislamiento, 8 de recuperación de orquestación, 7 del flujo con whisper.cpp real y 2 de alcance manual/legacy/frontera HTTP. Los eventos/estados explícitos de tests no se presentan como IA real. [CI 38677679024](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38677679024) aprobó los tres jobs para `1069fb0`, incluidos 62 tests de negocio. El bloqueo posterior de rutas manuales cierra esa vía de admisión fuera del ledger; los demás [gates de lanzamiento](autoclipper-project-documentation/launch-backlog.md) siguen pendientes.
 
-La etapa 1 está publicada en `cf6912b`, con CI remoto aprobado. La entrega de etapa 2 y sus verificaciones se describen en [stage-2.md](autoclipper-project-documentation/stage-2.md). Swagger público en [gateway](http://localhost:3000/docs); correo de desarrollo en [Mailpit](http://localhost:19025).
+La etapa 1 está publicada en `cf6912b`, con CI remoto aprobado. La entrega de etapa 2 y sus verificaciones se describen en [stage-2.md](autoclipper-project-documentation/stage-2.md). Swagger público en [gateway](http://localhost:3005/docs); correo de desarrollo en [Mailpit](http://localhost:19025).
 
 La [admisión por modo](autoclipper-project-documentation/stage-6-commercial-admission.md) quedó cerrada con [CI 38837993047](https://github.com/yojhanHuanca/AutocliPper-final-pro/actions/runs/38837993047) para `c9e57aa`, los tres jobs aprobados: 29 unitarias/HTTP, 34 infraestructura, 62 negocio, 7 Analysis fixtures, 8 orquestación commercial y 8 admisión HTTP, sin fallos/omisiones. Se verificó además una matriz local con whisper.cpp real y ledger; CI usa fixtures explícitos y no descarga modelos. Bootstrap limpio de seis bases/doce roles sin reinicios aprobado. El stack local conserva development por defecto; el modo commercial no habilita pagos ni producción.
 
@@ -30,4 +93,4 @@ La [admisión por modo](autoclipper-project-documentation/stage-6-commercial-adm
 - [Evidencia de verificaciones](autoclipper-project-documentation/verification.md)
 - [Plan de entregas](autoclipper-project-documentation/scope.md)
 
-El frontend Angular permanece separado y no se implementa aquí. No se reutilizaron archivos, secretos ni historia del proyecto Java anterior. Por autorización posterior del propietario se reutilizó únicamente su client ID público de Google, en configuración local ignorada. El repositorio remoto es privado; los commits se publican con autorización del usuario, sin desplegar producción.
+El frontend Angular se sirve desde Docker Compose en http://localhost:4200; no hace falta iniciar un servidor de desarrollo aparte. No se reutilizaron archivos, secretos ni historia del proyecto Java anterior. Por autorización posterior del propietario se reutilizó únicamente su client ID público de Google, en configuración local ignorada. El repositorio remoto es privado; los commits se publican con autorización del usuario, sin desplegar producción.
