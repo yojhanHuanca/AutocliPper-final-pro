@@ -2,20 +2,57 @@
 
 La guía de la entrega actual está en [stage-2.md](stage-2.md): se requiere combinar `compose.yaml` y `compose.business.yaml` para disponer de autenticación, workspaces y proyectos. Los comandos de infraestructura/pruebas multimedia de este documento también sirven para comprobar esas dependencias por separado.
 
-Requisitos: Docker Desktop con motor Linux, Compose, Git. Para desarrollo en host: Node **24.21.0**, npm **11.12.1**, FFmpeg/FFprobe. Windows observado tenía Node 25.9.0: usar `nvm use 24.21.0` si ya está instalado o contenedores. No es necesario cambiar globalmente el Node del equipo.
+Requisitos para el arranque en Windows: Docker Desktop con motor Linux (backend WSL 2), Docker Compose v2, Git y PowerShell. Comprueba Docker con `docker info` y Compose con `docker compose version` antes del setup. Mantén libres en loopback los puertos `4200`, `3001`–`3005`, `3007`, `11025`, `15432`, `16379`, `19000` y `19025`. El arranque en contenedores usa la imagen Node fijada abajo; no requiere Node/npm/FFmpeg instalados en Windows. Para desarrollo nativo: Node **24.21.0**, npm **11.12.1**, FFmpeg y FFprobe; no cambies globalmente la versión de Node del equipo.
 
 ## Arranque completamente en contenedores
 
-Desde la raíz de este repositorio, PowerShell:
+Desde la raíz del repositorio, en PowerShell. Ejecuta ambos scripts en orden: Stage 1 crea la base local y Stage 2 agrega las credenciales de Identity, Workspace, Project, Analysis y Billing que exige Compose. Los dos conservan valores existentes y completan solo entradas ausentes; no imprimen credenciales. No abras ni pegues los `.env` para comprobar el resultado.
 
 ```powershell
-Set-Location autoclipper-infrastructure
-node setup-local.mjs
-docker compose -f compose.yaml -f compose.business.yaml --profile app up -d --build
-docker compose -f compose.yaml -f compose.business.yaml --profile app ps
+$repoRoot = (Get-Location).Path
+$nodeBootstrap = @(
+  'run', '--rm',
+  '--mount', "type=bind,source=$repoRoot,target=/workspace",
+  '--workdir', '/workspace/autoclipper-infrastructure',
+  'node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20'
+)
+docker @nodeBootstrap node setup-local.mjs
+if ($LASTEXITCODE -ne 0) { throw 'Stage 1 setup failed.' }
+docker @nodeBootstrap node setup-stage2.mjs
+if ($LASTEXITCODE -ne 0) { throw 'Stage 2 setup failed.' }
+docker @nodeBootstrap node --test setup-scripts.test.mjs
+if ($LASTEXITCODE -ne 0) { throw 'Setup contract checks failed.' }
+
+Push-Location (Join-Path $repoRoot 'autoclipper-infrastructure')
+try {
+  $compose = @('-f', 'compose.yaml', '-f', 'compose.business.yaml', '-f', 'compose.web.yaml', '--profile', 'app')
+  docker compose @compose up -d --build
+  if ($LASTEXITCODE -ne 0) { throw 'Compose startup failed.' }
+  docker compose @compose ps
+  function Wait-ForHttpReady([string]$Uri, [int]$TimeoutSeconds = 300) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+      try {
+        $response = Invoke-WebRequest -Uri $Uri -TimeoutSec 5
+        if ($response.StatusCode -eq 200) { return }
+      } catch { }
+      Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    throw "Readiness check timed out for $Uri."
+  }
+  Wait-ForHttpReady 'http://localhost:4200/health/ready'
+  Wait-ForHttpReady 'http://localhost:3005/v1/health/ready'
+  Write-Output 'Web and API health checks passed (HTTP 200).'
+} finally {
+  Pop-Location
+}
 ```
 
-`setup-local.mjs` crea los archivos de entorno ignorados por Git con secretos aleatorios e invoca setup-stage2.mjs para las aplicaciones de negocio. Nunca imprime valores. Falla si los archivos iniciales ya existen: usar `setup-stage2.mjs` para ampliar una instalación de etapa 1. Si una creación se interrumpe parcialmente, recuperar explícitamente los archivos antes de reintentar. No borrar volúmenes para solucionar contraseñas sin confirmar que no contienen datos necesarios.
+Stage 1 no invoca Stage 2; se ejecutan explícitamente para que el orden y los archivos requeridos por Compose sean visibles. `setup-scripts.test.mjs` corre en un directorio temporal: comprueba reintento, preservación, salida sin credenciales y defaults de AI, sin arrancar servicios ni modificar los `.env` reales. Ambos comandos son repetibles cuando el `.env` de infraestructura está presente. Si faltan las credenciales base mientras quedan archivos `.env` de servicios, Stage 1 falla sin crear reemplazos: restaura el `.env` original desde un respaldo local seguro. Nunca compartas el contenido de `.env`, capturas que lo muestren ni la salida de `docker compose config`, porque esta expande variables. No borres `.env` ni volúmenes para solucionar contraseñas; no uses `down -v`.
+
+El perfil de onboarding usa `compose.yaml`, `compose.business.yaml` y `compose.web.yaml` con `--profile app`. Web queda en `http://localhost:4200`; Gateway, en `http://localhost:3005`. Los checks usados arriba prueban únicamente estado HTTP de readiness y no imprimen bodies. `docker compose ps` debe mostrar servicios de aplicación saludables y migradores/inicializadores one-shot completados.
+
+Paid AI queda apagado (`PAID_AI_ENABLED=false`, presupuesto `0`) y `OPENAI_API_KEY` vacío; el setup no configura pagos ni Ollama. No añadas `compose.analysis-local.yaml`, descargues un modelo ni habilites Ollama durante el onboarding. Ese opt-in es separado y está descrito en la sección ASR local.
 
 Servicios: gateway [http://localhost:3000/v1/health/live](http://localhost:3000/v1/health/live), media [http://localhost:3001/v1/health/ready](http://localhost:3001/v1/health/ready). Swagger en `/docs` y JSON en `/openapi.json`, habilitados solo para desarrollo. PostgreSQL `127.0.0.1:15432`, Redis `127.0.0.1:16379`, S3 `127.0.0.1:19000`. Todos los puertos publicados se limitan a loopback.
 
@@ -115,3 +152,5 @@ Billing de desarrollo usa puerto loopback 3007, base/roles propios y `0000_consu
 Project admite `PROCESSING_ADMISSION_MODE=development` por defecto. `commercial` rechaza nuevos POST manuales de audio/análisis/render/exportación con 403 `MANUAL_PROCESSING_NOT_ADMITTED`; conserva consultas, descargas, cancelación, drafts e historial y permite pipelines sujetos al ledger. Reiniciar Project aplica el modo; nunca enviarlo desde Angular. `admission-verification` requiere Project detenido, usa HTTP y workers reales y puede ejecutar ASR opt-in con `ADMISSION_REAL_ASR=true`; `pipeline-verification` comprueba también el modo commercial con estados explícitos. [Inventario, comandos y límites](stage-6-commercial-admission.md). El nombre del modo no habilita pagos ni producción.
 
 La administración mínima read-only añade Identity `0004_administration` y `0005_admin_audit_grant_context`, sin base ni runtime nuevo. El operador usa la conexión owner con `scripts/admin-operator.mjs`; la aplicación solo puede leer grants. Requiere cuenta verificada/MFA y elevación de sesión de cinco minutos; no hereda roles workspace. `admin-verification` usa cuentas/jobs sintéticos explícitos, servicios reales y CLI owner solo en el verificador; debe ejecutarse con Project activo y revoca/comprueba sus grants al terminar. No recrear servicios mientras el frontend esté en E2E: coordinar ventana y conservar volúmenes. [CLI, OpenAPI, permisos, límites y evidencia](stage-7-administration-read-only.md).
+
+Para comprobar solo login en Windows cuando Docker no está disponible, usar [el lanzador nativo aislado](../autoclipper-backend-microservices/docs/native-login.md). Esta prueba no acredita el flujo de proyectos ni procesamiento multimedia.
