@@ -1,19 +1,19 @@
-<div class="depth-stage" role="img" aria-label="Composición ilustrativa: una grabación da lugar a tres posibles clips verticales">
+<div class="depth-stage" role="img" aria-label="Composición de ejemplo: el video original, una selección vertical y subtítulos listos para editar" (pointermove)="onPointerMove($event)" (pointerleave)="resetPointer()">
   <div class="source-card">
     <div class="source-frame">
       <picture>
         <source srcset="/images/creator-480.webp 480w, /images/creator-960.webp 960w" sizes="(max-width: 700px) 90vw, 45vw" type="image/webp" />
         <img src="/images/creator-960.webp" width="960" height="640" alt="" fetchpriority="high" />
       </picture>
-      <span class="source-badge">VIDEO ORIGINAL · 16:9</span>
-      <strong>Un directo lleno de momentos.</strong>
+      <span class="source-badge">FUENTE ORIGINAL / 16:9</span>
+      <strong>La historia empieza aquí.</strong>
     </div>
     <div class="source-footer">
-      <span>grabación original</span>
+      <span>ARCHIVO LOCAL</span>
       <div class="source-wave" aria-hidden="true">
         @for (bar of wave; track $index) { <i [style.height.%]="bar"></i> }
       </div>
-      <span>48:12</span>
+      <span>00:12 / 00:42</span>
     </div>
   </div>
 
@@ -21,14 +21,14 @@
   <div class="cut-icon" aria-hidden="true"><ac-icon name="scissors" /></div>
 
   <div class="clip-stack" aria-hidden="true">
-    @for (clip of clips; track clip.time) {
-      <div class="clip-card" [class]="'clip-card clip-' + $index">
-        <img src="/images/creator-portrait-v1.webp" width="720" height="1279" alt="" [style.object-position-x]="clip.position" />
-        <span class="clip-ratio">9:16</span>
-        <strong>{{ clip.title }}</strong>
-        <small>{{ clip.time }}</small>
-      </div>
-    }
+    <div class="clip-card">
+      <img src="/images/creator-portrait-v1.webp" width="720" height="1279" alt="" [style.object-position-x]="selectedFrame.position" />
+      <span class="clip-ratio">9:16</span>
+      <strong>{{ selectedFrame.title }}</strong>
+    </div>
   </div>
-  <span class="stage-disclosure">Ejemplo visual · tú eliges el momento</span>
+  <div class="caption-float" aria-hidden="true"><small>SUBTÍTULO / 00:16</small><strong>esa idea que conecta.</strong><i></i></div>
+  <div class="selection-float" aria-hidden="true"><span>RECORTE</span><strong>00:12—00:24</strong><i></i></div>
+  <span class="stage-index" aria-hidden="true">01 <i></i> 04</span>
+  <span class="stage-disclosure">MUESTRA DEL EDITOR · NO ES UN VIDEO REAL</span>
 </div>

@@ -11,10 +11,10 @@ test('landing cycles every three seconds, pauses, reduces motion and disposes it
   });
   cycle.configure(false, false);
   tick(); assert.equal(index, 1);
-  tick(); assert.equal(index, 2);
   tick(); assert.equal(index, 0);
+  tick(); assert.equal(index, 1);
   cycle.configure(true, false); assert.equal(active, 0);
-  cycle.configure(false, false); tick(); assert.equal(index, 1);
+  cycle.configure(false, false); tick(); assert.equal(index, 0);
   cycle.configure(false, true); assert.equal(active, 0); assert.equal(index, 0);
   cycle.configure(false, false); assert.equal(active, 1);
   cycle.destroy(); assert.equal(active, 0);

@@ -4,24 +4,31 @@
       <a [href]="'#' + section.id" [class.current]="activeSection() === section.id" [attr.aria-current]="activeSection() === section.id ? 'location' : null">{{ section.label }}</a>
     }
   </nav>
-  <section class="hero wrap" id="inicio">
-    <div class="eyebrow">
-      <span class="live-dot"></span> EL SIGUIENTE CAPÍTULO DE TU CONTENIDO
-    </div>
-    <h1>Las grandes historias<br />merecen <em>otro corte.</em></h1>
-    <div class="hero-bottom">
-      <p>
-        Ese momento está en tu grabación. Encuéntralo en la transcripción,
-        elige el corte y llévatelo en un clip con subtítulos.
-      </p>
-      <a class="button primary" routerLink="/register"
-        >Crear mi primer clip <ac-icon name="arrow"
-      /></a>
-    </div>
-    <ac-hero-depth />
-    <div class="hero-footnote">
-      <span>Transcripción local · Edición versionada · Exportación privada</span
-      ><span>DESLIZA PARA DESCUBRIR ↓</span>
+  <section class="hero" id="inicio">
+    <div class="hero-shell wrap">
+      <div class="hero-topline">
+        <div class="eyebrow"><span class="live-dot"></span> AUTOCLIPPER / ESTUDIO CREATIVO</div>
+        <button class="motion-control" type="button" [attr.aria-pressed]="reducedMotion()" [disabled]="prefersReducedMotion()" (click)="toggleMotion()">
+          Movimiento: {{ prefersReducedMotion() ? 'reducido por sistema' : reducedMotion() ? 'pausado' : 'activo' }}
+        </button>
+      </div>
+      <div class="hero-composition">
+        <div class="hero-copy">
+          <span class="eyebrow">UNA GRABACIÓN. MUCHOS MOMENTOS.</span>
+          <h1><span>El corte</span><span>que hace que</span><span><em>se queden.</em></span></h1>
+          <p>Encuentra la idea, elige el fragmento y conviértelo en un clip con subtítulos. Cada decisión sigue siendo tuya.</p>
+          <div class="hero-actions">
+            <a class="button" routerLink="/register">Empieza con tu video <ac-icon name="arrow" /></a>
+            <a class="text-link" routerLink="/login">Ya tengo cuenta</a>
+          </div>
+          <p class="hero-next-step">Crea un proyecto, carga un archivo y sigue editando cuando quieras.</p>
+        </div>
+        <div class="hero-art"><ac-hero-depth /></div>
+      </div>
+      <div class="hero-footnote">
+        <span>Cortes que eliges · Borradores que puedes retomar · Exportación privada</span>
+        <span>BAJA PARA VER CÓMO FUNCIONA ↓</span>
+      </div>
     </div>
   </section>
 
@@ -34,12 +41,12 @@
       <p>Explora los cuatro pasos. El momento lo eliges tú.</p>
     </div>
     <div class="story-layout">
-      <div class="story-screen">
+      <div class="story-screen" (mouseenter)="pauseSceneCycle()" (mouseleave)="resumeSceneCycle()" (focusin)="pauseSceneCycle()" (focusout)="resumeSceneCycle()">
         <div class="screen-top">
           <span><ac-icon name="scissors" /> AutoClipper / estudio</span
           ><span>Ejemplo ilustrativo</span>
         </div>
-        <div class="process-stage" aria-live="polite" aria-atomic="true">
+        <div class="process-stage" aria-atomic="true">
           @switch (scene()) {
             @case (0) {
               <div class="process-upload process-scene">
@@ -146,7 +153,7 @@
             <ac-icon name="clock" /><span>Revisiones recuperables</span>
           </div>
           <a class="text-link" routerLink="/design/editor"
-            >Ver propuesta visual del editor <ac-icon name="arrow"
+            >Ver el editor <ac-icon name="arrow"
           /></a>
         </div>
         <div class="studio-track">
@@ -221,10 +228,7 @@
     <div class="closing-logo"><ac-brand variant="full"/></div>
     <span class="eyebrow">TU SIGUIENTE HISTORIA EMPIEZA CON UN CORTE</span>
     <h2>Haz espacio para<br /><em>lo que importa.</em></h2>
-    <a class="button primary" routerLink="/register"
-      >Abrir mi estudio <ac-icon name="arrow" /></a
-    ><a class="text-link" routerLink="/design"
-      >Ver propuesta del panel <ac-icon name="arrow"
-    /></a>
+    <a class="button primary" routerLink="/register">Crear un proyecto <ac-icon name="arrow" /></a>
+    <a class="text-link" routerLink="/login">Iniciar sesión <ac-icon name="arrow" /></a>
   </section>
 </main>

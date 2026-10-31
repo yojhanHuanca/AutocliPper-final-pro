@@ -1,7 +1,6 @@
 export const LANDING_ACCENTS = [
-  { color: '#2354BB', hover: '#183E90', tint: '#EDF2FC' },
-  { color: '#A32359', hover: '#841B47', tint: '#FCEFF5' },
-  { color: '#6E3CA3', hover: '#542C80', tint: '#F4EFFB' },
+  { color: '#315EFF', hover: '#2347D0', tint: '#E4EAFF' },
+  { color: '#C72670', hover: '#A61D5B', tint: '#FBE1ED' },
 ] as const;
 
 /** Owns one timer; pausing preserves the current accent. */

@@ -19,6 +19,7 @@ import { HeroDepthComponent } from '../components/hero-depth/hero-depth.componen
   imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent, HeroDepthComponent],
   host: {
     "[class.motion-paused]": "reducedMotion()",
+    "[class.motion-enabled]": "motionOverride() === true",
     "[style.--accent]": "accent().color",
     "[style.--accent-hover]": "accent().hover",
     "[style.--tint]": "accent().tint",
@@ -29,6 +30,9 @@ import { HeroDepthComponent } from '../components/hero-depth/hero-depth.componen
 export class LandingComponent implements AfterViewInit {
   private readonly destroy = inject(DestroyRef);
   readonly scene = signal(0);
+  readonly scenePaused = signal(false);
+  private sceneCycleTimer: number | undefined;
+  private readonly onVisibilityChange = () => this.syncSceneCycle();
   readonly activeSection = signal('inicio');
   readonly sectionLinks = [
     { id: 'inicio', label: 'Inicio' },
@@ -37,23 +41,50 @@ export class LandingComponent implements AfterViewInit {
     { id: 'estudio', label: 'El estudio' },
     { id: 'alcance', label: 'Disponible hoy' },
   ];
-  readonly reducedMotion = signal(false);
+  readonly prefersReducedMotion = signal(false);
+  readonly motionOverride = signal<boolean | null>(null);
+  readonly reducedMotion = computed(() => !(this.motionOverride() ?? !this.prefersReducedMotion()));
   private readonly accentIndex = signal(0);
   readonly accent = computed(() => LANDING_ACCENTS[this.accentIndex()]);
   constructor() {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    this.reducedMotion.set(preference.matches);
-    const onPreference = () => this.reducedMotion.set(preference.matches);
+    this.prefersReducedMotion.set(preference.matches);
+    const onPreference = () => this.prefersReducedMotion.set(preference.matches);
     preference.addEventListener('change', onPreference);
     const cycle = createAccentCycle(index => this.accentIndex.set(index), (tick, ms) => {
       const timer = window.setInterval(tick, ms);
       return () => window.clearInterval(timer);
     });
     effect(() => cycle.configure(false, this.reducedMotion()));
+    effect(() => {
+      this.reducedMotion();
+      this.scenePaused();
+      this.syncSceneCycle();
+    });
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.destroy.onDestroy(() => {
       cycle.destroy();
+      this.stopSceneCycle();
+      document.removeEventListener('visibilitychange', this.onVisibilityChange);
       preference.removeEventListener('change', onPreference);
     });
+  }
+  toggleMotion(): void {
+    this.motionOverride.set(this.reducedMotion());
+  }
+  pauseSceneCycle(): void { this.scenePaused.set(true); }
+  resumeSceneCycle(): void { this.scenePaused.set(false); }
+  private syncSceneCycle(): void {
+    this.stopSceneCycle();
+    if (document.hidden || this.reducedMotion() || this.scenePaused()) return;
+    this.sceneCycleTimer = window.setInterval(() => {
+      this.scene.update(current => (current + 1) % this.sceneLabels.length);
+    }, 4800);
+  }
+  private stopSceneCycle(): void {
+    if (this.sceneCycleTimer === undefined) return;
+    window.clearInterval(this.sceneCycleTimer);
+    this.sceneCycleTimer = undefined;
   }
   ngAfterViewInit(): void {
     const updateActive = () => {
