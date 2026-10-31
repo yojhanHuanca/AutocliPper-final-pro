@@ -2,17 +2,39 @@
   <div class="timeline-heading">
     <h2 id="timeline-title"><ac-icon name="captions" />Línea de tiempo</h2>
     @if (vm.draft() && vm.clipRangeUsable()) { <strong>{{ vm.timeline().startSeconds | number: "1.1-3" }} s — {{ vm.timeline().endSeconds | number: "1.1-3" }} s</strong> }
-    @else if (vm.draft()) { <span>Corrige el intervalo del clip</span> }
+    @else if (vm.draft()) { <span>{{ vm.sourceDuration() === null ? 'Verificando duración de la fuente' : 'Corrige el intervalo del clip' }}</span> }
     @else { <span>Sin revisión cargada</span> }
+    <div class="timeline-actions" aria-label="Herramientas de edición de tiempo">
+      <button type="button" class="button small" disabled title="El contrato de edición no ofrece dividir un borrador en dos clips.">Dividir clip</button>
+      <button type="button" class="button small" disabled title="El servidor no ofrece duplicar borradores.">Duplicar</button>
+      <button type="button" class="button small danger" disabled title="El servidor no ofrece eliminar borradores desde el editor.">Eliminar</button>
+      <span class="zoom-controls"><button type="button" aria-label="Alejar línea de tiempo" [disabled]="zoomPercent() <= 50" (click)="changeZoom(-25)">−</button><output>{{ zoomPercent() }}%</output><button type="button" aria-label="Acercar línea de tiempo" [disabled]="zoomPercent() >= 200" (click)="changeZoom(25)">+</button></span>
+    </div>
   </div>
+  <p class="timeline-action-note">Dividir, duplicar y eliminar están desactivados: el API no ofrece esas operaciones para borradores.</p>
 
   @if (vm.sourceDuration(); as duration) {
     <div class="source-meta">Fuente inspeccionada · {{ duration | number: "1.1-1" }} s</div>
+    @if (vm.sourcePlaybackSession()) {
+      <div class="source-scrubber">
+        <label for="source-scrub">Buscar en el video original</label>
+        <input id="source-scrub" type="range" min="0" [max]="duration" step="0.1" [ngModel]="vm.sourceTime() ?? 0" (ngModelChange)="vm.seekSourceTo($event)" aria-label="Buscar posición en el video original" />
+        <output>{{ (vm.sourceTime() ?? 0) | number:'1.1-1' }} s / {{ duration | number:'1.1-1' }} s</output>
+      </div>
+      <button class="button small" type="button" (click)="vm.seekSourceToClipStart()">Ir al inicio del recorte · {{ vm.spec.startSeconds | number:'1.1-1' }} s</button>
+    } @else {
+      <p class="timeline-help">Para buscar en el video original, solicita un enlace temporal desde Vista del clip.</p>
+    }
     @if (vm.clipRangeUsable()) {
-    <div class="source-track" role="img" [attr.aria-label]="'Selección desde ' + vm.spec.startSeconds + ' hasta ' + vm.spec.endSeconds + ' segundos de una fuente de ' + duration + ' segundos'">
-      <div class="selected-range" [style.left.%]="vm.spec.startSeconds / duration * 100" [style.width.%]="(vm.spec.endSeconds - vm.spec.startSeconds) / duration * 100"></div>
-    </div>
+    <div class="timeline-lane-heading"><strong>VIDEO</strong><span>Fuente privada · recorte seleccionado</span></div>
+    <div class="source-track-scroll"><div #rangeTrack class="source-track" [style.width.%]="zoomPercent()" role="group" [attr.aria-label]="'Selecciona el recorte en una fuente de ' + duration + ' segundos. Arrastra los extremos o usa el teclado.'" (pointermove)="moveRangeDrag($event, rangeTrack)" (pointerup)="endRangeDrag()" (pointercancel)="endRangeDrag()">
+      <div class="selected-range" role="group" tabindex="0" [attr.aria-disabled]="!vm.canChangeCaptions()" [attr.aria-label]="'Mover el recorte completo: ' + (vm.spec.startSeconds | number:'1.1-1') + ' a ' + (vm.spec.endSeconds | number:'1.1-1') + ' segundos. Usa ←/→ para moverlo; Mayús mueve un segundo; Inicio y Fin llevan a los extremos.'" [style.left.%]="vm.spec.startSeconds / duration * 100" [style.width.%]="(vm.spec.endSeconds - vm.spec.startSeconds) / duration * 100" (pointerdown)="startSelectionDrag($event)" (keydown)="moveSelectionKeydown($event)"></div>
+      <button type="button" class="range-handle range-handle-start" role="slider" aria-label="Inicio del recorte" [style.left.%]="vm.spec.startSeconds / duration * 100" [attr.aria-valuemin]="vm.timelineStartMin()" [attr.aria-valuemax]="vm.timelineStartMax()" [attr.aria-valuenow]="vm.spec.startSeconds" [attr.aria-valuetext]="(vm.spec.startSeconds | number:'1.1-1') + ' segundos'" [disabled]="!vm.canChangeCaptions()" (pointerdown)="startRangeDrag($event, 'start', rangeTrack)" (keydown)="rangeHandleKeydown($event, 'start')"></button>
+      <button type="button" class="range-handle range-handle-end" role="slider" aria-label="Final del recorte" [style.left.%]="vm.spec.endSeconds / duration * 100" [attr.aria-valuemin]="vm.timelineEndMin()" [attr.aria-valuemax]="vm.timelineEndMax()" [attr.aria-valuenow]="vm.spec.endSeconds" [attr.aria-valuetext]="(vm.spec.endSeconds | number:'1.1-1') + ' segundos'" [disabled]="!vm.canChangeCaptions()" (pointerdown)="startRangeDrag($event, 'end', rangeTrack)" (keydown)="rangeHandleKeydown($event, 'end')"></button>
+      @if (vm.sourceTime() !== null) { <div class="source-track-playhead" [style.left.%]="(vm.sourceTime()! / duration) * 100" aria-hidden="true"></div> }
+    </div></div>
     <div class="track-labels"><span>0 s</span><span>{{ duration | number: "1.1-1" }} s</span></div>
+    <p class="timeline-help range-drag-help">Arrastra los extremos para recortar o el tramo azul para moverlo completo. Enfoca un extremo para ajustarlo; enfoca el tramo y usa ←/→ para desplazarlo.</p>
     <details class="clip-range-controls">
       <summary>Ajustar intervalo del clip</summary>
     <div class="range-control">
@@ -30,7 +52,7 @@
       <button class="button small" type="button" (click)="vm.tab.set('composition')">Corregir intervalo en Composición</button>
     }
   } @else {
-    <p class="timeline-help">{{ vm.draft() ? 'Duración medida de la fuente no disponible. El intervalo guardado sigue disponible en Composición.' : 'Carga un borrador autorizado para consultar sus tiempos y subtítulos.' }}</p>
+    <p class="timeline-help">{{ vm.draft() ? 'Duración medida de la fuente no disponible. Se conserva el intervalo guardado, pero no se puede editar ni guardar hasta verificar que quede dentro del medio.' : 'Carga un borrador autorizado para consultar sus tiempos y subtítulos.' }}</p>
   }
 
   <div class="caption-track-heading"><h3>Subtítulos del clip</h3><span>Tiempos de la fuente original</span></div>
@@ -38,9 +60,11 @@
   @else if (vm.timeline().captionSource === 'transcript' && vm.transcriptError()) {
     <p class="timeline-error">{{ vm.transcriptError() }}</p>
     <button class="button small" type="button" (click)="vm.retryTranscript()" [disabled]="vm.busy()">Reintentar carga de frases</button>
+  } @else if (vm.captionEntries().length && !vm.clipRangeUsable()) {
+    <p class="timeline-help" role="status">Las frases pertenecen a la transcripción vinculada; la pista no se dibuja hasta verificar el intervalo y la duración de la fuente.</p>
   } @else if (vm.captionEntries().length) {
     <div class="cue-scroll">
-      <div class="cue-track" aria-label="Frases en el intervalo del clip" [style.height.px]="vm.timelineCueRows() * 44 + 12">
+      <div class="cue-track" aria-label="Frases en el intervalo del clip" [style.height.px]="vm.timelineCueRows() * 44 + 12" [style.width.%]="zoomPercent()">
         @for (cue of vm.timelineCues(); track cue.index) {
           <button type="button" class="cue-marker" [class.selected]="vm.selectedCue()?.index === cue.index" [class.playing]="vm.playingCueIndices().includes(cue.index)" [attr.aria-current]="vm.playingCueIndices().includes(cue.index) ? 'time' : null" [style.left.%]="cue.left" [style.width.%]="cue.width" [style.top.px]="cue.row * 44 + 6"
             [attr.aria-label]="'Frase ' + (cue.index + 1) + ', ' + cue.startSeconds + '–' + cue.endSeconds + ' segundos: ' + (cue.text || 'sin texto')"
@@ -48,6 +72,7 @@
             aria-describedby="caption-track-help" (click)="vm.selectCue(cue.index)" (keydown)="cueKeydown($event, cue.index)">{{ cue.text || 'Frase ' + (cue.index + 1) }}</button>
         } @empty { <span class="empty-cues">Ninguna frase tiene tiempos válidos dentro del clip. Corrígela en el selector.</span> }
         @if (vm.playbackPosition(); as position) { <div class="cue-playhead" aria-hidden="true" [style.left.%]="position.percent"></div> }
+        @if (!vm.previewSession() && vm.sourcePlaybackPosition() !== null) { <div class="cue-playhead source-playhead" aria-hidden="true" [style.left.%]="vm.sourcePlaybackPosition()"></div> }
       </div>
     </div>
     @if (vm.clipRangeUsable()) { <div class="clip-caption-labels"><span>{{ vm.timeline().startSeconds | number: '1.1-3' }} s</span><span>{{ vm.timeline().endSeconds | number: '1.1-3' }} s</span></div> }
@@ -59,6 +84,11 @@
       @if (vm.timeline().captionSource === 'transcript') { <button type="button" class="button" (click)="vm.tab.set('composition')">Consultar intervalo en Composición</button> }
       @else { <button type="button" class="button" (click)="vm.startManualCaptions()" [disabled]="!vm.canChangeCaptions()">Añadir subtítulos</button> }
     </div>
+  }
+  @if (vm.draft()) {
+    <div class="timeline-lane-heading"><strong>AUDIO</strong><span>Conservado de la fuente · el API no entrega una forma de onda analizable.</span></div>
+    <div class="audio-source-track" aria-label="Pista de audio original preservada, sin forma de onda disponible"><span>Audio original · sin controles de mezcla</span></div>
+    <p class="timeline-help">Puedes descargar el MP4 generado. La publicación directa a YouTube, Kick o Twitch no está disponible: el servidor no ofrece una operación de publicación.</p>
   }
   @if (vm.timeline().captionSource !== 'none') { <ac-caption-cue-editor context="timeline" /> }
 </section>

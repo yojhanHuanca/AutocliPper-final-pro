@@ -1,6 +1,13 @@
 import type { Schema } from '../../../core/contracts/api-types';
 import type { IndexedCaptionCue } from './caption-timeline';
 
+export function sourceCaptionAtTime(entries: IndexedCaptionCue[], clipStart: number, clipEnd: number, sourceTime: number | null): IndexedCaptionCue | null {
+  if (sourceTime === null || !Number.isFinite(sourceTime) || !Number.isFinite(clipStart) || !Number.isFinite(clipEnd) ||
+      clipStart < 0 || clipEnd <= clipStart || sourceTime < clipStart || sourceTime >= clipEnd) return null;
+  return entries.find(cue => Number.isFinite(cue.startSeconds) && Number.isFinite(cue.endSeconds) && cue.startSeconds >= 0 &&
+    cue.endSeconds > cue.startSeconds && sourceTime >= cue.startSeconds && sourceTime < cue.endSeconds) ?? null;
+}
+
 // A rendered clip starts at zero; persisted cues retain absolute source times.
 export function playbackWindow(spec: Schema<'ProcessingSpecDto'> | undefined, duration: number | null) {
   const start = spec?.startSeconds;

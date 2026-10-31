@@ -14,16 +14,19 @@ test('timeline and caption validation follow async load, local corrections and c
   let editCalls = 0, confirmations = 0, allowDiscard = false;
   const writeEtags=[];
   let failSave = false;
+  let denySourcePlayback = false;
   let workspaceRole = 'owner';
   let failHistory = true;
+  let wrongProjectMetadata = false;
+  let wrongUploadMetadata = false;
   let failAnalysis = false;
   const response = new Promise(resolve => { resolveEdit = resolve; });
   let currentDraft;
-  const api = { edit:()=>{ editCalls++; return response; }, project:async id=>({id,name:'Proyecto QA real',workspaceId:'fixture-workspace'}), analysis:async id=>{assert.equal(id,'fixture-analysis');if(failAnalysis)throw new Error('No se pudo consultar la transcripción.');return{id,status:'succeeded',attempts:1,errorCode:null,startedAt:null,finishedAt:null,transcript:{id:'fixture-transcript',language:'es',languageSource:'requested',durationSeconds:42,segments:[{startSeconds:12.1,endSeconds:14.8,text:'Segmento del fixture de prueba.'}],provider:'whisper_cpp',model:'tiny',revision:'fixture',engineVersion:'test',modelSha256:null,requestId:null,estimatedExternalCostUsd:0,diarization:false},selection:null,providerOutcomeUnknown:false,phases:[]};}, save:async(_id,body,etag)=>{writeEtags.push(etag);if(failSave)throw new HttpErrorResponse({status:412,statusText:'Precondition Failed'});currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
+  const api = { edit:()=>{ editCalls++; return response; }, project:async id=>wrongProjectMetadata?({id:'foreign-project',name:'Proyecto externo',workspaceId:'fixture-workspace'}):({id,name:'Proyecto QA real',workspaceId:'fixture-workspace'}), analysis:async id=>{assert.equal(id,'fixture-analysis');if(failAnalysis)throw new Error('No se pudo consultar la transcripción.');return{id,status:'succeeded',attempts:1,errorCode:null,startedAt:null,finishedAt:null,transcript:{id:'fixture-transcript',language:'es',languageSource:'requested',durationSeconds:42,segments:[{startSeconds:12.1,endSeconds:14.8,text:'Segmento del fixture de prueba.'}],provider:'whisper_cpp',model:'tiny',revision:'fixture',engineVersion:'test',modelSha256:null,requestId:null,estimatedExternalCostUsd:0,diarization:false},selection:null,providerOutcomeUnknown:false,phases:[]};}, sourcePlayback:async uploadId=>{assert.equal(uploadId,'fixture-upload');if(denySourcePlayback)throw new HttpErrorResponse({status:403,statusText:'Forbidden'});return{url:'https://media.example.test/private',expiresInSeconds:120,contentType:'video/mp4',bytes:64,sha256:'a'.repeat(64)};}, save:async(_id,body,etag)=>{writeEtags.push(etag);if(failSave)throw new HttpErrorResponse({status:412,statusText:'Precondition Failed'});currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1,spec:body.spec}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, restore:async(_id,_body,etag)=>{writeEtags.push(etag);currentDraft={...currentDraft,version:currentDraft.version+1,revision:{...currentDraft.revision,version:currentDraft.version+1}};return {draft:currentDraft,etag:`"${currentDraft.version}"`};}, history:async()=>{ if(failHistory) throw new Error('No se pudo consultar la siguiente página.'); return {items:[],nextBeforeVersion:null}; }, comments:async()=>({items:[],nextBeforeId:null}), exports:async()=>({items:[]}), review:async()=>({version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null}) };
   let reviewValue={version:1,reviewVersion:1,status:'draft',approvedRevisionVersion:null,approvals:[]};
   const commentItems=[]; let commentBody;
   const collaboration={review:async()=>reviewValue,comments:async()=>({items:commentItems,nextBeforeId:null}),createComment:async(_id,body)=>{commentBody=body;const item={id:'comment-1',revisionVersion:1,authorId:'author-1',timeSeconds:body.timeSeconds,text:body.text,version:1,createdAt:'2026-01-01T00:00:00Z',deletedAt:null};commentItems.unshift(item);return item;},deleteComment:async(_id,_commentId,body)=>{const item={...commentItems[0],version:body.version+1,deletedAt:'2026-01-02T00:00:00Z'};commentItems[0]=item;return item;},requestReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'review'},returnReview:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'draft'},approve:async()=>reviewValue={...reviewValue,reviewVersion:reviewValue.reviewVersion+1,status:'approved',approvedRevisionVersion:1}};
-  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:ProjectsApi,useValue:{upload:async()=>({id:'fixture-upload',projectId:'fixture-project',state:'confirmed',bytes:123,expiresAt:'2026-01-01T00:00:00Z',inspection:{status:'succeeded',result:{durationSeconds:42,format:'mp4',width:1920,height:1080,videoCodec:'h264',audioCodec:'aac'}}})}},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:workspaceRole}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  TestBed.configureTestingModule({providers:[EditorState,{provide:EDITOR_DISCARD_CONFIRMATION,useValue:()=>{ confirmations++; return allowDiscard; }},{provide:EditorApi,useValue:api},{provide:ProjectsApi,useValue:{upload:async()=>({id:'fixture-upload',projectId:wrongUploadMetadata?'foreign-project':'fixture-project',state:'confirmed',bytes:123,expiresAt:'2026-01-01T00:00:00Z',inspection:{status:'succeeded',result:{durationSeconds:42,format:'mp4',width:1920,height:1080,videoCodec:'h264',audioCodec:'aac'}}})}},{provide:CollaborationApi,useValue:collaboration},{provide:DESIGN_MODE,useValue:false},{provide:ActivatedRoute,useValue:{paramMap:routeParams.asObservable(),snapshot:{paramMap:new Map([['id','fixture-edit']])}}},{provide:Router,useValue:{navigateByUrl:async()=>true}},{provide:WorkspaceStore,useValue:{loaded:()=>true,workspaces:()=>[{id:'fixture-workspace',role:workspaceRole}]}},{provide:SessionStore,useValue:{user:()=>({id:'author-1'})}},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
     const state=TestBed.inject(EditorState);
     assert.equal(state.timeline().endSeconds,30);
@@ -33,7 +36,22 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.equal(state.draft().id,'fixture-edit','A secondary endpoint failure must not hide the loaded draft.');
     assert.equal(state.project().name,'Proyecto QA real');
     assert.equal(state.sourceDuration(),42,'The measured duration is loaded only from the confirmed source upload.');
+    await state.requestSourcePlayback();
+    assert.equal(state.sourcePlaybackStatus(),'ready','The original source gets its own short-lived playback session.');
+    assert.equal(state.sourcePlaybackSession().url,'https://media.example.test/private');
+    assert.doesNotMatch(JSON.stringify(state.draft()),/media\.example\.test|expiresAt/,'The signed playback URL and expiry are held outside the saved draft.');
+    denySourcePlayback=true;
+    await state.requestSourcePlayback();
+    assert.equal(state.sourcePlaybackSession(),null,'A refreshed permission failure clears the previous signed URL.');
+    assert.equal(state.sourcePlaybackStatus(),'error');
+    assert.match(state.sourcePlaybackError(),/no tiene permiso/);
+    denySourcePlayback=false;
     assert.deepEqual(state.transcriptSegments(),[{startSeconds:12.1,endSeconds:14.8,text:'Segmento del fixture de prueba.'}]);
+    state.setClipField('endSeconds',99);
+    assert.equal(state.spec.endSeconds,42,'Manual composition fields clamp to the inspected media duration.');
+    state.setClipField('startSeconds',99);
+    assert.equal(state.spec.startSeconds,41.9,'Manual start preserves the minimum valid range inside the source.');
+    state.setClipField('startSeconds',12); state.setClipField('endSeconds',18);
     failAnalysis=true;
     await state.reload();
     assert.equal(state.draft().id,'fixture-edit','A transcript endpoint failure must not hide the loaded draft.');
@@ -93,9 +111,15 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.equal(state.draft().version,4);
     assert.deepEqual(writeEtags,['"1"','"2"','"3"'],'Save and restore must send the latest concurrency token.');
     state.spec.aspect='vertical'; state.touchForm(); failSave=true;
+    const keptDraft = state.draft();
     await state.save();
     assert.equal(state.conflict(),true);
     assert.equal(state.dirty(),true,'A rejected write must retain the local form.');
+    assert.equal(state.draft(),keptDraft,'A 412 must retain the last saved draft and its version.');
+    assert.equal(state.draft().version,4);
+    assert.equal(state.draft().revision.spec.aspect,'square');
+    assert.equal(state.spec.aspect,'vertical','The user-authored local change remains available after conflict.');
+    assert.equal(writeEtags.at(-1),'"4"','The stale write still carries the last received If-Match token.');
     allowDiscard=true; failSave=false;
     await state.reload();
     assert.equal(state.conflict(),false);
@@ -118,6 +142,17 @@ test('timeline and caption validation follow async load, local corrections and c
     assert.deepEqual(commentBody,{revisionVersion:1,timeSeconds:4,text:'¿Así funciona mejor para el clip?'});
     await state.deleteComment(commentItems[0]);
     assert.ok(state.comments()[0].deletedAt);
+    const confirmedProject=state.project();
+    wrongProjectMetadata=true;
+    await state.reload();
+    assert.equal(state.project(),confirmedProject,'Metadata from a different project must not replace the confirmed project name.');
+    assert.match(state.loadNotice(),/metadatos del proyecto/);
+    wrongProjectMetadata=false;
+    wrongUploadMetadata=true;
+    await state.reload();
+    assert.equal(state.sourceDuration(),42,'A mismatched upload response cannot replace the last confirmed measurement.');
+    assert.match(state.loadNotice(),/metadatos de la fuente/,'A source metadata mismatch is reported as an unavailable section.');
+    wrongUploadMetadata=false;
     state.spec.endSeconds=19; state.touchForm(); allowDiscard=false;
     const navigation=TestBed.inject(EditorNavigationService);
     assert.equal(navigation.allowEdit('blocked-edit'),false,'Unsaved changes prevent navigation to another edit.');
@@ -162,5 +197,31 @@ test('late responses from a previous edit cannot overwrite the reused editor', a
     resolveHistoryA({items:[{id:'stale-history-a'}],nextBeforeVersion:null});
     await stale;
     assert.deepEqual(state.history(),[{id:'history-edit-b'}]);
+  } finally { TestBed.resetTestingModule(); }
+});
+
+test('the editor empty route never sends an edit lookup without a draft id', async () => {
+  let editCalls = 0;
+  const routeParams = new BehaviorSubject(new Map());
+  TestBed.configureTestingModule({ providers: [
+    EditorState,
+    { provide: EditorApi, useValue: { edit: async () => { editCalls++; throw new Error('Must not be called'); } } },
+    { provide: ProjectsApi, useValue: {} },
+    { provide: CollaborationApi, useValue: {} },
+    { provide: DESIGN_MODE, useValue: false },
+    { provide: ActivatedRoute, useValue: { paramMap: routeParams.asObservable(), snapshot: { paramMap: new Map() } } },
+    { provide: Router, useValue: { navigateByUrl: async () => true } },
+    { provide: WorkspaceStore, useValue: { loaded: () => true, workspaces: () => [] } },
+    { provide: SessionStore, useValue: { user: () => null } },
+    { provide: EDITOR_DISCARD_CONFIRMATION, useValue: () => true },
+    { provide: TestComponentRenderer, useValue: { insertRootElement() {}, removeAllRootElements() {} } },
+  ] });
+  try {
+    const state = TestBed.inject(EditorState);
+    await state.reload();
+    assert.equal(state.id, '');
+    assert.equal(state.error(), '');
+    assert.equal(state.draft(), null);
+    assert.equal(editCalls, 0);
   } finally { TestBed.resetTestingModule(); }
 });

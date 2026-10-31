@@ -80,4 +80,9 @@ export class EditorApi {
       `/processing/${encodeURIComponent(id)}/download?kind=${encodeURIComponent(kind)}`,
     );
   }
+  sourcePlayback(uploadId: string) {
+    return this.api.get<Schema<"SourcePlaybackDto">>(
+      `/uploads/${encodeURIComponent(uploadId)}/source-playback`,
+    );
+  }
 }

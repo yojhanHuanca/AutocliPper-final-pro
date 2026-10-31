@@ -5,10 +5,12 @@ export { apiInterceptor } from '../src/app/core/http/api.interceptor';
 export { errorMessage } from '../src/app/core/http/api-error';
 export { validateCaptionCues } from '../src/app/features/editor/models/caption-cues';
 export { layoutCaptionCues, copyTranscriptCues } from '../src/app/features/editor/models/caption-timeline';
-export { playbackWindow, renderedCaptionCues } from '../src/app/features/editor/models/caption-playback';
+export { playbackWindow, renderedCaptionCues, sourceCaptionAtTime } from '../src/app/features/editor/models/caption-playback';
 export { fetchPrivateArtifact } from '../src/app/core/http/artifact-download';
 export { EditorState } from '../src/app/features/editor/state/editor.state';
 export { EditorApi } from '../src/app/features/editor/data-access/editor-api.service';
+export { EditorTimelineComponent } from '../src/app/features/editor/components/editor-timeline/editor-timeline.component';
+export { EditorPreviewComponent } from '../src/app/features/editor/components/editor-preview/editor-preview.component';
 export { EDITOR_ARTIFACT_DOWNLOAD } from '../src/app/features/editor/state/editor-artifact-download.token';
 export { DESIGN_MODE } from '../src/app/core/config/design-mode.token';
 export { createAccentCycle, LANDING_ACCENTS } from '../src/app/features/landing/landing-accent';
@@ -42,6 +44,7 @@ export { ConsumptionApi } from '../src/app/features/consumption/data-access/cons
 export { CollaborationApi } from '../src/app/features/collaboration/data-access/collaboration-api.service';
 export { PublicReviewComponent } from '../src/app/features/collaboration/pages/public-review.component';
 export { ReviewPanelComponent } from '../src/app/features/editor/components/review-panel/review-panel.component';
+export { EditorInspectorComponent } from '../src/app/features/editor/components/editor-inspector/editor-inspector.component';
 export { HttpErrorResponse } from '@angular/common/http';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';
 

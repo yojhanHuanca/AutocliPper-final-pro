@@ -1,8 +1,20 @@
-<aside id="editor-inspector-panel" class="editor-inspector panel" tabindex="-1" aria-label="Ajustes del editor">
-  @if (vm.tab() === "composition") {
-    <span class="eyebrow">COMPOSICIÓN</span>
-    <h2>Encuentra tu encuadre.</h2>
+<aside id="editor-inspector-panel" class="editor-inspector panel" tabindex="-1" aria-label="Ajustes del editor" [attr.role]="isToolTab(vm.tab()) ? 'tabpanel' : null" [attr.aria-labelledby]="isToolTab(vm.tab()) ? inspectorTabId(vm.tab()) : null">
+  @if (vm.tab() === 'composition' || vm.tab() === 'captions' || vm.tab() === 'format') {
+  <nav class="editor-inspector-tools" role="tablist" aria-label="Herramientas del clip">
+    <button id="editor-inspector-tab-composition" type="button" role="tab" aria-controls="editor-inspector-panel" [attr.aria-selected]="vm.tab() === 'composition'" [attr.tabindex]="vm.tab() === 'composition' ? 0 : -1" [class.active]="vm.tab() === 'composition'" (click)="vm.tab.set('composition')" (keydown)="onToolTabKeydown($event)">Recorte</button>
+    <button id="editor-inspector-tab-captions" type="button" role="tab" aria-controls="editor-inspector-panel" [attr.aria-selected]="vm.tab() === 'captions'" [attr.tabindex]="vm.tab() === 'captions' ? 0 : -1" [class.active]="vm.tab() === 'captions'" (click)="vm.tab.set('captions')" (keydown)="onToolTabKeydown($event)">Subtítulos</button>
+    <button id="editor-inspector-tab-format" type="button" role="tab" aria-controls="editor-inspector-panel" [attr.aria-selected]="vm.tab() === 'format'" [attr.tabindex]="vm.tab() === 'format' ? 0 : -1" [class.active]="vm.tab() === 'format'" (click)="vm.tab.set('format')" (keydown)="onToolTabKeydown($event)">Formato</button>
+    <button type="button" role="tab" aria-selected="false" disabled title="La API no ofrece mezcla, volumen ni mute para el audio de la fuente." aria-describedby="editor-audio-unavailable">Audio</button>
+    <button type="button" role="tab" aria-selected="false" disabled title="EditorSpecDto no incluye controles de color." aria-describedby="editor-color-unavailable">Color</button>
+  </nav>
+  <p id="editor-audio-unavailable" class="editor-tool-unavailable">Audio: el servidor conserva el sonido original; no ofrece mezcla o control de volumen para una fuente única.</p>
+  <p id="editor-color-unavailable" class="editor-tool-unavailable">Color: el contrato actual no incluye exposición, contraste, saturación ni filtros.</p>
+  }
+  @if (vm.tab() === "composition" || vm.tab() === "format") {
+    <span class="eyebrow">{{ vm.tab() === 'composition' ? 'RECORTE' : 'FORMATO DE SALIDA' }}</span>
+    <h2>{{ vm.tab() === 'composition' ? 'Ajusta el tramo del clip.' : 'Adapta el encuadre.' }}</h2>
     <form #specForm="ngForm" (ngSubmit)="specForm.valid && vm.save()">
+      @if (vm.tab() === "composition") {
       <div class="form-grid">
         <label
           >Inicio (s)<input
@@ -14,7 +26,7 @@
             step="0.1"
             required
             aria-describedby="editor-range-help" [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1"
-            [disabled]="!vm.canChangeCaptions()" /></label
+            [disabled]="!vm.canChangeCaptions() || vm.sourceDuration() === null" /></label
         ><label
           >Fin (s)<input
             type="number"
@@ -25,18 +37,20 @@
             step="0.1"
             required
             aria-describedby="editor-range-help" [attr.aria-invalid]="vm.sourceRangeInvalid() || vm.spec.endSeconds - vm.spec.startSeconds < 0.1 || vm.spec.endSeconds - vm.spec.startSeconds > 120"
-            [disabled]="!vm.canChangeCaptions()"
+            [disabled]="!vm.canChangeCaptions() || vm.sourceDuration() === null"
         /></label>
       </div>
       <p id="editor-range-help" class="source-duration-note">El intervalo debe durar de 0,1 a 120 segundos y estar dentro de la fuente.</p>
       @if (vm.sourceDuration(); as duration) {
         <p class="source-duration-note">Duración medida de la fuente: {{ duration | number: "1.1-1" }} s.</p>
       } @else {
-        <p class="source-duration-note">Sin duración medida disponible; el rango se verificará al guardar.</p>
+        <p class="source-duration-note">Sin duración medida disponible. Los campos de intervalo y el guardado quedan bloqueados hasta consultar la fuente.</p>
       }
       @if (vm.sourceRangeInvalid()) {
         <p class="field-error" role="alert">El final debe estar dentro de la duración medida de la fuente.</p>
       }
+      }
+      @if (vm.tab() === "format") {
       <label
         >Formato<select
           name="aspect"
@@ -129,6 +143,7 @@
             <option value="none">Silencio</option>
           </select></label
         >
+      }
       }
       <button
         class="button primary full"

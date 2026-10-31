@@ -1,7 +1,30 @@
 <section class="editor-stage">
+  @if (!vm.design && vm.draft()) {
+    <section class="source-playback" aria-labelledby="source-playback-title">
+      <div class="source-playback-heading">
+        <div><span class="source-eyebrow">FUENTE ORIGINAL</span><h3 id="source-playback-title">Video subido</h3></div>
+        @if (vm.sourcePlaybackSession(); as source) {
+          <span class="source-expiry" role="status">Enlace privado · máximo 120 s</span>
+          <button type="button" class="button primary small" (click)="toggleSelectionPlayback(source.token)" [disabled]="!vm.clipRangeUsable() || vm.busy()">
+            {{ playingSelection() ? 'Pausar selección' : 'Reproducir selección' }}
+          </button>
+          @if (vm.clipRangeUsable()) { <span class="source-selection-range">{{ vm.spec.startSeconds | number:'1.1-1' }} s → {{ vm.spec.endSeconds | number:'1.1-1' }} s</span> }
+        }
+      </div>
+      <p class="source-playback-copy">{{ vm.sourcePlaybackSession() ? 'Revisa aquí el formato, el encuadre y los subtítulos. La exportación aplica el corte y genera el archivo final.' : 'Abre el video original para explorar el contenido. La vista previa del encuadre se habilita al cargarlo.' }}</p>
+      @if (vm.sourcePlaybackError()) { <p class="source-playback-error" role="alert">{{ vm.sourcePlaybackError() }}</p> }
+      @if (vm.sourcePlaybackSession()) {
+        <button type="button" class="button small" (click)="vm.requestSourcePlayback()"
+          [disabled]="vm.sourcePlaybackStatus() === 'loading' || !vm.canEditCollaboration() || vm.sourceDuration() === null">
+          {{ vm.sourcePlaybackStatus() === 'loading' ? 'Renovando acceso…' : 'Renovar enlace de la fuente' }}
+        </button>
+      }
+      @if (!vm.canEditCollaboration()) { <span class="source-permission-note">Se requiere acceso de editor al proyecto.</span> }
+    </section>
+  }
   <div class="preview-label">
     <span>{{
-      vm.previewUrl() ? "Exportación renderizada" : "Sin vista previa renderizada"
+      vm.previewUrl() ? "Exportación del servidor" : vm.sourcePlaybackSession() ? "Fuente original · cambios aún sin renderizar" : "Vista previa del clip"
     }}</span
     ><span>{{
       vm.previewVersion()
@@ -10,11 +33,10 @@
     }}</span>
   </div>
   <div class="video-stage">
-    @for (session of vm.previewSession() ? [vm.previewSession()!] : []; track session.token) {
+    @if (vm.previewSession(); as session) {
       <video
         #renderVideo
         controls
-        crossorigin="anonymous"
         preload="metadata"
         [src]="session.url"
         (loadedmetadata)="vm.previewMetadata(session.token, renderVideo.duration); vm.previewTimeChanged(session.token, renderVideo.currentTime)"
@@ -23,18 +45,43 @@
         (error)="vm.previewFailed(session.token)"
         aria-label="Render exportado de la revisión elegida"
       ></video>
-    } @empty {
+    } @else if (vm.sourcePlaybackSession(); as source) {
+      <div #sourceCanvas class="source-preview-canvas" [class.format-source]="vm.spec.aspect === 'source'" [class.format-square]="vm.spec.aspect === 'square'" [class.format-horizontal]="vm.spec.aspect === 'horizontal'" [style.aspect-ratio]="vm.spec.aspect === 'vertical' ? '9 / 16' : vm.spec.aspect === 'square' ? '1' : vm.spec.aspect === 'horizontal' ? '16 / 9' : null">
+      <video #sourceVideo class="source-stage-video" controls preload="metadata" playsinline [src]="source.url" [style.object-position]="(vm.cropX * 100) + '% ' + (vm.cropY * 100) + '%'"
+        aria-label="Video fuente con vista previa del encuadre y los subtítulos seleccionados"
+        (loadedmetadata)="vm.sourceTimeChanged(source.token, sourceVideo.currentTime)"
+        (timeupdate)="sourceTimeUpdate(source.token, sourceVideo)"
+        (seeked)="sourceTimeUpdate(source.token, sourceVideo)"
+        (pause)="sourcePlaybackPaused()"
+        (error)="sourcePlaybackFailed(source.token)"></video>
+      @if (vm.sourceCaptionAtPlayhead(); as cue) {
+        <span class="source-caption-preview" [class.caption-boxed]="vm.captionTemplate === 'boxed'" [class.caption-bold]="vm.captionTemplate === 'bold'" [class.caption-top]="vm.captionPosition === 'top'" [style.font-size.px]="vm.sourceCaptionFontSize()">{{ cue.text }}</span>
+      }
+      @if (vm.spec.aspect !== 'source' && vm.canChangeCaptions()) {
+        <button type="button" class="frame-anchor" [class.dragging]="draggingFrame()" [style.left.%]="vm.cropX * 100" [style.top.%]="vm.cropY * 100" [attr.aria-label]="'Punto de encuadre: horizontal ' + (vm.cropX * 100 | number:'1.0-0') + ' %, vertical ' + (vm.cropY * 100 | number:'1.0-0') + ' %. Usa flechas para moverlo e Inicio para centrar.'" aria-describedby="frame-anchor-help" (pointerdown)="startFrameDrag($event, sourceCanvas)" (pointermove)="moveFrameDrag($event, sourceCanvas)" (pointerup)="endFrameDrag()" (pointercancel)="endFrameDrag()" (keydown)="frameAnchorKeydown($event)"></button>
+        <span id="frame-anchor-help" class="frame-anchor-note">Arrastra el punto para ajustar el encuadre</span>
+      }
+      </div>
+      <span class="source-stage-label">PREVIA DEL ENCUADRE · EL CORTE FINAL SE GENERA AL EXPORTAR</span>
+    } @else {
       <div class="video-placeholder">
         <div class="frame-corners"><ac-icon name="play" /></div>
-        <strong>Tu historia, en el centro.</strong>
+        <strong>{{ vm.draft() ? 'Previsualiza tu video original.' : 'Tu historia, en el centro.' }}</strong>
         <p>
           {{
-            vm.design
-              ? "Aquí se reproducirá el video autorizado."
-              : "Selecciona una exportación terminada para reproducirla."
+            vm.draft()
+              ? "Solicita acceso temporal a la fuente para revisar el material antes de exportar los cambios."
+              : vm.design ? "Aquí se reproducirá el video autorizado." : "Selecciona una exportación terminada para reproducirla."
           }}
         </p>
-        <span>El resultado se comprueba con el render del servidor.</span>
+        @if (vm.draft()) {
+          <button type="button" class="button primary" (click)="vm.requestSourcePlayback()" [disabled]="vm.sourcePlaybackStatus() === 'loading' || !vm.canEditCollaboration() || vm.sourceDuration() === null">
+            {{ vm.sourcePlaybackStatus() === 'loading' ? 'Solicitando video…' : 'Ver video original' }}<ac-icon name="play" />
+          </button>
+          <span>El resultado con recorte y subtítulos aparece al guardar y exportar.</span>
+        } @else {
+          <span>El resultado se comprueba con el render del servidor.</span>
+        }
       </div>
     }
   </div>
@@ -52,7 +99,7 @@
   }
   <div class="preview-foot">
     <ac-icon name="shield" /><span
-      >@if (vm.dirty() && vm.previewUrl()) { Hay cambios pendientes. El video mostrado corresponde a la revisión guardada, no a estos cambios. } @else if (vm.previewUrl()) { Video de una exportación terminada. Guarda y exporta una nueva revisión para ver tus cambios. } @else { Guarda y exporta tu revisión para ver el resultado. Selecciona el video desde Exportaciones. }</span
+      >@if (vm.dirty() && vm.previewUrl()) { Hay cambios pendientes. El video mostrado corresponde a la revisión guardada, no a estos cambios. } @else if (vm.previewUrl()) { Video de una exportación terminada. Guarda y exporta una nueva revisión para ver tus cambios. } @else if (vm.sourcePlaybackSession()) { La vista previa aplica el formato, el encuadre y los subtítulos al video original. El corte final y la pantalla dividida se confirman al exportar. } @else { La fuente original se abre con el botón del reproductor. La vista previa de cambios se habilita después de solicitar el video. }</span
     >
   </div>
 </section>

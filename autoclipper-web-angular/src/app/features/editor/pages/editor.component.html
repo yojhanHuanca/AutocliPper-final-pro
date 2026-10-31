@@ -1,26 +1,35 @@
+@if (vm.draft(); as draft) {
+  <nav class="editor-project-path" aria-label="Volver al proyecto"><a [routerLink]="vm.design ? '/design/projects' : ['/app/projects', draft.projectId]">← {{ vm.project()?.name || 'Volver al proyecto' }}</a><span>Editor de clip</span></nav>
+}
 <section class="editor-heading">
   <div>
     <span class="eyebrow">EL ESTUDIO / EDITOR</span>
-    <h1>{{ vm.draft()?.name ?? "Cada detalle cuenta." }}</h1>
+    <h1>{{ vm.draft()?.name ?? (vm.busy() ? 'Cargando revisión…' : vm.error() ? 'No pudimos cargar el borrador' : 'Editor de clips') }}</h1>
     @if (vm.draft()) {
-      <small class="muted">
-        Proyecto: {{ vm.project()?.name ?? "Metadatos no disponibles" }}
-      </small>
+      <div class="editor-draft-meta" aria-label="Estado de la revisión">
+        <span class="editor-draft-project"><ac-icon name="folder" />{{ vm.project()?.name ?? "Metadatos no disponibles" }}</span>
+        <span class="editor-draft-version">Revisión {{ vm.draft()!.version }}</span>
+        <span class="editor-save-state" [class.pending-save]="vm.dirty()"><ac-icon [name]="vm.dirty() ? 'clock' : 'check'" />{{ vm.dirty() ? 'Cambios sin guardar' : 'Al día' }}</span>
+      </div>
+    } @else if (vm.busy()) {
+      <span class="muted">Estamos recuperando el intervalo, el formato y los subtítulos guardados.</span>
+    } @else if (vm.error()) {
+      <span class="muted">Vuelve a consultar la revisión para abrir el editor.</span>
+    } @else {
+      <span class="muted">{{ vm.error() ? 'Vuelve a proyectos y abre un borrador guardado para continuar.' : 'Abre un proyecto para elegir una fuente y continuar con un borrador guardado.' }}</span>
     }
-    <span class="muted">{{
-      vm.design
-        ? "Estructura del editor · Sin contenido de cuenta"
-        : vm.draft()
-          ? "Revisión guardada " +
-            vm.draft()!.version +
-            (vm.dirty() ? " · Cambios sin guardar" : " · Al día")
-          : "Cargando revisión…"
-    }}</span>
   </div>
+  @if (vm.draft()) {
   <div class="button-row">
+    <button class="button" type="button" (click)="vm.undo()" [disabled]="!vm.canUndo()" aria-label="Deshacer cambio" title="Deshacer cambio">↶ Deshacer</button>
+    <button class="button" type="button" (click)="vm.redo()" [disabled]="!vm.canRedo()" aria-label="Rehacer cambio" title="Rehacer cambio">↷ Rehacer</button>
     <button class="button" type="button" (click)="vm.tab.set('history')">
       <ac-icon name="clock" />Historial</button
-    >@if (vm.canRequestReview()) { <button
+    ><button class="button" type="button" (click)="vm.tab.set('review')"><ac-icon name="users" />Revisión</button>
+    <button class="button" type="button" (click)="vm.tab.set('exports')"><ac-icon name="download" />Exportaciones</button>
+    <a class="button" [routerLink]="['/app/projects', vm.draft()!.projectId]" title="Añadir otra fuente desde el proyecto">Añadir fuente<ac-icon name="arrow" /></a>
+    @if (vm.dirty()) { <button class="button primary" type="button" (click)="vm.save()" [disabled]="!vm.canSaveRevision() || vm.busy()">Guardar borrador</button> }
+    @if (vm.canRequestReview()) { <button
       class="button"
       type="button"
       (click)="vm.requestReview()"
@@ -43,10 +52,14 @@
       <ac-icon name="download" />
     </button>
   </div>
+  } @else if (!vm.busy() && !vm.error()) {
+    <div class="button-row"><a class="button primary" routerLink="/app/projects">Elegir proyecto<ac-icon name="arrow" /></a></div>
+  }
 </section>
 @if (vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy()) {
   <div id="export-validation-help" class="alert">
     @if (vm.compositionError()) { {{ vm.compositionError() }} }
+    @else if (vm.sourceDuration() === null) { Consulta la duración de la fuente antes de guardar y exportar. }
     @else if (!vm.clipRangeUsable()) { Corrige el intervalo del clip antes de guardar y exportar. }
     @else if (vm.captionStyleError()) { {{ vm.captionStyleError() }} }
     @else if (vm.invalidCaptions()) { Corrige las frases con errores. Deben tener texto simple y seguir el orden de tiempo, sin superponerse. }
@@ -65,8 +78,13 @@
   <div class="alert error" role="alert">
     {{ vm.error() }}
     @if (vm.conflict()) {
+      <p>El servidor conservó la revisión que ya estaba guardada. Tus cambios locales siguen en este editor; recargar reemplazará esos cambios.</p>
       <button class="button small" type="button" (click)="vm.reload()" [disabled]="vm.busy()">
         Recargar y descartar cambios
+      </button>
+    } @else if (!vm.draft()) {
+      <button class="button small" type="button" (click)="vm.reload()" [disabled]="vm.busy()">
+        Reintentar carga
       </button>
     }
   </div>
@@ -83,9 +101,83 @@
   <div class="alert" role="status">{{ vm.message() }}</div>
 }
 @if (vm.captionActionError()) { <div class="alert error" role="alert">{{ vm.captionActionError() }}</div> }
-<div class="editor-layout">
-  <ac-editor-rail />
-  <ac-editor-preview />
-  <ac-editor-inspector />
-  <ac-editor-timeline />
-</div>
+@if (vm.draft()) {
+  <div class="editor-layout">
+    <section class="editor-clip-list" aria-labelledby="editor-clip-list-title">
+      <header class="editor-clip-list-heading"><div><span class="eyebrow">PROYECTO</span><h2 id="editor-clip-list-title">Clips del proyecto</h2></div><span class="editor-clip-count">{{ vm.projectEdits().length }}</span></header>
+      @if (vm.projectEditsLoading()) { <p class="editor-clip-empty" role="status">Consultando borradores reales del proyecto…</p> }
+      @if (vm.draft(); as draft) {
+        @for (clip of vm.projectEdits(); track clip.id) {
+          <button type="button" class="editor-clip-card" [class.current]="clip.id === draft.id" [attr.aria-current]="clip.id === draft.id ? 'page' : null" (click)="vm.openProjectEdit(clip.id)" [disabled]="clip.id === draft.id || vm.busy()" [title]="clip.id === draft.id ? 'Clip abierto' : 'Abrir este borrador guardado'">
+            <span class="editor-clip-thumbnail"><ac-icon name="film" /></span>
+            <span class="editor-clip-card-copy"><strong>{{ clip.name }}</strong><small>{{ clip.id === draft.id ? 'Clip actual' : 'Abrir clip' }} · Revisión {{ clip.version }}</small><small>{{ clip.updatedAt | date:'short' }}</small></span>
+            @if (clip.id === draft.id) { <ac-icon class="editor-clip-selected" name="check" /> }
+          </button>
+        } @empty { <div class="editor-clip-empty"><p>El proyecto no tiene otros borradores guardados.</p></div> }
+        @if (vm.projectEditsError()) { <p class="editor-clip-list-note" role="status">{{ vm.projectEditsError() }} Se muestra solo el borrador abierto.</p> }
+      } @else {
+        <div class="editor-clip-empty"><ac-icon name="film" /><p>Abre una revisión guardada desde un proyecto para editar su clip.</p></div>
+      }      <div class="editor-clip-list-note"><ac-icon name="shield" /><span>El recorte se conserva ligado a la carga del proyecto.</span></div>
+    </section>
+    <ac-editor-preview />
+    <ac-editor-inspector />
+    <ac-editor-timeline />
+  </div>
+} @else if (vm.busy()) {
+  <section class="editor-empty-state" role="status" aria-live="polite">
+    <span class="editor-empty-icon"><ac-icon name="film" /></span>
+    <div><span class="eyebrow">PREPARANDO EL EDITOR</span><h2>Recuperando tu borrador</h2><p>Consultamos la fuente confirmada y la última revisión guardada antes de habilitar cambios.</p></div>
+    <span class="editor-empty-spinner" aria-hidden="true"></span>
+  </section>
+} @else if (!vm.error()) {
+  <div class="editor-layout editor-empty-workspace">
+    <section class="editor-clip-list" aria-labelledby="editor-empty-clips-title">
+      <header class="editor-clip-list-heading">
+        <div><span class="eyebrow">PROYECTO</span><h2 id="editor-empty-clips-title">Clips del proyecto</h2></div>
+      </header>
+      <div class="editor-clip-empty">
+        <ac-icon name="film" />
+        <strong>Sin clips cargados</strong>
+        <p>Elige un proyecto para ver sus borradores reales.</p>
+      </div>
+    </section>
+    <section class="editor-stage editor-empty-preview" aria-labelledby="editor-empty-preview-title">
+      <div class="preview-label"><span>VISTA PREVIA</span><span>Sin fuente seleccionada</span></div>
+      <div class="video-stage">
+        <div class="video-placeholder">
+          <div class="frame-corners"><ac-icon name="film" /></div>
+          <strong id="editor-empty-preview-title">Tu video aparecerá aquí</strong>
+          <p>Selecciona un MP4 confirmado desde un proyecto para abrirlo en el editor.</p>
+          <a class="button primary" routerLink="/app/projects">Ir a proyectos<ac-icon name="arrow" /></a>
+        </div>
+      </div>
+      <div class="preview-foot"><ac-icon name="shield" /><span>La vista previa solo se habilita para una fuente autorizada del proyecto.</span></div>
+    </section>
+    <aside class="editor-inspector panel editor-empty-inspector" aria-label="Ajustes del clip">
+      <span class="eyebrow">AJUSTES DEL CLIP</span>
+      <h2>Inspector</h2>
+      <nav class="editor-inspector-tools" role="tablist" aria-label="Herramientas del clip">
+        <button type="button" role="tab" disabled>Recorte</button>
+        <button type="button" role="tab" disabled>Texto</button>
+        <button type="button" role="tab" disabled>Formato</button>
+        <button type="button" role="tab" disabled>Subtítulos</button>
+        <button type="button" role="tab" disabled title="El API conserva el audio original y no ofrece mezcla para una fuente única.">Audio</button>
+        <button type="button" role="tab" disabled title="El contrato no incluye filtros ni ajustes de color.">Color</button>
+      </nav>
+      <div class="editor-empty-inspector-note"><ac-icon name="sliders" /><p>Los ajustes se activan al abrir un borrador con una fuente inspeccionada.</p></div>
+      <p class="editor-tool-unavailable">Audio y color no están disponibles en el contrato actual.</p>
+    </aside>
+    <section class="editor-timeline panel editor-empty-timeline" aria-labelledby="editor-empty-timeline-title">
+      <div class="timeline-heading"><h2 id="editor-empty-timeline-title">Línea de tiempo</h2><span>Sin fuente cargada</span></div>
+      <div class="editor-empty-timeline-tracks" aria-hidden="true"><span>VIDEO</span><i></i><span>SUBTÍTULOS</span><i></i><span>AUDIO ORIGINAL</span><i></i></div>
+      <p>Los controles de recorte y subtítulos aparecen al abrir un clip real.</p>
+    </section>
+  </div>
+} @else {
+  <section class="editor-empty-state" aria-labelledby="editor-empty-title">
+    <div class="editor-empty-copy">
+      <span class="editor-empty-icon"><ac-icon name="film" /></span>
+      <div><span class="eyebrow">REVISIÓN NO DISPONIBLE</span><h2 id="editor-empty-title">No encontramos esta revisión.</h2><p>No cargamos datos parciales. Reintenta la consulta o vuelve a proyectos para abrir una revisión guardada.</p><a class="button primary" routerLink="/app/projects">Volver a proyectos<ac-icon name="arrow" /></a></div>
+    </div>
+  </section>
+}

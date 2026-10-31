@@ -417,7 +417,32 @@ test('original aspect omits manual framing and invalid split/composition values 
     await state.save();assert.equal(calls.writes.length,1);assert.match(state.error(),/proporción/);
     state.primaryRatio=0.5;state.secondaryStart=null;state.touchForm();assert.equal(state.canSaveRevision(),false);
     state.secondaryStart=0;state.cropX=NaN;state.touchForm();assert.equal(state.canSaveRevision(),false);
-    state.cropX=0.5;state.touchForm();assert.equal(state.canSaveRevision(),true);
+    state.cropX=0.72;state.cropY=0.31;state.touchForm();assert.equal(state.canSaveRevision(),true);
+    await state.save();
+    assert.deepEqual(calls.writes.at(-1).body.spec.framing,{x:0.72,y:0.31});
+    assert.deepEqual(state.draft().revision.spec.framing,{x:0.72,y:0.31});
+    assert.equal(state.cropX,0.72);assert.equal(state.cropY,0.31);
+  } finally {TestBed.resetTestingModule();}
+});
+
+test('a continuous timeline gesture becomes one undo step and redo restores the moved clip',async()=>{
+  try {
+    const {state}=await setup();
+    state.beginFormGesture();
+    state.setTimelineRange(11,17);
+    state.setTimelineRange(11.5,17.5);
+    state.endFormGesture();
+    assert.equal(state.canUndo(),true);
+    state.undo();
+    assert.equal(state.spec.startSeconds,10);assert.equal(state.spec.endSeconds,16);
+    assert.equal(state.canUndo(),false,'The whole drag is reverted in one operation.');
+    assert.equal(state.canRedo(),true);
+    state.redo();
+    assert.equal(state.spec.startSeconds,11.5);assert.equal(state.spec.endSeconds,17.5);
+    state.setTimelineRange(20,26);
+    assert.equal(state.spec.startSeconds,15.7);assert.equal(state.spec.endSeconds,21.7,'The moved range stays within the measured fractional source duration.');
+    state.setTimelineRange(10,200);
+    assert.equal(state.spec.startSeconds,15.7);assert.equal(state.spec.endSeconds,21.7,'An oversized range is rejected without partial mutation.');
   } finally {TestBed.resetTestingModule();}
 });
 

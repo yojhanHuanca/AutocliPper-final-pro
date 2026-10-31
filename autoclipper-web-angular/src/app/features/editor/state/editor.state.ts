@@ -10,7 +10,7 @@ import type { Schema } from "../../../core/contracts/api-types";
 import { errorMessage } from "../../../core/http/api-error";
 import { captionListIssues, validateCaptionCues } from '../models/caption-cues';
 import { copyTranscriptCues, layoutCaptionCues } from '../models/caption-timeline';
-import { playbackWindow, renderedCaptionCues } from '../models/caption-playback';
+import { playbackWindow, renderedCaptionCues, sourceCaptionAtTime } from '../models/caption-playback';
 import { EDITOR_ARTIFACT_DOWNLOAD } from './editor-artifact-download.token';
 import { EDITOR_DISCARD_CONFIRMATION } from './discard-confirmation.token';
 import { EditorNavigationService } from "./editor-navigation.service";
@@ -34,6 +34,9 @@ export class EditorState {
   private readonly activeId = signal(this.route.snapshot.paramMap.get("id") ?? "");
   get id(): string { return this.activeId(); }
   readonly draft = signal<Schema<"EditorDraftDto"> | null>(null);
+  readonly projectEdits = signal<Response<"/v1/projects/{id}/edits">["items"]>([]);
+  readonly projectEditsLoading = signal(false);
+  readonly projectEditsError = signal("");
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
   readonly sourceDuration = signal<number | null>(null);
   readonly transcriptSegments = signal<Schema<"TranscriptSegmentDto">[]>([]);
@@ -81,7 +84,26 @@ export class EditorState {
   readonly previewTime = signal<number | null>(null);
   readonly previewError = signal('');
   readonly previewSeek = signal<{ token: number; sequence: number; seconds: number } | null>(null);
+  readonly sourcePlaybackSession = signal<{ token: number; uploadId: string; url: string; expiresAt: number } | null>(null);
+  readonly sourcePlaybackStatus = signal<'idle' | 'loading' | 'ready' | 'expired' | 'error'>('idle');
+  readonly sourcePlaybackError = signal('');
+  readonly sourceTime = signal<number | null>(null);
+  readonly sourceSeek = signal<{ token: number; sequence: number; seconds: number } | null>(null);
+  private sourcePlaybackGeneration = 0;
+  private sourcePlaybackTimer?: ReturnType<typeof setTimeout>;
   private seekSequence = 0;
+  sourceTimeChanged(token: number, seconds: number): void {
+    const session = this.sourcePlaybackSession();
+    if (!session || session.token !== token || !Number.isFinite(seconds)) return;
+    this.sourceTime.set(Math.max(0, Math.min(this.sourceDuration() ?? seconds, seconds)));
+  }
+  seekSourceTo(seconds: number): void {
+    const session = this.sourcePlaybackSession();
+    const duration = this.sourceDuration();
+    if (!session || duration === null || !Number.isFinite(seconds)) return;
+    this.sourceSeek.set({ token: session.token, sequence: ++this.seekSequence, seconds: Math.max(0, Math.min(duration, seconds)) });
+  }
+  seekSourceToClipStart(): void { this.seekSourceTo(this.spec.startSeconds); }
   readonly previewSyncNotice = computed(() => {
     const session = this.previewSession();
     if (!session) return '';
@@ -107,15 +129,28 @@ export class EditorState {
     const time = this.previewTime();
     return window && time !== null ? { sourceSeconds: window.start + Math.min(time, window.duration), percent: Math.min(100, time / (window.end - window.start) * 100) } : null;
   });
+  readonly sourcePlaybackPosition = computed(() => {
+    const time = this.sourceTime();
+    const { startSeconds, endSeconds } = this.timeline();
+    return time !== null && this.clipRangeUsable() && time >= startSeconds && time <= endSeconds
+      ? (time - startSeconds) / (endSeconds - startSeconds) * 100 : null;
+  });
   private readonly formVersion = signal(0);
+  private undoStack: ReturnType<EditorState["captureForm"]>[] = [];
+  private redoStack: ReturnType<EditorState["captureForm"]>[] = [];
+  private formGestureStart: ReturnType<EditorState["captureForm"]> | null = null;
+  private trackingForm = false;
+  readonly canUndo = computed(() => { this.formVersion(); return this.canChangeCaptions() && this.undoStack.length > 0; });
+  readonly canRedo = computed(() => { this.formVersion(); return this.canChangeCaptions() && this.redoStack.length > 0; });
   readonly timeline = computed(() => {
     this.formVersion();
     return { startSeconds: this.spec.startSeconds, endSeconds: this.spec.endSeconds, captionSource: this.captionSource, sourceDuration: this.sourceDuration() };
   });
   readonly clipRangeUsable = computed(() => {
     const { startSeconds: start, endSeconds: end, sourceDuration: duration } = this.timeline();
-    return Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end - start >= 0.1 &&
-      end - start <= 120 && end <= 14400 && (duration === null || end <= duration);
+    return duration !== null && Number.isFinite(duration) && duration >= 0.1 &&
+      Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end - start >= 0.1 &&
+      end - start <= 120 && end <= 14400 && end <= duration;
   });
   readonly captionEntries = computed(() => {
     this.formVersion();
@@ -130,15 +165,98 @@ export class EditorState {
     return selection?.source === this.timeline().captionSource
       ? this.captionEntries().find(cue => cue.index === selection.index) ?? null : null;
   });
+  readonly sourceCaptionAtPlayhead = computed(() => sourceCaptionAtTime(
+    this.captionEntries(), this.spec.startSeconds, this.spec.endSeconds, this.sourceTime(),
+  ));
+  readonly sourceCaptionFontSize = computed(() => Math.max(12, Math.min(22, Math.round(this.fontSize * 0.55))));
   readonly selectedCuePosition = computed(() => this.captionEntries().findIndex(cue => cue.index === this.selectedCue()?.index));
   readonly selectedCueIssues = computed(() => this.selectedCue() && this.timeline().captionSource === 'user'
     ? this.captionIssues()[this.selectedCue()!.index] ?? { times: '', text: '' } : { times: '', text: '' });
   readonly timelineCues = computed(() => this.clipRangeUsable() ? layoutCaptionCues(this.captionEntries(), this.timeline().startSeconds, this.timeline().endSeconds) : []);
   readonly timelineCueRows = computed(() => Math.max(1, ...this.timelineCues().map(cue => cue.row + 1)));
-  touchForm(): void { this.formVersion.update(version => version + 1); }
+  beginFormGesture(): void {
+    if (this.trackingForm && this.formGestureStart === null) this.formGestureStart = this.captureForm();
+  }
+  endFormGesture(): void {
+    const previous = this.formGestureStart;
+    if (!previous) return;
+    this.formGestureStart = null;
+    const next = this.captureForm();
+    if (this.serializeForm(previous) !== this.serializeForm(next)) {
+      this.undoStack = [...this.undoStack, previous].slice(-40);
+      this.redoStack = [];
+    }
+    this.lastTrackedForm = next;
+    this.formVersion.update(version => version + 1);
+  }
+  touchForm(): void {
+    const next = this.captureForm();
+    if (this.trackingForm) {
+      const previous = this.lastTrackedForm;
+      if (previous && this.serializeForm(previous) !== this.serializeForm(next)) {
+        if (!this.formGestureStart) this.undoStack = [...this.undoStack, previous].slice(-40);
+        this.redoStack = [];
+      }
+      this.lastTrackedForm = next;
+    }
+    this.formVersion.update(version => version + 1);
+  }
+  private lastTrackedForm: ReturnType<EditorState["captureForm"]> | null = null;
+  private captureForm() {
+    return { spec: structuredClone(this.spec), cropX: this.cropX, cropY: this.cropY, splitEnabled: this.splitEnabled,
+      secondaryUploadId: this.secondaryUploadId, primaryRatio: this.primaryRatio, secondaryStart: this.secondaryStart,
+      splitLayout: this.splitLayout, shortInput: this.shortInput, splitAudio: this.splitAudio, captionSource: this.captionSource,
+      analysisId: this.analysisId, cues: structuredClone(this.cues), captionTemplate: this.captionTemplate,
+      captionPosition: this.captionPosition, fontSize: this.fontSize };
+  }
+  private serializeForm(value: ReturnType<EditorState["captureForm"]>): string {
+    return JSON.stringify(value, (_key, item) => typeof item === "number" && !Number.isFinite(item) ? String(item) : item);
+  }
+  private restoreForm(serialized: string): ReturnType<EditorState["captureForm"]> {
+    return JSON.parse(serialized, (_key, item) => item === "NaN" ? Number.NaN : item === "Infinity" ? Number.POSITIVE_INFINITY : item === "-Infinity" ? Number.NEGATIVE_INFINITY : item);
+  }
+  private applyForm(value: ReturnType<EditorState["captureForm"]>): void {
+    this.formGestureStart = null;
+    this.trackingForm = false;
+    Object.assign(this, structuredClone(value));
+    this.cueSelection.set(null);
+    this.formVersion.update(version => version + 1);
+    this.lastTrackedForm = this.captureForm();
+    this.trackingForm = true;
+  }
+  undo(): void {
+    if (!this.canUndo()) return;
+    const current = this.captureForm();
+    this.applyForm(this.undoStack.pop()!);
+    this.redoStack = [...this.redoStack, current].slice(-40);
+  }
+  redo(): void {
+    if (!this.canRedo()) return;
+    const current = this.captureForm();
+    this.applyForm(this.redoStack.pop()!);
+    this.undoStack = [...this.undoStack, current].slice(-40);
+  }
   setClipField(field: 'startSeconds' | 'endSeconds', value: number | null): void {
     if (!this.canChangeCaptions()) return;
-    this.spec[field] = typeof value === 'number' ? value : Number.NaN;
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      this.spec[field] = Number.NaN;
+      this.touchForm();
+      return;
+    }
+    const duration = this.sourceDuration();
+    if (duration !== null && duration >= 0.1) {
+      if (field === 'startSeconds') {
+        const currentEnd = Number.isFinite(this.spec.endSeconds) ? this.spec.endSeconds : duration;
+        const lower = Math.max(0, currentEnd - 120);
+        const upper = Math.max(lower, Math.min(duration - 0.1, 14399.9, currentEnd - 0.1));
+        this.spec.startSeconds = Math.min(upper, Math.max(lower, value));
+      } else {
+        const currentStart = Number.isFinite(this.spec.startSeconds) ? this.spec.startSeconds : 0;
+        const lower = Math.min(duration, 14400, currentStart + 0.1);
+        const upper = Math.max(lower, Math.min(duration, 14400, currentStart + 120));
+        this.spec.endSeconds = Math.min(upper, Math.max(lower, value));
+      }
+    } else this.spec[field] = value;
     this.touchForm();
   }
   setTimelineStart(value: number): void {
@@ -163,6 +281,21 @@ export class EditorState {
     } else if (upper >= lower) {
       this.spec.endSeconds = Math.min(upper, Math.max(lower, Math.round(value * 10) / 10));
     } else return;
+    this.touchForm();
+  }
+  setTimelineRange(startSeconds: number, endSeconds: number): void {
+    const duration = this.sourceDuration();
+    const length = Math.round((endSeconds - startSeconds) * 10) / 10;
+    if (!this.canChangeCaptions() || duration === null || !Number.isFinite(startSeconds) ||
+        !Number.isFinite(endSeconds) || length < 0.1 || length > 120) return;
+    const maximumStart = Math.floor((Math.min(duration - length, 14400 - length) + 1e-9) * 10) / 10;
+    if (maximumStart < 0) return;
+    const nextStart = Math.max(0, Math.min(maximumStart, Math.round(startSeconds * 10) / 10));
+    const nextEnd = Number((nextStart + length).toFixed(1));
+    if (nextEnd > duration || nextEnd > 14400) return;
+    if (nextStart === this.spec.startSeconds && nextEnd === this.spec.endSeconds) return;
+    this.spec.startSeconds = nextStart;
+    this.spec.endSeconds = nextEnd;
     this.touchForm();
   }
   timelineStartMin(): number {
@@ -262,6 +395,7 @@ export class EditorState {
       this.unregisterNavigation();
       this.editGeneration++;
       clearTimeout(this.timer);
+      clearTimeout(this.sourcePlaybackTimer);
     });
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
       const nextId = params.get("id") ?? "";
@@ -276,7 +410,7 @@ export class EditorState {
       this.unregisterNavigation = this.editorNavigation.register(nextId, () => this.confirmDiscard());
       if (!this.design && nextId) void this.reload();
     });
-    if (!this.design) void this.reload();
+    if (!this.design && this.id) void this.reload();
   }
   private resetForEdit(id: string): void {
     this.editGeneration++;
@@ -284,6 +418,9 @@ export class EditorState {
     this.timer = undefined;
     this.activeId.set(id);
     this.draft.set(null);
+    this.projectEdits.set([]);
+    this.projectEditsError.set("");
+    this.projectEditsLoading.set(false);
     this.project.set(null);
     this.sourceDuration.set(null);
     this.transcriptSegments.set([]);
@@ -319,6 +456,7 @@ export class EditorState {
     this.previewTime.set(null);
     this.previewError.set('');
     this.previewSeek.set(null);
+    this.clearSourcePlayback();
     this.formVersion.set(0);
     this.spec = { version: 1, kind: "clip", startSeconds: 0, endSeconds: 30, aspect: "vertical" };
     this.cropX = 0.5;
@@ -341,6 +479,11 @@ export class EditorState {
     this.replyTarget.set(null);
     this.etag = null;
     this.initialForm = "";
+    this.trackingForm = false;
+    this.formGestureStart = null;
+    this.lastTrackedForm = null;
+    this.undoStack = [];
+    this.redoStack = [];
     this.renderAttempt = null;
     this.commentKey = "";
     this.commentBody = "";
@@ -390,6 +533,10 @@ export class EditorState {
     if (!Number.isInteger(index) || !this.captionEntries().some(cue => cue.index === index)) { this.cueSelection.set(null); return; }
     this.cueSelection.set({ source: this.captionSource, index });
     this.tab.set('captions');
+    if (!this.previewSession() && this.sourcePlaybackSession()) {
+      const cue = this.captionEntries().find(entry => entry.index === index);
+      if (cue) this.seekSourceTo(cue.startSeconds);
+    }
   }
   selectAdjacentCue(direction: -1 | 1): void {
     const entry = this.captionEntries()[this.selectedCuePosition() + direction];
@@ -451,6 +598,7 @@ export class EditorState {
     preserveSelection = false,
   ): void {
     this.draft.set(draft);
+    this.projectEdits.update(items => items.map(item => item.id === draft.id ? { ...item, version: draft.version, name: draft.name } : item));
     this.etag = etag;
     this.spec = structuredClone(draft.revision.spec);
     this.cropX = this.spec.framing?.x ?? 0.5;
@@ -476,6 +624,11 @@ export class EditorState {
     this.captionPosition = style?.position ?? "bottom";
     this.fontSize = style?.fontSize ?? 24;
     this.initialForm = this.snapshot();
+    this.formGestureStart = null;
+    this.undoStack = [];
+    this.redoStack = [];
+    this.lastTrackedForm = this.captureForm();
+    this.trackingForm = true;
     this.touchForm();
   }
   private async loadTranscript(): Promise<void> {
@@ -504,16 +657,23 @@ export class EditorState {
     await this.loadTranscript().catch(() => {});
   }
   async reload(): Promise<void> {
+    if (!this.id) {
+      this.error.set("");
+      this.loadNotice.set("");
+      return;
+    }
     if (this.busy() || !this.confirmDiscard()) return;
     const generation = this.editGeneration;
     await this.run(async () => {
       const result = await this.api.edit(this.id);
       if (!this.isCurrentEdit(generation)) return;
       this.accept(result.draft, result.etag);
-      const labels = ["metadatos del proyecto", "metadatos de la fuente", "historial", "comentarios", "exportaciones", "revisión", "transcripción vinculada"];
+      this.projectEditsLoading.set(true);
+      const labels = ["metadatos del proyecto", "metadatos de la fuente", "clips del proyecto", "historial", "comentarios", "exportaciones", "revisión", "transcripción vinculada"];
       const results = await Promise.allSettled([
         this.api.project(result.draft.projectId),
         this.projectsApi.upload(result.draft.uploadId),
+        typeof this.projectsApi.edits === "function" ? this.projectsApi.edits(result.draft.projectId) : Promise.resolve({ items: [] }),
         this.loadHistory(),
         this.loadComments(),
         this.loadExports(),
@@ -521,15 +681,30 @@ export class EditorState {
         this.loadTranscript(),
       ]);
       if (!this.isCurrentEdit(generation)) return;
-      if (results[0].status === "fulfilled") this.project.set(results[0].value);
+      const projectMetadataMismatch = results[0].status === "fulfilled" && results[0].value.id !== result.draft.projectId;
+      if (results[0].status === "fulfilled" && !projectMetadataMismatch) this.project.set(results[0].value);
       const upload = results[1];
-      if (upload.status === "fulfilled" && upload.value.projectId === result.draft.projectId && upload.value.state === "confirmed" && upload.value.inspection?.status === "succeeded") {
-        const measured = upload.value.inspection.result?.durationSeconds;
-        if (measured && Number.isFinite(measured) && measured > 0) this.sourceDuration.set(measured);
+      const edits = results[2];
+      if (edits.status === "fulfilled") {
+        const current = { id: result.draft.id, uploadId: result.draft.uploadId, name: result.draft.name, version: result.draft.version, updatedAt: result.draft.revision.createdAt };
+        this.projectEdits.set([current, ...edits.value.items.filter(item => item.id !== current.id)]);
+        this.projectEditsError.set("");
+      } else {
+        this.projectEdits.set([{ id: result.draft.id, uploadId: result.draft.uploadId, name: result.draft.name, version: result.draft.version, updatedAt: result.draft.revision.createdAt }]);
+        this.projectEditsError.set("No pudimos consultar los demás clips del proyecto.");
       }
-      const unavailable = results.flatMap((result, index) =>
-        index !== 6 && (result.status === "rejected" ||
-        (index === 4 && result.status === "fulfilled" && result.value === false))
+      this.projectEditsLoading.set(false);
+      const measured = upload.status === "fulfilled" ? upload.value.inspection?.result?.durationSeconds : null;
+      const sourceMetadataMismatch = upload.status === "fulfilled" && (
+        upload.value.projectId !== result.draft.projectId || upload.value.state !== "confirmed" ||
+        upload.value.inspection?.status !== "succeeded" || typeof measured !== "number" ||
+        !Number.isFinite(measured) || measured <= 0
+      );
+      if (upload.status === "fulfilled" && !sourceMetadataMismatch) this.sourceDuration.set(measured!);
+      const unavailable = results.flatMap((section, index) =>
+        index !== 7 && (section.status === "rejected" || (index === 0 && projectMetadataMismatch) ||
+        (index === 1 && sourceMetadataMismatch) ||
+        (index === 5 && section.status === "fulfilled" && section.value === false))
           ? [labels[index]]
           : [],
       );
@@ -538,6 +713,10 @@ export class EditorState {
           `El borrador está disponible; no se pudo cargar ${unavailable.join(", ")}. Puedes volver a consultar la sección.`,
         );
     });
+  }
+  openProjectEdit(id: string): void {
+    if (this.design || id === this.id || !this.projectEdits().some(item => item.id === id) || !this.editorNavigation.allowEdit(id)) return;
+    void this.router.navigateByUrl(`/app/edits/${encodeURIComponent(id)}`);
   }
   private buildSpec(): Schema<"EditorSpecDto"> {
     if (this.compositionError()) throw new Error(this.compositionError());
@@ -550,6 +729,7 @@ export class EditorState {
       this.spec.endSeconds - this.spec.startSeconds > 120 || this.spec.endSeconds > 14400
     )
       throw new Error("El intervalo debe durar entre 0,1 y 120 segundos.");
+    if (this.sourceDuration() === null) throw new Error('Consulta la duración inspeccionada de la fuente antes de guardar cambios en el intervalo.');
     if (this.sourceRangeInvalid()) throw new Error("El final del intervalo supera la duración medida de la fuente.");
     const result: Schema<"EditorSpecDto"> = { ...this.spec };
     if (result.aspect === 'source') delete result.framing;
@@ -848,6 +1028,67 @@ export class EditorState {
   }
   hasVideoArtifact(item: Schema<'EditorExportDto'>): boolean {
     return item.status === 'succeeded' && item.artifacts.some(artifact => artifact.kind === 'video');
+  }
+  async requestSourcePlayback(): Promise<void> {
+    const draft = this.draft();
+    if (this.design || !draft || !this.sourceDuration() || !this.canEditCollaboration() || this.sourcePlaybackStatus() === 'loading') return;
+    const editGeneration = this.editGeneration;
+    const requestGeneration = ++this.sourcePlaybackGeneration;
+    clearTimeout(this.sourcePlaybackTimer);
+    this.sourcePlaybackSession.set(null);
+    this.sourceTime.set(null);
+    this.sourceSeek.set(null);
+    this.sourcePlaybackError.set('');
+    this.sourcePlaybackStatus.set('loading');
+    try {
+      const result = await this.api.sourcePlayback(draft.uploadId);
+      if (!this.isCurrentEdit(editGeneration) || requestGeneration !== this.sourcePlaybackGeneration) return;
+      const url = this.safeUrl(result.url);
+      if (!Number.isInteger(result.expiresInSeconds) || result.expiresInSeconds < 1 || result.expiresInSeconds > 120 ||
+          !Number.isInteger(result.bytes) || result.bytes < 1 || !/^[a-f0-9]{64}$/i.test(result.sha256) ||
+          !['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'].includes(result.contentType))
+        throw new Error('El servidor devolvió una autorización de reproducción incompleta o inválida.');
+      const expiresAt = Date.now() + result.expiresInSeconds * 1000;
+      this.sourcePlaybackSession.set({ token: requestGeneration, uploadId: draft.uploadId, url, expiresAt });
+      this.sourcePlaybackStatus.set('ready');
+      this.sourcePlaybackTimer = setTimeout(() => this.expireSourcePlayback(requestGeneration), result.expiresInSeconds * 1000);
+    } catch (error) {
+      if (!this.isCurrentEdit(editGeneration) || requestGeneration !== this.sourcePlaybackGeneration) return;
+      const status = error instanceof HttpErrorResponse ? error.status : 0;
+      this.sourcePlaybackStatus.set('error');
+      this.sourcePlaybackError.set(status === 401 || status === 403
+        ? 'Tu cuenta no tiene permiso para reproducir esta fuente en el proyecto activo.'
+        : status === 404
+          ? 'La fuente confirmada ya no está disponible en este proyecto.'
+          : status === 410
+            ? 'La autorización temporal venció. Solicita un enlace nuevo.'
+            : error instanceof Error ? error.message : errorMessage(error));
+    }
+  }
+  sourcePlaybackFailed(token: number): void {
+    if (token !== this.sourcePlaybackSession()?.token) return;
+    const expired = Date.now() >= this.sourcePlaybackSession()!.expiresAt;
+    this.clearSourcePlayback();
+    this.sourcePlaybackStatus.set(expired ? 'expired' : 'error');
+    this.sourcePlaybackError.set(expired
+      ? 'La autorización de reproducción venció. Solicita un enlace nuevo.'
+      : 'No se pudo leer el video desde el almacenamiento. Comprueba la conexión e inténtalo de nuevo.');
+  }
+  private expireSourcePlayback(token: number): void {
+    if (token !== this.sourcePlaybackSession()?.token) return;
+    this.clearSourcePlayback();
+    this.sourcePlaybackStatus.set('expired');
+    this.sourcePlaybackError.set('La autorización temporal venció. Solicita un enlace nuevo para continuar.');
+  }
+  private clearSourcePlayback(): void {
+    clearTimeout(this.sourcePlaybackTimer);
+    this.sourcePlaybackTimer = undefined;
+    this.sourcePlaybackGeneration++;
+    this.sourcePlaybackSession.set(null);
+    this.sourceTime.set(null);
+    this.sourceSeek.set(null);
+    this.sourcePlaybackStatus.set('idle');
+    this.sourcePlaybackError.set('');
   }
   async preview(requested: Schema<"EditorExportDto">): Promise<void> {
     const item = this.exports().find(exported => exported.id === requested.id);
