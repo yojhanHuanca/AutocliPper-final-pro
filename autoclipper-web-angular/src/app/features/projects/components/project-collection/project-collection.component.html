@@ -1,161 +1,184 @@
-@if (!compact()) {
-  <section class="page-heading">
-    <div>
-      <span class="eyebrow">{{
-        !compact() ? "TU ARCHIVO CREATIVO" : "HAZ ESPACIO PARA LA PRÓXIMA IDEA"
-      }}</span>
-      <h1>{{ !compact() ? "Tus proyectos." : "Tus proyectos." }}</h1>
-      <p>
-        {{
-          design
-            ? "Una mirada al espacio donde tus ideas tomarán forma."
-            : "Hola, " +
-              (session.user()?.name ?? "") +
-              ". Continúa un proyecto o empieza con un nuevo video."
-        }}
-      </p>
+<main class="project-library" aria-labelledby="projects-title">
+  <header class="library-heading">
+    <div class="heading-copy">
+      <span class="section-kicker"><span class="kicker-mark"></span> Biblioteca de trabajo</span>
+      <h1 id="projects-title" tabindex="-1">Proyectos</h1>
+      <p>Organiza tus vídeos y continúa editando desde el punto donde lo dejaste.</p>
     </div>
-    <button
-      class="button primary"
-      type="button"
-      (click)="newProject.set(!newProject())"
-      [disabled]="design || !canEdit()"
-    >
-      <ac-icon name="plus" />Nuevo proyecto
-    </button>
-  </section>
-}
-@if (error()) {
-  <div class="alert error" role="alert">
-    {{ error() }}<button type="button" (click)="load()">Reintentar</button>
-  </div>
-}
-@if (newProject()) {
-  <form
-    class="panel inline-form"
-    #createForm="ngForm"
-    (ngSubmit)="createForm.valid && create()"
-  >
-    <label
-      >Nombre del proyecto<input
-        name="projectName"
-        [(ngModel)]="projectName"
-        required
-        maxlength="150"
-        [disabled]="busy() || !canEdit()"
-        placeholder="El nombre de tu próxima historia" /></label
-    ><button
-      class="button primary"
-      type="submit"
-      [disabled]="busy() || createForm.invalid || !canEdit()"
-    >
-      {{ hasCreatedProjectForCurrentInput() ? "Abrir proyecto creado" : "Crear proyecto" }}</button
-    ><button class="button" type="button" (click)="newProject.set(false)">
-      Cancelar
-    </button>
-  </form>
-}
+    <div class="heading-actions">
+      <span class="permission-note" [class.permission-note--blocked]="!canEdit()">
+        <ac-icon [name]="canEdit() ? 'shield' : 'users'" />{{ roleLabel() }}
+      </span>
+      <button id="project-create-button" class="create-button" type="button" (click)="openCreateDialog()" [disabled]="design || busy() || !canEdit()">
+        <span class="create-button-icon"><ac-icon name="plus" /></span>
+        <span>Nuevo proyecto</span>
+      </button>
+    </div>
+  </header>
 
-<section class="panel project-panel">
-  <div class="panel-heading">
-    <div>
-      <span class="eyebrow">EL PUNTO DE PARTIDA</span>
-      <h2>{{ compact() ? "Proyectos recientes" : "Tus proyectos" }}</h2>
+  <section class="library-tools" aria-label="Buscar proyectos">
+    <div class="results-heading">
+      @if (design) { <span class="preview-label">Vista previa de la biblioteca</span> }
+      @else if (!workspace.workspaceId()) { <span role="status">{{ workspace.loaded() ? 'Sin espacio activo' : 'Consultando espacios…' }}</span> }
+      @else if (busy() && !loaded()) { <span role="status">Consultando proyectos…</span> }
+      @else if (error() && !loaded()) { <span role="status">Lista sin confirmar</span> }
+      @else { <span class="results-count">{{ projects().length }}</span><span>{{ projects().length === 1 ? 'resultado recibido' : 'resultados recibidos' }} · consulta limitada a 100</span> }
     </div>
-    @if (compact()) { <button
-      class="button small"
-      type="button"
-      (click)="newProject.set(!newProject())"
-      [disabled]="design || !canEdit()"
-    >
-      <ac-icon name="plus" />Nuevo
-    </button> }
-    <form class="search-form" (ngSubmit)="load()">
-      <ac-icon name="search" /><input
-        aria-label="Buscar proyectos por nombre"
-        name="search"
-        [(ngModel)]="search"
-        [disabled]="design"
-        placeholder="Buscar proyecto"
-      /><button type="submit" [disabled]="design || busy()">Buscar</button>
+    <form class="project-search" (ngSubmit)="load()">
+      <ac-icon name="search" />
+      <input aria-label="Buscar proyectos por nombre" name="search" [(ngModel)]="search" [disabled]="design || busy()" placeholder="Buscar por nombre" />
+      @if (search) {
+        <button class="search-clear" type="button" (click)="clearSearch()" [disabled]="busy()" aria-label="Limpiar búsqueda">Limpiar</button>
+      }
+      <button class="search-submit" type="submit" [disabled]="design || busy()">Buscar</button>
     </form>
-  </div>
+  </section>
+
   @if (roleNotice()) {
-    <div class="alert" role="status">{{ roleNotice() }}</div>
+    <p class="access-notice" role="status"><ac-icon name="shield" />{{ roleNotice() }}</p>
   }
-  @if (!design) {
-    <p class="muted">La lista muestra hasta 100 proyectos por consulta. Usa el buscador para encontrar uno por nombre.</p>
+
+  @if (busy() && loaded()) {
+    <p class="collection-update-note" role="status" aria-live="polite">Actualizando proyectos. Se conservan los resultados de la última consulta confirmada.</p>
   }
-  @if (busy()) {
-    <div class="loading-state" role="status">
-      <span class="spinner"></span>Consultando tus proyectos…
+  @if (resultsNeedRefresh() && !busy() && !error()) {
+    <p class="collection-update-note" role="status">La búsqueda cambió; pulsa «Buscar» para consultar el nuevo texto. Los resultados visibles corresponden a «{{ confirmedSearch() || 'todos los proyectos' }}».</p>
+  }
+  @if (error() && loaded()) {
+    <section class="state-panel state-panel--error collection-stale-error" role="alert">
+      <span class="state-icon"><ac-icon name="clock" /></span>
+      <div><h2>No pudimos actualizar tus proyectos</h2><p>{{ error() }} Se conservan los resultados de «{{ confirmedSearch() || 'todos los proyectos' }}».</p></div>
+      <button class="secondary-button" type="button" (click)="load()" [disabled]="busy()">Reintentar</button>
+    </section>
+  }
+  @if (error() && !loaded()) {
+    <section class="state-panel state-panel--error" role="alert">
+      <span class="state-icon"><ac-icon name="clock" /></span>
+      <div><h2>No pudimos cargar tus proyectos</h2><p>{{ error() }}</p></div>
+      <button class="secondary-button" type="button" (click)="load()" [disabled]="busy()">Reintentar</button>
+    </section>
+  } @else if (busy() && !loaded()) {
+    <section class="project-grid" aria-label="Cargando proyectos" aria-busy="true">
+      @for (placeholder of [1, 2, 3]; track placeholder) {
+        <div class="project-card project-card--loading"><div class="card-art skeleton"></div><div class="skeleton-line"></div><div class="skeleton-line skeleton-line--short"></div></div>
+      }
+    </section>
+  } @else if (!workspace.workspaceId()) {
+    <section class="state-panel" role="status"><span class="state-icon"><ac-icon name="folder" /></span><div><h2>{{ workspace.loaded() ? 'Selecciona un espacio de trabajo.' : 'Consultando tus espacios…' }}</h2><p>{{ workspace.loaded() ? 'Elige un espacio activo para consultar sus proyectos.' : 'La biblioteca mostrará proyectos cuando se confirme el espacio seleccionado.' }}</p></div></section>
+  } @else if (projects().length) {
+    <section class="project-grid" aria-label="Tus proyectos">
+      @for (project of visibleProjects(); track project.id; let index = $index) {
+        <article class="project-card" [style.--card-order]="index">
+          <div class="card-art" aria-hidden="true">
+            <div class="art-grid"></div>
+            <span class="art-label">PROYECTO</span>
+            <span class="art-symbol"><ac-icon name="film" /></span>
+            <span class="art-index">{{ pageIndex() * pageSize + index + 1 }}</span>
+          </div>
+          <div class="card-content">
+            <div class="card-title-line">
+              <h2>{{ project.name }}</h2>
+              <span class="version-tag">v{{ project.version }}</span>
+            </div>
+            <p class="card-date"><ac-icon name="clock" /><time [attr.datetime]="project.createdAt">Creado {{ project.createdAt | date: 'd MMM y' }}</time></p>
+            <div class="project-card-actions" role="group" [attr.aria-label]="'Acciones para ' + project.name">
+              <button type="button" (click)="openRename(project)" [disabled]="design || !canEdit() || busy()" [attr.aria-label]="'Renombrar ' + project.name">Renombrar</button>
+              <button type="button" (click)="openArchive(project)" [disabled]="design || !canEdit() || busy()" [attr.aria-label]="'Mover ' + project.name + ' a la papelera'">Mover a papelera</button>
+            </div>
+            <a class="open-project" [routerLink]="['/app/projects', project.id]" [attr.aria-label]="'Abrir proyecto ' + project.name">
+              <span>Abrir proyecto</span><ac-icon name="arrow" />
+            </a>
+          </div>
+        </article>
+      }
+      @if (canEdit()) {
+        <button id="project-empty-create-button" class="project-card project-card--new" type="button" (click)="openCreateDialog()">
+          <span class="new-project-mark"><ac-icon name="plus" /></span>
+          <strong>Empezar algo nuevo</strong>
+          <span>Crea un espacio para tu próximo vídeo</span>
+        </button>
+      }
+    </section>
+    <div class="list-footer">
+      <p role="status" aria-live="polite">Mostrando {{ pageStart() }}–{{ pageEnd() }} de {{ projects().length }} resultados recibidos por la consulta actual.</p>
+      @if (pageCount() > 1) {
+        <nav class="pagination" aria-label="Páginas de proyectos">
+          <button type="button" (click)="previousPage()" [disabled]="busy() || pageIndex() === 0" aria-label="Página anterior">‹</button>
+          <span>{{ pageIndex() + 1 }} <span class="page-of">/ {{ pageCount() }}</span></span>
+          <button type="button" (click)="nextPage()" [disabled]="busy() || pageIndex() + 1 >= pageCount()" aria-label="Página siguiente">›</button>
+        </nav>
+      }
     </div>
   } @else {
-    @for (project of projects(); track project.id) {
-      <article class="project-row">
-        <div class="project-art" aria-hidden="true">
-          <ac-icon name="film" />
-        </div>
-        <div>
-          <h3>{{ project.name }}</h3>
-          <p>
-            Creado {{ project.createdAt | date: "mediumDate" }} · Versión
-            {{ project.version }}
-          </p>
-        </div>
-        <a class="button small" [routerLink]="['/app/projects', project.id]"
-          >Abrir<ac-icon name="arrow"
-        /></a>
-      </article>
-    } @empty {
-      <div class="empty-state">
-        <div class="empty-illustration" aria-hidden="true">
-          <div class="empty-film"><span></span><span></span><span></span></div>
-          <div class="empty-frame"><ac-icon name="play" /></div>
-          <div class="empty-scissors"><ac-icon name="scissors" /></div>
-        </div>
-        <span class="eyebrow">AQUÍ COMIENZA ALGO BUENO</span>
-        <h3>
-          {{
-            design
-              ? "Imagina tu próxima historia aquí."
-              : error()
-                ? "No pudimos cargar la lista."
-                : search && loaded()
-                  ? "No encontramos ese proyecto."
-              : loaded()
-                ? "Tu próximo proyecto empieza aquí."
-                : "Tus proyectos aparecerán al conectar."
-          }}
-        </h3>
-        <p>
-          {{
-            error()
-              ? "Revisa la conexión e inténtalo de nuevo."
-              : search && loaded()
-              ? "No encontramos proyectos con ese nombre."
-              : "Reúne tu material, dale un nombre y crea un espacio para cada idea. Cada archivo será privado y se comprobará antes de procesarlo."
-          }}
-        </p>
-        @if (design) {
-          <a class="button" routerLink="/login"
-            >Conectar mi cuenta<ac-icon name="arrow"
-          /></a>
-        } @else if (error()) {
-          <button class="button" type="button" (click)="load()">Reintentar</button>
-        } @else if (search && loaded()) {
-          <button class="button" type="button" (click)="clearSearch()">Limpiar búsqueda</button>
-        } @else {
-          <button
-            class="button"
-            type="button"
-            (click)="newProject.set(true)"
-            [disabled]="!canEdit()"
-          >
-            Crear primer proyecto<ac-icon name="plus" />
-          </button>
-        }
+    <section class="empty-library">
+      <div class="empty-composition" aria-hidden="true">
+        <div class="empty-backdrop"></div><div class="empty-frame"><ac-icon name="film" /></div><span class="empty-plus"><ac-icon name="plus" /></span>
       </div>
-    }
+      <span class="section-kicker">Tu espacio creativo</span>
+      <h2>{{ design ? 'Tus proyectos, en un solo lugar' : resultsNeedRefresh() ? 'La nueva búsqueda está pendiente' : confirmedSearch() && loaded() ? 'No encontramos ese proyecto' : loaded() ? 'Todavía no hay proyectos' : 'Consultando proyectos' }}</h2>
+      <p>{{ design ? 'Conecta tu cuenta para ver los proyectos reales de tu espacio, cargar fuentes y continuar tus ediciones.' : resultsNeedRefresh() ? 'Los resultados de la última consulta están vacíos. Pulsa «Buscar» para confirmar el nuevo texto.' : confirmedSearch() && loaded() ? 'Prueba con otro nombre o limpia la búsqueda para consultar los proyectos del espacio.' : loaded() ? 'Crea un proyecto para reunir una fuente de vídeo, generar clips y continuar con su edición.' : 'La lista aparecerá cuando el servicio confirme los proyectos de este espacio.' }}</p>
+      @if (design) {
+        <a class="create-button" routerLink="/login"><span>Conectar mi cuenta</span><ac-icon name="arrow" /></a>
+      } @else if (confirmedSearch() && confirmedSearch() === search.trim() && loaded()) {
+        <button class="secondary-button" type="button" (click)="clearSearch()">Limpiar búsqueda</button>
+      } @else {
+        <button id="project-empty-create-button" class="create-button" type="button" (click)="openCreateDialog()" [disabled]="busy() || !canEdit()"><span class="create-button-icon"><ac-icon name="plus" /></span><span>Crear primer proyecto</span></button>
+      }
+    </section>
   }
-</section>
+
+  @if (newProject()) {
+    <div class="dialog-scrim" (click)="$event.target === $event.currentTarget && closeCreateDialog()">
+      <section class="create-dialog" role="dialog" aria-modal="true" aria-labelledby="create-title" (keydown)="onCreateDialogKeydown($event)" (click)="$event.stopPropagation()">
+        <button class="dialog-close" type="button" (click)="closeCreateDialog()" [disabled]="busy()" aria-label="Cerrar">×</button>
+        <span class="dialog-mark"><ac-icon name="film" /></span>
+        <span class="section-kicker">Nuevo proyecto</span>
+        <h2 id="create-title">Ponle nombre a tu proyecto</h2>
+        <p>Carga un video compatible. YouTube y Kick solo ofrecen vista previa. Un clip de Twitch podría importarse si OAuth está configurado, vinculas una cuenta con permisos y el servidor confirma que el clip está disponible.</p>
+        <form #createForm="ngForm" (ngSubmit)="createForm.valid && create()">
+          <label for="project-name">Nombre del proyecto</label>
+          <input id="project-name" name="projectName" [(ngModel)]="projectName" required maxlength="150" [disabled]="busy() || !canEdit()" placeholder="Por ejemplo, Entrevista de producto" autocomplete="off" />
+          @if (mutationError()) { <p class="dialog-error" role="alert">{{ mutationError() }}</p> }
+          <div class="dialog-actions">
+            <button class="secondary-button" type="button" (click)="closeCreateDialog()" [disabled]="busy()">Cancelar</button>
+            <button class="create-button" type="submit" [disabled]="busy() || createForm.invalid || !canEdit()">{{ busy() ? 'Creando…' : hasCreatedProjectForCurrentInput() ? 'Abrir proyecto creado' : 'Crear proyecto' }}<ac-icon name="arrow" /></button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+  @if (projectAction() === 'rename' && actionProject(); as project) {
+    <div class="dialog-scrim" (click)="$event.target === $event.currentTarget && closeProjectAction()">
+      <section class="create-dialog project-action-dialog" role="dialog" aria-modal="true" aria-labelledby="rename-title" (keydown)="onProjectActionKeydown($event)" (click)="$event.stopPropagation()">
+        <button class="dialog-close" type="button" (click)="closeProjectAction()" [disabled]="busy()" aria-label="Cerrar">×</button>
+        <span class="section-kicker">Editar proyecto</span>
+        <h2 id="rename-title">Renombra «{{ project.name }}»</h2>
+        <p>El cambio se guarda en el servidor con la versión confirmada del proyecto.</p>
+        <form #renameForm="ngForm" (ngSubmit)="renameForm.valid && saveRename()">
+          <label for="rename-project-name">Nombre del proyecto</label>
+          <input id="rename-project-name" name="renameValue" [(ngModel)]="renameValue" required maxlength="150" [disabled]="busy()" autocomplete="off" />
+          @if (mutationError()) { <p class="dialog-error" role="alert">{{ mutationError() }}</p> }
+          <div class="dialog-actions">
+            <button class="secondary-button" type="button" (click)="closeProjectAction()" [disabled]="busy()">Cancelar</button>
+            <button class="create-button" type="submit" [disabled]="busy() || renameForm.invalid || renameValue.trim() === project.name">{{ busy() ? 'Guardando…' : 'Guardar nombre' }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+  @if (projectAction() === 'archive' && actionProject(); as project) {
+    <div class="dialog-scrim" (click)="$event.target === $event.currentTarget && closeProjectAction()">
+      <section class="create-dialog project-action-dialog" role="alertdialog" aria-modal="true" aria-labelledby="archive-title" aria-describedby="archive-description" (keydown)="onProjectActionKeydown($event)" (click)="$event.stopPropagation()">
+        <button class="dialog-close" type="button" (click)="closeProjectAction()" [disabled]="busy()" aria-label="Cerrar">×</button>
+        <span class="section-kicker">Quitar de la biblioteca</span>
+        <h2 id="archive-title">Mover «{{ project.name }}» a la papelera</h2>
+        <p id="archive-description">El servicio ocultará este proyecto de la lista activa. La API actual no ofrece una acción para restaurarlo.</p>
+        @if (mutationError()) { <p class="dialog-error" role="alert">{{ mutationError() }}</p> }
+        <div class="dialog-actions">
+          <button id="project-action-cancel" class="secondary-button" type="button" (click)="closeProjectAction()" [disabled]="busy()">Cancelar</button>
+          <button class="create-button project-trash-button" type="button" (click)="archiveProject()" [disabled]="busy() || !canEdit()">{{ busy() ? 'Moviendo…' : 'Mover a papelera' }}</button>
+        </div>
+      </section>
+    </div>
+  }
+</main>

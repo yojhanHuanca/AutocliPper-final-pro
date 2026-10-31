@@ -10,6 +10,17 @@ export class ProjectsApi {
       `/projects?workspaceId=${encodeURIComponent(workspaceId)}&limit=100${search ? "&search=" + encodeURIComponent(search) : ""}`,
     );
   }
+  updateProject(id: string, body: Schema<"UpdateProjectDto">) {
+    return this.api.patch<void>(
+      `/projects/${encodeURIComponent(id)}`,
+      body,
+    ).then(() => this.get(id));
+  }
+  trashProject(id: string): Promise<void> {
+    return this.api.delete<void>(
+      `/projects/${encodeURIComponent(id)}`,
+    );
+  }
   get(id: string) {
     return this.api.get<Schema<"ProjectResponseDto">>(
       `/projects/${encodeURIComponent(id)}`,

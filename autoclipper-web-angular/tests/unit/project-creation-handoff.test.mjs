@@ -37,12 +37,12 @@ test('a created project is reopened after navigation failure without repeating t
     component.projectName = 'Primer proyecto';
     await component.create();
     assert.equal(creates, 1);
-    assert.match(component.error(), /ya está creado/);
+    assert.match(component.mutationError(), /ya está creado/);
     assert.equal(component.hasCreatedProjectForCurrentInput(), true);
     await component.create();
     assert.equal(creates, 1);
     assert.equal(navigations.length, 2);
     assert.deepEqual(navigations, [['/app/projects', 'created-project'], ['/app/projects', 'created-project']]);
-    assert.equal(component.error(), '');
+    assert.equal(component.mutationError(), '');
   } finally { TestBed.resetTestingModule(); }
 });
