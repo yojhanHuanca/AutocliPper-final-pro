@@ -24,7 +24,7 @@
   </section>
   <p class="team-honesty-note">No se muestran personas, invitaciones ni accesos de ejemplo.</p>
 } @else {
-  @if (error()) { <div class="alert error team-alert" role="alert">{{ error() }} @if (forbidden()) { <button class="button small" type="button" (click)="workspaceStore.loadWorkspaces()">Actualizar espacios</button> } @else { <button class="button small" type="button" (click)="refresh()" [disabled]="loading()">Reintentar</button> }</div> }
+  @if (error()) { <div class="alert error team-alert" role="alert">{{ error() }} @if (forbidden() || workspaceListRefreshFailed() || workspacePermissionsUnconfirmed()) { <button class="button small" type="button" (click)="refreshWorkspaces()" [disabled]="workspaceRefreshBusy()">{{ workspaceRefreshBusy() ? 'Actualizando espacios…' : 'Actualizar espacios' }}</button> } @else { <button class="button small" type="button" (click)="refresh()" [disabled]="loading()">Reintentar</button> }</div> }
   @if (message()) { <div class="alert success" role="status">{{ message() }}</div> }
 
   @if (activeWorkspace(); as workspace) {
@@ -51,7 +51,9 @@
         <button class="button small" type="button" (click)="refresh()" [disabled]="loading() || mutationBusy()"><ac-icon name="refresh" />{{ loading() ? "Actualizando…" : "Actualizar" }}</button>
       </div>
       <p class="team-contract-note">Tu cuenta muestra tu nombre. Las demás personas se identifican por su referencia; no se muestran nombres ni correos ajenos.</p>
+      @if (!loading() && error() && members().length && !forbidden()) { <p class="team-refresh-state" role="status">La actualización falló. Se conserva la lista anterior para consulta; los cambios de rol, retiros y transferencias requieren una lista confirmada.</p> }
       @if (loading() && !members().length) { <p class="team-state" role="status">Cargando miembros del espacio…</p> }
+      @if (loading() && members().length) { <p class="team-refresh-state" role="status" aria-live="polite">Actualizando la lista. Se muestran {{ members().length }} {{ members().length === 1 ? 'miembro confirmado' : 'miembros confirmados' }} mientras termina la consulta.</p> }
       @if (!loading() && !error() && !members().length) { <p class="team-state">No hay miembros disponibles para este espacio.</p> }
       @for (member of members(); track member.userId) {
         <article class="team-member-row">
@@ -90,7 +92,23 @@
             <label>Acceso inicial<select name="inviteRole" [(ngModel)]="inviteRole" [disabled]="mutationBusy()"><option value="editor">Editor</option><option value="reader">Lector</option>@if (actorRole() === "owner") { <option value="admin">Administrador</option> }</select></label>
             <button class="button primary" type="submit" [disabled]="inviteForm.invalid || mutationBusy() || !canInviteSelected()">{{ mutationBusy() ? "Enviando…" : "Enviar invitación" }}<ac-icon name="arrow" /></button>
           </form>
-          <p class="team-contract-note team-invitation-limit">Las invitaciones enviadas aún no se pueden consultar ni gestionar desde esta pantalla. La aceptación requiere el enlace del correo.</p>
+          <section class="team-invitations" aria-labelledby="team-invitations-heading">
+            <div class="team-invitations-heading"><div><span class="eyebrow">ESTADO DE INVITACIONES</span><h3 id="team-invitations-heading">Invitaciones</h3></div><button class="button small" type="button" (click)="loadInvitations()" [disabled]="invitationsLoading() || mutationBusy()"><ac-icon name="refresh" />{{ invitationsLoading() ? 'Actualizando…' : 'Actualizar lista' }}</button></div>
+            @if (invitationsError()) { <div class="alert error team-invitations-error" role="alert">No se pudo consultar la lista. {{ invitationsError() }} <button class="button small" type="button" (click)="loadInvitations()" [disabled]="invitationsLoading()">Reintentar</button></div> }
+            @if (invitationsError() && invitations().length) { <p class="team-refresh-state" role="status">La lista anterior queda como referencia; confirma una actualización antes de revocar invitaciones.</p> }
+            @if (invitationsLoading() && !invitationsLoaded()) { <p class="team-state" role="status">Consultando invitaciones…</p> }
+            @if (invitationsLoading() && invitations().length) { <p class="team-refresh-state" role="status">Se conserva la lista anterior mientras se confirma la actual; las revocaciones están pausadas.</p> }
+            @if (!invitationsLoading() && !invitationsError() && invitationsLoaded() && !invitations().length) { <p class="team-state">No hay invitaciones registradas para este espacio.</p> }
+            @for (invitation of invitations(); track invitation.id) {
+              <article class="team-invitation-row">
+                <div class="team-invitation-identity"><strong>{{ invitation.email }}</strong><span>{{ roleLabel(invitation.role) }} · <span [class]="'team-invitation-status status-' + invitationStatus(invitation)">{{ invitationStatusLabel(invitation) }}</span></span><small>Vence {{ invitation.expiresAt | date: 'mediumDate' }}</small></div>
+                @if (invitationStatus(invitation) === 'pending') {
+                  @if (pendingInvitationRevocation() === invitation.id) { <div class="team-invitation-confirm" role="group" [attr.aria-label]="'Confirmar revocación para ' + invitation.email"><span>La persona ya no podrá aceptar este enlace.</span><button class="button small danger" type="button" (click)="revokeInvitation(invitation)" [disabled]="mutationBusy() || !invitationsLoaded()">{{ mutationBusy() ? 'Revocando…' : 'Confirmar revocación' }}</button><button class="button small" type="button" (click)="pendingInvitationRevocation.set('')" [disabled]="mutationBusy()">Cancelar</button></div> }
+                  @else { <button class="button small danger" type="button" (click)="pendingInvitationRevocation.set(invitation.id)" [disabled]="mutationBusy() || !invitationsLoaded()">Revocar</button> }
+                }
+              </article>
+            }
+          </section>
         </section>
       } @else {
         <section class="team-invite-panel panel">
@@ -114,7 +132,17 @@
       </section></details>
     }
     </div><aside class="team-context" aria-label="Acceso y organización del equipo">
-      <section class="team-access-card"><span class="team-context-icon"><ac-icon name="shield" /></span><span class="eyebrow">TU ACCESO AL ESPACIO</span><h2>{{ forbidden() ? 'Sin acceso confirmado' : roleLabel(workspace.role) }}</h2><p>{{ workspace.kind === 'team' ? 'Este espacio reúne el material y los proyectos compartidos del equipo.' : 'Tu espacio personal mantiene tus proyectos organizados para ti.' }}</p><dl><div><dt>Tipo de espacio</dt><dd>{{ workspace.kind === 'team' ? 'Equipo' : 'Personal' }}</dd></div><div><dt>Miembros consultados</dt><dd>{{ membersLoaded() ? members().length : '—' }}</dd></div></dl></section>
+      <section class="team-access-card"><span class="team-context-icon"><ac-icon name="shield" /></span><span class="eyebrow">TU ACCESO AL ESPACIO</span><h2>{{ forbidden() ? 'Sin acceso confirmado' : workspacePermissionsUnconfirmed() ? 'Permisos por confirmar' : roleLabel(workspace.role) }}</h2><p>{{ workspace.kind === 'team' ? 'Este espacio reúne el material y los proyectos compartidos del equipo.' : 'Tu espacio personal mantiene tus proyectos organizados para ti.' }}</p><dl><div><dt>Tipo de espacio</dt><dd>{{ workspace.kind === 'team' ? 'Equipo' : 'Personal' }}</dd></div><div><dt>Miembros consultados</dt><dd>{{ membersLoaded() ? members().length : '—' }}</dd></div></dl></section>
+      @if (workspace.kind === 'team') {
+        <section class="team-workflow" aria-labelledby="team-workflow-heading">
+          <span class="eyebrow">DEL VIDEO A LA REVISIÓN</span><h2 id="team-workflow-heading">Así participa el equipo</h2>
+          <ol>
+            @for (item of teamWorkflow; track item.step) {
+              <li><span class="team-workflow-step">{{ item.step }}</span><div><strong>{{ item.title }}</strong><span class="team-workflow-access">{{ item.access }}</span><p>{{ item.detail }}</p></div></li>
+            }
+          </ol>
+        </section>
+      }
       <details class="team-permissions"><summary>Qué permite cada rol<ac-icon name="shield" /></summary>
     <section class="team-role-guide" aria-label="Permisos por rol">
       @for (item of capabilities; track item.role) {
@@ -130,7 +158,7 @@
       <a class="team-account-shortcut" [routerLink]="design ? '/design/settings' : '/app/settings'"><ac-icon name="settings" /><div><strong>Tu cuenta y seguridad</strong><p>Perfil, 2FA, sesiones y privacidad.</p></div><ac-icon name="arrow" /></a>
     </aside></div>
   } @else {
-    <section class="panel team-no-workspace"><h2>No hay un espacio seleccionado.</h2><p>Actualiza la lista de espacios o vuelve a entrar al estudio.</p><button class="button" type="button" (click)="workspaceStore.loadWorkspaces()">Actualizar espacios</button></section>
+    <section class="panel team-no-workspace" role="status"><h2>{{ !workspaceStore.loaded() ? 'Consultando tus espacios…' : workspaceStore.workspaces().length ? 'Selecciona un espacio de trabajo.' : 'No hay espacios disponibles.' }}</h2><p>{{ !workspaceStore.loaded() ? 'La configuración del equipo aparecerá cuando se confirme tu acceso.' : workspaceStore.workspaces().length ? 'Elige un espacio en la barra lateral para consultar sus miembros y permisos.' : 'Actualiza la lista de espacios para volver a consultar tu acceso.' }}</p>@if (workspaceStore.loaded() && !workspaceStore.workspaces().length) { <button class="button" type="button" (click)="refreshWorkspaces()" [disabled]="workspaceRefreshBusy()">{{ workspaceRefreshBusy() ? 'Actualizando…' : 'Actualizar espacios' }}</button> }</section>
   }
 }
 

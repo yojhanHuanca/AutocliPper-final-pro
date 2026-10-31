@@ -1,10 +1,11 @@
-<section class="panel">
+<section class="panel" [attr.aria-busy]="busy()">
   <span class="eyebrow">TU PRIMER ESPACIO</span>
   <h2>Dale un lugar a tus historias.</h2>
   <p>Crea tu espacio personal para organizar proyectos y cargar tu propio material.</p>
   @if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
   <form #form="ngForm" (ngSubmit)="form.valid && create()" class="inline-form">
-    <label>Nombre del espacio<input name="workspaceName" [(ngModel)]="name" maxlength="100" required placeholder="Mi estudio"></label>
-    <button class="button primary" type="submit" [disabled]="busy() || form.invalid">Crear espacio<ac-icon name="plus"/></button>
+    <label>Nombre del espacio<input name="workspaceName" [(ngModel)]="name" (ngModelChange)="error.set('')" maxlength="100" required autocomplete="organization" placeholder="Mi estudio" [disabled]="busy()"></label>
+    <button class="button primary" type="submit" [disabled]="busy() || form.invalid">{{ busy() ? 'Creando espacio…' : 'Crear espacio' }}<ac-icon [name]="busy() ? 'clock' : 'plus'"/></button>
   </form>
+  @if (busy()) { <p class="muted" role="status" aria-live="polite">Creando tu espacio personal y actualizando la lista de espacios…</p> }
 </section>

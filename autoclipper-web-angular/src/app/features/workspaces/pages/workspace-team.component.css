@@ -45,6 +45,7 @@ ac-workspace-team { display: block; }
 .team-transfer-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 13px; border: 1px solid #e4bebe; border-radius: 9px; background: #fff8f8; }
 .team-transfer-confirm p { flex-basis: 100%; margin: 0; color: #613b3b; font-size: 12px; line-height: 1.55; }
 .team-state { padding: 20px 0 5px; color: var(--muted); font-size: 13px; }
+.team-refresh-state { margin: 0 0 10px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--tint); color: var(--muted); font-size: 12px; line-height: 1.5; }
 .team-alert { margin: 12px 0; }
 .team-alert .button { margin-left: 10px; }
 .team-design-note { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; padding: 24px; }
@@ -92,7 +93,22 @@ ac-workspace-team { display: block; }
 .team-studio .team-invite-panel form > button { grid-column:1/-1; justify-self:start; min-height:43px; }
 .team-studio .team-invite-panel label { font-size:11px; }
 .team-studio .team-invite-panel input,.team-studio .team-invite-panel select { min-height:44px; border-radius:8px; border-color:#d4deee; font-size:13px; }
-.team-studio .team-invitation-limit { margin:20px 0 0; padding-top:16px; border-top:1px solid #e3eaf6; font-size:10px; }
+.team-invitations { margin-top:24px; padding-top:20px; border-top:1px solid #e3eaf6; }
+.team-invitations-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:10px; }
+.team-invitations-heading h3 { margin:5px 0 0; color:#1b2b48; font-size:17px; letter-spacing:-.02em; }
+.team-invitations-heading .eyebrow { font-size:8px; }
+.team-invitation-row { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:14px 0; border-top:1px solid #e8edf5; }
+.team-invitation-identity { display:grid; min-width:0; gap:5px; }
+.team-invitation-identity strong { color:#20314e; font-size:12px; overflow-wrap:anywhere; }
+.team-invitation-identity > span,.team-invitation-identity small { color:#78869b; font-size:10px; }
+.team-invitation-identity small { font-size:9px; }
+.team-invitation-status { font-weight:700; }
+.team-invitation-status.status-pending { color:#9a6a14; }
+.team-invitation-status.status-accepted { color:#25815b; }
+.team-invitation-status.status-expired,.team-invitation-status.status-revoked { color:#78869b; }
+.team-invitation-confirm { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; }
+.team-invitation-confirm > span { max-width:28ch; color:#78869b; font-size:10px; }
+.team-invitations-error { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:10px 0; font-size:11px; }
 .team-context { min-width:0; display:grid; gap:20px; }
 .team-access-card { padding:23px; border:1px solid #d9e3f5; border-radius:13px; background:#f7faff; }
 .team-context-icon { display:grid; place-items:center; width:42px; height:42px; margin-bottom:19px; background:#e7efff; color:var(--accent); border-radius:11px; }
@@ -104,6 +120,18 @@ ac-workspace-team { display: block; }
 .team-access-card dl > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:9px; padding:12px 0; border-top:1px solid #dde6f5; font-size:10px; }
 .team-access-card dt { color:#7c8ba3; }
 .team-access-card dd { margin:0; font-weight:650; color:#4a628b; }
+.team-workflow { padding:20px 18px; border:1px solid #dfe7f4; border-radius:13px; background:#fff; }
+.team-workflow > .eyebrow { font-size:8px; }
+.team-workflow h2 { margin:8px 0 17px; color:#1b2b48; font-size:16px; letter-spacing:-.025em; }
+.team-workflow ol { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+.team-workflow li { position:relative; display:grid; grid-template-columns:27px minmax(0,1fr); gap:10px; padding:0 0 17px; }
+.team-workflow li:last-child { padding-bottom:0; }
+.team-workflow li:not(:last-child)::after { position:absolute; top:25px; bottom:0; left:12px; width:1px; background:#dce5f3; content:""; }
+.team-workflow-step { z-index:1; display:grid; place-items:center; width:26px; height:26px; border:1px solid #cbd9f0; border-radius:8px; background:#f5f8ff; color:var(--accent); font-size:9px; font-weight:750; }
+.team-workflow li > div { display:grid; gap:4px; min-width:0; padding-top:3px; }
+.team-workflow li strong { color:#253957; font-size:10px; line-height:1.5; }
+.team-workflow-access { color:#4669a3; font-size:8px; font-weight:700; line-height:1.5; }
+.team-workflow li p { margin:0; color:#7a8799; font-size:9px; line-height:1.55; }
 .team-permissions { padding:16px; border:1px solid var(--border); border-radius:11px; background:white; }
 .team-permissions > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; font-size:11px; font-weight:650; color:#4b6287; }
 .team-permissions > summary::before { content:'+'; font-size:17px; font-weight:400; }
@@ -132,4 +160,5 @@ ac-workspace-team { display: block; }
 @media(max-width:1100px) { .team-space-layout { grid-template-columns:minmax(0,1fr) 225px; gap:18px; } .team-studio .team-overview-role { border:0; padding:0; } }
 @media(max-width:900px) { .team-space-layout { grid-template-columns:1fr; } .team-context { grid-template-columns:1fr 1fr; align-items:start; } .team-account-shortcut { grid-column:1/-1; } }
 @media(max-width:600px) { .team-studio-heading { flex-direction:column; align-items:stretch; gap:20px; } .team-studio-heading h1 { font-size:32px; } .team-studio-heading .button { align-self:flex-start; } .team-studio .team-overview,.team-studio .team-members,.team-studio .team-invite-panel { padding:22px; } .team-context { grid-template-columns:1fr; } .team-studio .team-invite-panel form { grid-template-columns:1fr; } .team-studio .team-invite-panel form > label,.team-studio .team-invite-panel form > button { grid-column:auto; } .team-studio .team-invite-panel input,.team-studio .team-invite-panel select { font-size:16px; } .team-studio .team-member-actions { padding-left:0; } .team-ownership > summary { padding:19px; flex-wrap:wrap; gap:11px; } }
+@media(max-width:500px) { .team-invitations-heading,.team-invitation-row { align-items:flex-start; flex-direction:column; } .team-invitation-confirm { justify-content:flex-start; } }
 }

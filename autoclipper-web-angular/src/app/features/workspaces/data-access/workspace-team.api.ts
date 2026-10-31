@@ -12,6 +12,13 @@ export class WorkspaceTeamApi {
   invite(workspaceId: string, body: Schema<"InvitationDto">, idempotencyKey: string) {
     return this.api.post<void>(`/workspaces/${encodeURIComponent(workspaceId)}/invitations`, body, idempotencyKey);
   }
+  invitations(workspaceId: string) {
+    // The gateway currently omits the response schema for this implemented route.
+    return this.api.get<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/invitations`);
+  }
+  revokeInvitation(workspaceId: string, invitationId: string) {
+    return this.api.delete<unknown>(`/workspaces/${encodeURIComponent(workspaceId)}/invitations/${encodeURIComponent(invitationId)}`);
+  }
   setRole(workspaceId: string, userId: string, role: Schema<"RoleDto">["role"]) {
     return this.api.patch<void>(`/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`, { role });
   }
