@@ -47,11 +47,11 @@
     <article class="stat-card">
       <ac-icon name="shield" />
       <div>
-        <span>Disponible</span
+      <span>{{ usage.plan ? "Disponible" : "Disponible reportado por la API" }}</span
         ><strong
           >{{ usage.availableSeconds | number: "1.0-2" }}
           <small>s</small></strong
-        ><small>{{ usage.plan ? "Según la asignación de desarrollo de este espacio" : "Valor disponible devuelto por la API; el espacio no tiene un límite asignado" }}</small>
+        ><small>{{ usage.plan ? "Saldo de material restante en la asignación" : "Valor devuelto por la API; no se confirmó una asignación de límite" }}</small>
       </div>
     </article>
   </div>
@@ -103,15 +103,17 @@
 }
 @if (consumption()?.plan?.kind === 'development') {
   <p class="alert">La asignación local de desarrollo no tiene precios, cobros ni créditos comerciales. El uso suma material procesado por etapa; algunos trabajos anteriores pueden seguir otra regla. El resumen corresponde a este espacio y periodo.</p>
-} @else if (!consumption()?.plan) {
-  <p class="alert">No se confirmó una asignación de desarrollo para este espacio. Se muestran únicamente los valores de consumo y reservas devueltos por el servicio; no se estiman precios ni cobros.</p>
-} @else {
-  <p class="alert">El resumen muestra los valores de consumo y reservas devueltos por el servicio. Esta pantalla no calcula precios ni facturas.</p>
+} @else if (consumption(); as usage) {
+  @if (!usage.plan) {
+    <p class="alert">El API no confirmó un límite asignado para este espacio. Se conservan sus valores devueltos de consumo, reserva y disponible; no hay importes ni facturas en esta respuesta.</p>
+  } @else {
+    <p class="alert">La API devuelve asignación y uso de material, no precios, cobros ni facturas. Esta pantalla no calcula importes.</p>
+  }
 }
 <section class="panel" [attr.aria-busy]="busy() || loadingMore()">
   <div class="panel-heading">
     <div><span class="eyebrow">DETALLE POR ETAPA</span><h2>Movimientos del espacio.</h2></div>
-    <span class="muted">Hasta 50 por página · {{ ledger().length }} cargados</span>
+    <span class="muted">{{ visibleLedger().length }} visibles de {{ ledger().length }} movimientos cargados · hasta 50 por página</span>
   </div>
   <div class="ledger-stage-filter" role="group" aria-label="Filtrar movimientos por etapa">
     <span>Etapas en los movimientos cargados</span>
@@ -123,7 +125,17 @@
       }
     </div>
   </div>
-  <p class="ledger-stage-note">El resumen de arriba muestra el periodo vigente. Este historial incluye los movimientos disponibles por páginas; la API no devuelve un total consolidado por etapa.</p>
+  <div class="ledger-stage-filter" role="group" aria-label="Filtrar movimientos por tipo">
+    <span>Tipo de movimiento en los registros cargados</span>
+    <div>
+      @for (filter of kindFilters; track filter.id) {
+        <button class="ledger-stage-chip" [class.active]="kindFilter() === filter.id" type="button" [attr.aria-pressed]="kindFilter() === filter.id" (click)="kindFilter.set(filter.id)">
+          {{ filter.label }} <span>{{ kindCount(filter.id) }}</span>
+        </button>
+      }
+    </div>
+  </div>
+  <p class="ledger-stage-note">Los filtros se aplican a los movimientos cargados, no hacen una consulta ni representan el total histórico. Reserva, consumo y liberación son segundos de material; no son cargos monetarios. El resumen superior corresponde al periodo vigente.</p>
   @if (ledgerError()) {
     <div class="alert error" role="alert">
       @if (ledgerError().includes('cursor repetido')) { {{ ledgerError() }} } @else { {{ ledger().length ? "No se pudieron actualizar los movimientos." : "No se pudieron cargar los movimientos." }} {{ ledgerError() }} }
@@ -156,7 +168,7 @@
           </tr>
         } @empty {
           @if (ledger().length) {
-            <tr><td colspan="6">No hay movimientos cargados para esta etapa. Prueba otra etapa o carga más movimientos.</td></tr>
+            <tr><td colspan="6">No hay movimientos cargados que coincidan con estos filtros. Cambia la etapa o el tipo, o carga más movimientos.</td></tr>
           } @else if (ledgerEmptyStateMessage(busy(), accessDenied(), !!ledgerError(), !!workspace.workspaceId(), workspace.loaded(), workspace.workspaces().length > 0); as emptyMessage) {
             <tr>
               <td colspan="6">{{ emptyMessage }}</td>

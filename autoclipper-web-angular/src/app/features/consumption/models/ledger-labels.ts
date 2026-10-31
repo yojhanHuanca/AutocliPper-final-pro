@@ -7,6 +7,7 @@ export function consumptionKindLabel(kind: string): string {
 }
 
 export type ConsumptionStageFilter = 'all' | 'audio' | 'analysis' | 'render';
+export type ConsumptionKindFilter = 'all' | 'reserve' | 'consume' | 'release';
 
 export function filterLedgerByStage<T extends { stage: string }>(
   entries: readonly T[],
@@ -15,11 +16,29 @@ export function filterLedgerByStage<T extends { stage: string }>(
   return stage === 'all' ? [...entries] : entries.filter((entry) => entry.stage === stage);
 }
 
+export function filterLedger<T extends { stage: string; kind: string }>(
+  entries: readonly T[],
+  stage: ConsumptionStageFilter,
+  kind: ConsumptionKindFilter,
+): T[] {
+  return entries.filter((entry) =>
+    (stage === 'all' || entry.stage === stage) &&
+    (kind === 'all' || entry.kind === kind),
+  );
+}
+
 export function consumptionLedgerStageCount(
   entries: readonly { stage: string }[],
   stage: ConsumptionStageFilter,
 ): number {
   return stage === 'all' ? entries.length : entries.filter((entry) => entry.stage === stage).length;
+}
+
+export function consumptionLedgerKindCount(
+  entries: readonly { kind: string }[],
+  kind: ConsumptionKindFilter,
+): number {
+  return kind === 'all' ? entries.length : entries.filter((entry) => entry.kind === kind).length;
 }
 
 export function consumptionLedgerEmptyStateMessage(

@@ -32,7 +32,7 @@ export { AdminConsoleComponent } from '../src/app/features/administration/pages/
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
 export { consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaTotal } from '../src/app/features/consumption/models/ledger-labels';
-export { consumptionKindLabel, consumptionStageLabel, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
+export { consumptionKindLabel, consumptionLedgerEmptyStateMessage, consumptionLedgerKindCount, consumptionLedgerStageCount, consumptionStageLabel, filterLedger, filterLedgerByStage, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
 export { sessionGuard } from '../src/app/core/guards/session.guard';
 export { workspaceGuard } from '../src/app/features/workspaces/workspace.guard';
 export { SettingsComponent } from '../src/app/features/settings/pages/settings.component';

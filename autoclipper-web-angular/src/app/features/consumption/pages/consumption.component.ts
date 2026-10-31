@@ -16,15 +16,17 @@ import { errorMessage } from "../../../core/http/api-error";
 import { IconComponent } from "../../../shared/ui/icon/icon.component";
 import {
   consumptionKindLabel,
+  consumptionLedgerKindCount,
   consumptionLedgerStageCount,
   consumptionLedgerEmptyStateMessage,
   consumptionPlanLabel,
   consumptionQuotaProgress,
   consumptionQuotaTotal,
   consumptionStageLabel,
-  filterLedgerByStage,
+  filterLedger,
   pipelineShortId,
   type ConsumptionStageFilter,
+  type ConsumptionKindFilter,
 } from "../models/ledger-labels";
 
 export function loadConsumptionSections(
@@ -44,6 +46,13 @@ const consumptionStageFilters = [
   { id: "render", label: "Renderizado" },
 ] as const;
 
+const consumptionKindFilters = [
+  { id: "all", label: "Todos" },
+  { id: "reserve", label: "Reservas" },
+  { id: "consume", label: "Consumos" },
+  { id: "release", label: "Liberaciones" },
+] as const;
+
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-consumption",
@@ -53,6 +62,7 @@ const consumptionStageFilters = [
 })
 export class ConsumptionComponent {
   readonly stageFilters = consumptionStageFilters;
+  readonly kindFilters = consumptionKindFilters;
   readonly stageLabel = consumptionStageLabel;
   readonly kindLabel = consumptionKindLabel;
   readonly ledgerEmptyStateMessage = consumptionLedgerEmptyStateMessage;
@@ -68,8 +78,9 @@ export class ConsumptionComponent {
   readonly consumption = signal<Schema<"ConsumptionDto"> | null>(null);
   readonly ledger = signal<Schema<"UsageLedgerEntryDto">[]>([]);
   readonly stageFilter = signal<ConsumptionStageFilter>("all");
+  readonly kindFilter = signal<ConsumptionKindFilter>("all");
   readonly visibleLedger = computed(() => {
-    return filterLedgerByStage(this.ledger(), this.stageFilter());
+    return filterLedger(this.ledger(), this.stageFilter(), this.kindFilter());
   });
   readonly nextId = signal<string | null>(null);
   readonly overviewError = signal("");
@@ -82,6 +93,9 @@ export class ConsumptionComponent {
   private seenLedgerCursors = new Set<string>();
   stageCount(stage: ConsumptionStageFilter): number {
     return consumptionLedgerStageCount(this.ledger(), stage);
+  }
+  kindCount(kind: ConsumptionKindFilter): number {
+    return consumptionLedgerKindCount(this.ledger(), kind);
   }
   constructor() {
     effect(() => {
