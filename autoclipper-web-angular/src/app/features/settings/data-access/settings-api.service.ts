@@ -1,6 +1,15 @@
 import { Injectable, inject } from "@angular/core";
 import { ApiTransport } from "../../../core/http/api-transport.service";
 import type { Schema } from "../../../core/contracts/api-types";
+
+export type PrivacyContributionScope = "identity" | "workspace" | "project" | "billing" | "media" | "analysis";
+export type PrivacyContributionResult =
+  | Schema<"PrivacyProfileExportDto">
+  | Schema<"PrivacyWorkspaceExportDto">
+  | Schema<"PrivacyProjectExportDto">
+  | Schema<"PrivacyBillingExportDto">
+  | Schema<"PrivacyMediaExportDto">
+  | Schema<"PrivacyAnalysisExportDto">;
 @Injectable({ providedIn: "root" })
 export class SettingsApi {
   private readonly api = inject(ApiTransport);
@@ -8,7 +17,7 @@ export class SettingsApi {
     return this.api.get<Schema<"ProfileResponseDto">>("/auth/profile");
   }
   saveProfile(body: Schema<"UpdateProfileDto">) {
-    return this.api.patch<Schema<"ProfileResponseDto">>("/auth/profile", body);
+    return this.api.patch<{ version: number }>("/auth/profile", body);
   }
   mfa() {
     return this.api.get<Schema<"MfaStatusResponseDto">>("/auth/2fa");
@@ -26,6 +35,27 @@ export class SettingsApi {
   }
   requestPrivacy(body: Schema<"PrivacyRequestDto">) {
     return this.api.post("/auth/privacy-requests", body);
+  }
+  privacyContribution(
+    id: string,
+    scope: PrivacyContributionScope,
+    body: Schema<"PrivacyProfileProofDto">,
+    key: string,
+  ) {
+    const path = `/auth/privacy-requests/${encodeURIComponent(id)}/${scope === "billing" ? "billing" : scope}-export`;
+    switch (scope) {
+      case "identity": return this.api.post<Schema<"PrivacyProfileExportDto">>(path, body, key);
+      case "workspace": return this.api.post<Schema<"PrivacyWorkspaceExportDto">>(path, body, key);
+      case "project": return this.api.post<Schema<"PrivacyProjectExportDto">>(path, body, key);
+      case "billing": return this.api.post<Schema<"PrivacyBillingExportDto">>(path, body, key);
+      case "media": return this.api.post<Schema<"PrivacyMediaExportDto">>(path, body, key);
+      case "analysis": return this.api.post<Schema<"PrivacyAnalysisExportDto">>(path, body, key);
+    }
+  }
+  privacyManifest(id: string) {
+    return this.api.get<Schema<"PrivacyRequestManifestDto">>(
+      `/auth/privacy-requests/${encodeURIComponent(id)}/manifest`,
+    );
   }
   setupMfa(password: string) {
     return this.api.post<Schema<"MfaSetupResponseDto">>("/auth/2fa/setup", {

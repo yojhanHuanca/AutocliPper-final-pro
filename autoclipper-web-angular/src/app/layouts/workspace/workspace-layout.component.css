@@ -79,8 +79,7 @@
   display: grid;
   gap: 4px;
 }
-.sidebar nav > a,
-.nav-disabled {
+.sidebar nav > a {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -109,8 +108,7 @@
 .sidebar nav > a:hover {
   background: var(--surface);
 }
-.sidebar nav ac-icon,
-.nav-disabled ac-icon {
+.sidebar nav ac-icon {
   width: 18px;
   height: 18px;
 }
@@ -118,16 +116,6 @@
   font-size: 10px;
   margin-left: auto;
   color: #757b72;
-}
-.nav-disabled {
-  color: #787e76;
-}
-.nav-disabled small {
-  font-size: 10px;
-  margin-left: auto;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 4px;
 }
 .sidebar-note {
   background: var(--surface);
@@ -203,6 +191,28 @@
   align-items: center;
   gap: 14px;
 }
+.topbar-context {
+  max-width: min(48vw, 560px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-switch-overlay {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgb(255 255 255 / 88%);
+  color: #233655;
+  font-size: 14px;
+  font-weight: 650;
+  backdrop-filter: blur(5px);
+}
+.workspace-switch-overlay .spinner { flex: 0 0 auto; }
 .connection {
   display: inline-flex;
   align-items: center;
@@ -265,4 +275,202 @@
   border-top: 1px solid var(--border);
 }
 
+@media (max-width: 800px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(310px, calc(100vw - 52px));
+    height: 100dvh;
+    padding: max(20px, env(safe-area-inset-top)) 17px max(16px, env(safe-area-inset-bottom));
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 220ms ease, visibility 0s linear 220ms;
+    box-shadow: 16px 0 40px #11182724;
+    overscroll-behavior: contain;
+  }
+  .menu-open .sidebar {
+    transform: translateX(0);
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .mobile-menu {
+    display: inline-flex;
+  }
+  .app-topbar {
+    height: 64px;
+    padding: 0 18px;
+  }
+  .app-main {
+    padding: 24px 18px;
+  }
+  .design-banner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+  .design-banner > a {
+    margin-left: 28px;
+  }
+  .app-footer {
+    flex-direction: column;
+    gap: 8px;
+    margin: 18px;
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+  }
 }
+
+@media (max-width: 480px) {
+  .app-topbar {
+    padding-inline: 12px;
+    gap: 10px;
+  }
+  .app-topbar > div {
+    gap: 9px;
+  }
+  .topbar-context { max-width: calc(100vw - 170px); }
+  .topbar-right {
+    gap: 8px;
+  }
+  .connection {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-main {
+    padding: 20px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+
+/* La barra superior indica el módulo y ofrece retornos directos al contexto. */
+.topbar-location { min-width:0; flex:1; }
+.topbar-context { display:grid; gap:4px; max-width:min(52vw,620px); min-width:0; overflow:visible; white-space:normal; }
+.workspace-context { overflow:hidden; color:#78849a; font-size:9px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+.workspace-breadcrumbs { display:flex; align-items:center; gap:8px; min-width:0; overflow-x:auto; color:#283a56; font-size:11px; line-height:1.3; scrollbar-width:none; white-space:nowrap; }
+.workspace-breadcrumbs::-webkit-scrollbar { display:none; }
+.workspace-breadcrumbs a { flex:0 0 auto; color:#526783; text-decoration:none; }
+.workspace-breadcrumbs a:hover { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+.workspace-breadcrumbs [aria-current="page"] { overflow:hidden; color:#1c3152; font-weight:650; text-overflow:ellipsis; }
+.breadcrumb-separator { flex:0 0 auto; color:#a5afbf; }
+.sidebar a:focus-visible,.sidebar button:focus-visible,.sidebar select:focus-visible,.app-topbar a:focus-visible,.app-topbar button:focus-visible { outline:3px solid #91b6f2; outline-offset:2px; }
+@media(max-width:800px) {
+  .topbar-context { max-width:min(62vw,520px); }
+  .workspace-breadcrumbs { gap:6px; }
+}
+@media(max-width:480px) {
+  .topbar-context { max-width:calc(100vw - 174px); }
+  .workspace-context { max-width:100%; }
+  .workspace-breadcrumbs { font-size:10px; }
+}
+
+}
+/* Keep the workspace navigation expanded everywhere except in the clip editor. */
+@layer components {
+  .app-shell.editor-mode { grid-template-columns:68px minmax(0,1fr); }
+  .app-shell.editor-mode .sidebar { box-sizing:border-box; width:68px; min-width:0; align-items:center; padding:12px 7px 10px; overflow-x:hidden; }
+  .app-shell.editor-mode .sidebar > .brand { display:grid; place-items:center; width:44px; height:44px; overflow:hidden; padding:0; margin:0 0 14px; font-size:0; }
+  .app-shell.editor-mode .sidebar > .brand ac-brand { width:42px !important; max-width:42px; height:42px; }
+  .app-shell.editor-mode .sidebar .brand-compact { width:42px !important; height:42px; }
+  .app-shell.editor-mode .sidebar .brand-emblem { width:40px !important; height:40px; aspect-ratio:auto; }
+  .app-shell.editor-mode .sidebar .brand-wordmark { display:none; }
+  .app-shell.editor-mode .sidebar .workspace-select { position:relative; box-sizing:border-box; justify-content:center; width:44px; min-height:44px; padding:5px; margin:0 0 14px; }
+  .app-shell.editor-mode .sidebar .workspace-select > div { position:absolute; inset:0; width:44px; height:44px; overflow:visible; }
+  .app-shell.editor-mode .sidebar .workspace-select label { display:none; }
+  .app-shell.editor-mode .sidebar .workspace-select select { position:absolute; inset:0; width:44px; height:44px; padding:0; opacity:.01; cursor:pointer; }
+  .app-shell.editor-mode .sidebar .workspace-avatar { width:32px; height:32px; }
+  .app-shell.editor-mode .sidebar .nav-caption,.app-shell.editor-mode .sidebar .sidebar-note,.app-shell.editor-mode .sidebar-user .topbar-location { display:none; }
+  .app-shell.editor-mode .sidebar nav { justify-items:center; width:100%; gap:5px; }
+  .app-shell.editor-mode .sidebar nav > a { box-sizing:border-box; justify-content:center; width:44px; min-height:44px; padding:8px; gap:0; overflow:hidden; font-size:0; }
+  .app-shell.editor-mode .sidebar nav > a ac-icon { flex:0 0 20px; width:20px; height:20px; }
+  .app-shell.editor-mode .sidebar nav > a small { display:none; }
+  .app-shell.editor-mode .sidebar nav > a.active:before { left:-7px; }
+  .app-shell.editor-mode .sidebar .sidebar-bottom { margin-top:auto; }
+  .app-shell.editor-mode .sidebar-user { justify-content:center; width:44px; padding:7px 0 0; margin-top:10px; border-top:1px solid var(--border); }
+  .app-shell.editor-mode .sidebar-user .avatar { flex:0 0 32px; }
+  @media(max-width:800px) {
+    .app-shell.editor-mode { display:grid; grid-template-columns:68px minmax(0,1fr); }
+    .app-shell.editor-mode .sidebar { position:sticky; inset:auto; width:68px; height:100dvh; padding:12px 7px 10px; transform:none; visibility:visible; transition:none; box-shadow:none; }
+    .app-shell.editor-mode .workspace-menu-close { display:none; }
+  }
+}
+
+/* Shared authenticated palette. The editor keeps the same tokens while its navigation stays icon-only. */
+.app-shell {
+  --bg: #f4f0e8;
+  --surface: #fffdf8;
+  --surface-2: #e9e3da;
+  --text: #11111a;
+  --muted: #625e64;
+  --border: #d8d2c9;
+  --accent: #315eff;
+  --accent-hover: #2347d0;
+  --accent-rose: #c72670;
+  --tint: #e5eaff;
+  --on-accent: #fff;
+  color: var(--text);
+  background: var(--bg);
+}
+.sidebar { background: var(--surface); border-color: var(--border); }
+.app-topbar { background: var(--bg); border-color: var(--border); }
+.sidebar-note { background: var(--surface-2); border-color: var(--border); }
+.workspace-select { border-color: var(--border); }
+.sidebar nav > a { color: var(--muted); }
+.sidebar nav > a:hover { background: var(--surface-2); }
+.sidebar-user { border-color: var(--border); }
+.design-banner { background: var(--tint); border-color: var(--border); color: var(--text); }
+.app-footer { border-color: var(--border); color: var(--muted); }
+.sidebar a:focus-visible, .sidebar button:focus-visible, .sidebar select:focus-visible,
+.app-topbar a:focus-visible, .app-topbar button:focus-visible { outline-color: var(--accent-rose); }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  background: #11111a;
+  color: #f4f0e8;
+}
+html[data-theme="dark"] body { background: #11111a; color: #f4f0e8; }
+html[data-theme="dark"] .app-shell {
+  --bg: #11111a;
+  --surface: #1b1a24;
+  --surface-2: #24232f;
+  --text: #f4f0e8;
+  --muted: #bbb5c0;
+  --border: #413d49;
+  --accent: #91a5ff;
+  --accent-hover: #b1beff;
+  --accent-rose: #ff85bd;
+  --tint: #292d46;
+  --on-accent: #11111a;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+}
+html[data-theme="dark"] .app-shell :is(.sidebar, .app-topbar, .account-rail, .account-identity, .account-content > .panel, .panel, .card, .sidebar-note, .workspace-select) {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+html[data-theme="dark"] .app-shell :is(.design-banner, .account-nav-item.active, .workspace-access-summary, .workspace-access-state, .notice, .sensitive-box) {
+  background-color: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+html[data-theme="dark"] .app-shell :is(input:not([type="checkbox"]), select, textarea) {
+  border-color: var(--border);
+  background-color: #201f2a;
+  color: var(--text);
+}
+html[data-theme="dark"] .app-shell :is(h1, h2, h3, h4, strong, dt, dd, .workspace-breadcrumbs [aria-current="page"]) { color: var(--text); }
+html[data-theme="dark"] .app-shell :is(p, small, .muted, .topbar-context, .connection, .account-identity p) { color: var(--muted); }
+html[data-theme="dark"] .app-shell :is(a, button:not(.danger)) { color: var(--accent); }
+html[data-theme="dark"] .app-shell :is(.button.primary, .account-content .button.primary, .design-banner > a) { color: var(--on-accent); }
+html[data-theme="dark"] .app-shell :is(.account-nav-item.active, .sidebar nav > a.active) { color: var(--accent); }
+html[data-theme="dark"] .app-shell :is(.account-nav-item.active > ac-icon:first-child, .workspace-access-icon, .account-card-icon) { background: var(--tint); color: var(--accent); border-color: var(--border); }

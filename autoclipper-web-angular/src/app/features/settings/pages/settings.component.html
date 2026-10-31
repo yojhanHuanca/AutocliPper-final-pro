@@ -12,10 +12,10 @@
 <div class="account-layout">
   <aside class="account-rail" aria-label="Resumen y secciones de la cuenta">
     <section class="account-identity"><span class="account-identity-avatar">{{ design ? 'AC' : (profile()?.name ?? '…').slice(0,2).toUpperCase() }}</span><div><strong>{{ design ? 'Tu perfil de creador' : profile()?.name ?? (busy() ? 'Consultando cuenta…' : 'Perfil no disponible') }}</strong><p>{{ design ? 'Conecta tu cuenta para ver tus datos.' : profile()?.email ?? 'Sin identidad confirmada' }}</p></div></section>
-    <nav class="account-navigation" role="tablist" aria-label="Secciones de configuración">
+    <nav class="account-navigation" role="tablist" aria-orientation="vertical" aria-label="Secciones de configuración">
       @for (item of tabItems; track item; let index = $index) {
         <button class="account-nav-item" type="button" role="tab" [id]="'settings-tab-' + index" aria-controls="settings-panel" [attr.aria-label]="item" [attr.aria-describedby]="'account-tab-help-' + index" [attr.aria-selected]="tab() === item" [attr.tabindex]="tab() === item ? 0 : -1" [class.active]="tab() === item" (keydown)="onTabKeydown($event, index)" (click)="selectTab(item)">
-          <ac-icon [name]="item === 'Perfil' ? 'users' : item === 'Seguridad' ? 'shield' : 'folder'" /><span><strong>{{ item }}</strong><small [id]="'account-tab-help-' + index">{{ item === 'Perfil' ? 'Nombre y preferencias' : item === 'Seguridad' ? '2FA y sesiones' : 'Solicitudes y datos' }}</small></span><ac-icon name="arrow" />
+          <ac-icon [name]="item === 'Perfil' ? 'users' : item === 'Seguridad' ? 'shield' : item === 'Privacidad' ? 'download' : 'folder'" /><span><strong>{{ item }}</strong><small [id]="'account-tab-help-' + index">{{ item === 'Perfil' ? 'Perfil y preferencias' : item === 'Seguridad' ? '2FA y sesiones' : item === 'Privacidad' ? 'Solicitudes y datos' : 'Acceso y equipo' }}</small></span><ac-icon name="arrow" />
         </button>
       }
     </nav>
@@ -38,43 +38,51 @@
           #profileForm="ngForm"
           (ngSubmit)="profileForm.valid && saveProfile()"
         >
-          <div class="account-field-grid">
-          <label
-            >Nombre<input
-              name="name"
-              [(ngModel)]="name"
-              required
-              maxlength="100"
-              [disabled]="design || busy()" /></label
-          ><label
-            >Correo de la cuenta<input
-              [value]="profile()?.email ?? ''"
-              readonly
-              placeholder="Conecta tu cuenta para verlo" /></label
-          ><label
-            >Zona horaria<input
-              name="timezone" [attr.aria-invalid]="!!timezone && !timezoneValid()" [attr.aria-describedby]="timezone && !timezoneValid() ? 'settings-timezone-error' : null"
-              [(ngModel)]="timezone"
-              (ngModelChange)="error.set(''); message.set('')"
-              required
-              [disabled]="design || busy()"
-              placeholder="America/Lima"
-          /></label>
-          @if (timezone && !timezoneValid()) { <p id="settings-timezone-error" class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
-          <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
-          <p class="muted">Esta preferencia se guarda en tu cuenta. La entrega de notificaciones depende de los servicios habilitados.</p>
+          <div class="account-field-grid account-identity-fields">
+            <label>Nombre<input name="name" [(ngModel)]="name" required maxlength="100" [disabled]="design || busy()" /></label>
+            <label>Correo de la cuenta<input [value]="profile()?.email ?? ''" readonly placeholder="Conecta tu cuenta para verlo" /></label>
           </div>
+          <fieldset class="account-preferences-fieldset">
+            <legend>Preferencias de interfaz y cuenta</legend>
+            <p class="account-preferences-intro">Se guardan en tu perfil y se mantienen al cambiar de espacio.</p>
+            <div class="account-field-grid">
+              <label>Zona horaria<input name="timezone" [attr.aria-invalid]="!!timezone && !timezoneValid()" [attr.aria-describedby]="timezone && !timezoneValid() ? 'settings-timezone-error' : null" [(ngModel)]="timezone" (ngModelChange)="error.set(''); message.set('')" required [disabled]="design || busy()" placeholder="America/Lima" /></label>
+              <label>Idioma preferido<select name="locale" [(ngModel)]="locale" [disabled]="design || busy()"><option value="es">Español</option><option value="en">English</option></select></label>
+              <label>Aspecto de la interfaz<select name="theme" [(ngModel)]="theme" [disabled]="design || busy()"><option value="system">Según el dispositivo</option><option value="light">Claro · blanco y hueso</option><option value="dark">Oscuro · negro y hueso</option></select></label>
+              <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
+          </div>
+            @if (timezone && !timezoneValid()) { <p id="settings-timezone-error" class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
+            <p class="muted">El aspecto se aplica al estudio al guardar. El idioma preferido se conserva en tu perfil; esta interfaz web todavía se muestra en español. La entrega de notificaciones depende de los servicios habilitados.</p>
+          </fieldset>
           <div class="account-form-actions">
           <button
             class="button primary"
             type="submit"
-            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications)"
+            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && theme === profile()!.preferences.theme)"
           >
             Guardar perfil<ac-icon name="check" />
           </button>
-          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications)">Descartar cambios</button>
+          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && theme === profile()!.preferences.theme)">Descartar cambios</button>
           </div>
         </form>
+      </article>
+    }
+    @if (tab() === "Espacio de trabajo") {
+      <article class="panel account-workspace-card">
+        <div class="account-card-title"><span class="account-card-icon"><ac-icon name="folder" /></span><div><span class="eyebrow">ESPACIO ACTIVO</span><h2>Acceso y equipo.</h2><p>Consulta a qué espacio perteneces y qué rol tiene tu cuenta.</p></div></div>
+        @if (design) {
+          <div class="workspace-access-state" role="status"><span class="workspace-access-icon"><ac-icon name="shield" /></span><div><strong>Conecta tu cuenta para ver tu espacio.</strong><p>La exploración de diseño no consulta ni inventa membresías.</p><a class="button primary" routerLink="/login">Conectar mi cuenta<ac-icon name="arrow" /></a></div></div>
+        } @else if (!workspaceStore.loaded()) {
+          <p class="workspace-access-state" role="status">Consultando el acceso confirmado para esta cuenta…</p>
+        } @else if (activeWorkspace(); as workspace) {
+          <div class="workspace-access-summary">
+            <div class="workspace-access-heading"><span class="workspace-access-icon"><ac-icon name="users" /></span><div><span class="eyebrow">{{ workspace.kind === 'team' ? 'ESPACIO DE EQUIPO' : 'ESPACIO PERSONAL' }}</span><h3>{{ workspace.name }}</h3></div></div>
+            <dl><div><dt>Tu rol</dt><dd>{{ workspaceRoleLabel(workspace.role) }}</dd></div><div><dt>Tipo</dt><dd>{{ workspace.kind === 'team' ? 'Equipo compartido' : 'Personal' }}</dd></div><div><dt>Creado</dt><dd>{{ workspace.createdAt | date:'mediumDate' }}</dd></div></dl>
+            <p class="workspace-preferences-note" role="note">El contrato del servidor no ofrece preferencias por espacio. Los integrantes y permisos se administran en <a [routerLink]="'/app/team'">Equipo y permisos</a>.</p>
+          </div>
+        } @else {
+          <div class="workspace-access-state" role="status"><span class="workspace-access-icon"><ac-icon name="folder" /></span><div><strong>No hay un espacio activo confirmado.</strong><p>Actualiza la lista de espacios o revisa las invitaciones de equipo.</p><a class="button" routerLink="/app/team">Abrir equipo y permisos<ac-icon name="arrow" /></a></div></div>
+        }
       </article>
     }
     @if (tab() === "Seguridad") {
@@ -215,7 +223,7 @@
       </article>
       <article class="panel">
         <div class="panel-heading">
-          <h2>Sesiones de tu cuenta.</h2>
+          <div><span class="eyebrow">ACCESO DE LA CUENTA</span><h2>Sesiones activas y revocadas.</h2></div>
           <button
             class="button small"
             type="button"
@@ -225,8 +233,10 @@
             {{ sessionsLoading() ? "Actualizando…" : "Actualizar" }}
           </button>
         </div>
+        <p class="session-scope-note">La API muestra identificador y fechas de cada sesión; no informa nombre del dispositivo ni ubicación.</p>
         @if (sessionsLoading() && !sessions().length) { <p class="muted" role="status">Cargando sesiones…</p> }
         @if (sessionsError()) { <div class="alert error" role="alert">{{ sessionsError() }} <button class="button small" type="button" (click)="loadSessions()" [disabled]="sessionsLoading()">Reintentar</button></div> }
+        @if (sessionsError() && sessions().length) { <p class="session-list-stale" role="status">Se conserva la consulta anterior para referencia. No cierres sesiones hasta actualizar correctamente la lista.</p> }
         @for (item of sessions(); track item.id) {
           <div class="session-row">
             <ac-icon name="shield" />
@@ -235,19 +245,21 @@
               ><small>Creada {{ item.createdAt | date: "medium" }}</small
               ><small>Vence {{ item.expiresAt | date: "medium" }}</small>
             </div>
-            <button
-              class="button small"
-              type="button"
-              (click)="revoke(item.id)"
-              [attr.aria-label]="(item.revokedAt ? 'Sesión revocada ' : 'Cerrar sesión ') + item.id.slice(0,8)"
-              [disabled]="design || busy() || !!item.revokedAt"
-            >
-              {{ item.revokedAt ? "Revocada" : "Cerrar sesión" }}
-            </button>
+            @if (!sessionsLoaded()) { <span class="session-unconfirmed-state" role="status">Estado sin confirmar</span> }
+            @else if (item.revokedAt) { <span class="session-revoked-state" role="status">Sesión revocada</span> }
+            @else if (pendingSessionRevocation() === item.id) {
+              <div class="session-revoke-confirm" role="group" [attr.aria-label]="'Confirmar cierre de la sesión ' + item.id.slice(0,8)">
+                <span>Este dispositivo perderá acceso al cerrar esta sesión.</span>
+                <button class="button small danger" type="button" (click)="revoke(item.id)" [disabled]="design || busy() || !sessionsLoaded()">{{ busy() ? "Cerrando…" : "Confirmar cierre" }}</button>
+                <button class="button small" type="button" (click)="cancelSessionRevocation(item.id)" [disabled]="busy()">Cancelar</button>
+              </div>
+            } @else {
+              <button class="button small danger" type="button" (click)="revoke(item.id)" [attr.aria-label]="'Cerrar sesión ' + item.id.slice(0,8)" [disabled]="design || busy() || !sessionsLoaded()">Cerrar sesión</button>
+            }
           </div>
         } @empty {
           @if (!sessionsLoading() && !sessionsError()) {
-          <div class="empty-inline">
+          <div class="empty-inline" role="status">
             <ac-icon name="shield" />
             <p>
               Las sesiones autorizadas aparecerán aquí. Esta lista no
@@ -263,10 +275,18 @@
         <span class="eyebrow">PRIVACIDAD Y DATOS</span>
         <h2>Tus datos, con claridad.</h2>
         <p>
-          Puedes registrar solicitudes de exportación o eliminación. Su
-          ejecución integral entre servicios está pendiente; registrarlas no
-          elimina ni exporta automáticamente tus datos.
+          Una solicitud global solo queda registrada en Identity. Su estado no
+          demuestra que todos los servicios hayan entregado o eliminado datos.
         </p>
+        <div class="notice" role="note">
+          <strong>Exportar:</strong> puedes descargar aportes JSON parciales de
+          Identity, Workspace y Project para una solicitud pendiente. Cada aporte
+          declara su alcance y deja la solicitud global pendiente.
+          <br /><strong>Eliminar:</strong> por ahora solo se registra la
+          solicitud. La purga global de cuenta y datos está pendiente; la
+          limpieza operativa de cargas expiradas de Project tampoco equivale a
+          borrar tu cuenta ni tus datos.
+        </div>
         @if (!mfa()) { <p class="alert">Comprueba el estado de 2FA en Seguridad antes de registrar una solicitud.</p> }
         <form
           class="account-proof-form"
@@ -305,6 +325,59 @@
           </button>
         </form>
       </article>
+      <article class="panel account-privacy-card">
+        <h2>Aportes parciales de exportación</h2>
+        <p>Descarga únicamente los datos incluidos en cada alcance. La prueba de identidad se valida al preparar el archivo.</p>
+        <ul>
+          <li><strong>Identity:</strong> perfil y proveedor vinculado; no incluye sesiones, 2FA ni auditoría.</li>
+          <li><strong>Workspace:</strong> tus membresías actuales; no incluye datos de otras personas ni contenido.</li>
+          <li><strong>Project:</strong> referencias y metadatos atribuidos a ti; no incluye nombres, textos, transcripciones ni archivos multimedia.</li>
+          <li><strong>Billing:</strong> reservas y movimientos de consumo atribuidos a tu cuenta.</li>
+          <li><strong>Media:</strong> estado de inspecciones y procesos de medios atribuidos a ti; no incluye archivos de video.</li>
+          <li><strong>Analysis:</strong> estado de trabajos y presencia de transcripción/selección; no incluye el texto de las transcripciones.</li>
+        </ul>
+        @if (exportablePrivacyRequests().length) {
+          @if (privacyManifestLoading()) { <p class="muted" role="status">Consultando los alcances de esta solicitud…</p> }
+          @if (privacyManifestError()) {
+            <div class="alert error" role="alert">No se pudo confirmar el manifiesto: {{ privacyManifestError() }} <button class="button small" type="button" (click)="loadPrivacyManifest()" [disabled]="privacyManifestLoading()">Reintentar manifiesto</button></div>
+          }
+          @if (privacyManifest(); as manifest) {
+            <p role="status">{{ manifest.preparedScopes }} de {{ manifest.requiredScopes }} alcances requeridos preparados. El estado global es {{ manifest.globalFulfillment === 'ready_for_assembly' ? 'listo para ensamblaje' : 'pendiente' }}; esta pantalla solo descarga aportes parciales.</p>
+            <ul class="privacy-scope-status" aria-label="Estado de los alcances de exportación">
+              @for (scope of manifest.scopes; track scope.scope) {
+                <li><strong>{{ privacyScopeName(scope.scope) }}</strong><span>{{ scope.required ? 'Requerido' : 'Opcional' }} · {{ scope.supported ? privacyScopeStatusLabel(scope.status) : 'No disponible en este servicio' }}</span></li>
+              }
+            </ul>
+          }
+          @if (privacyManifest() && availablePrivacyExportScopes().length) {
+          <form class="account-proof-form" #privacyExportForm="ngForm" (ngSubmit)="privacyExportForm.valid && downloadPrivacyContribution()">
+            <label>Solicitud de exportación<select name="exportRequest" [ngModel]="privacyExportRequestId()" (ngModelChange)="selectPrivacyExportRequest($event)" [disabled]="design || privacyContributionBusy()">
+              @for (request of exportablePrivacyRequests(); track request.id) {
+                <option [value]="request.id">{{ request.id.slice(0, 8) }} · {{ privacyStateLabel(request.state) }}</option>
+              }
+            </select></label>
+            <label>Aporte a descargar<select name="exportScope" [ngModel]="privacyExportScope()" (ngModelChange)="selectPrivacyExportScope($event)" [disabled]="design || privacyContributionBusy() || privacyManifestLoading()">
+              @for (scope of availablePrivacyExportScopes(); track scope.scope) {
+                <option [value]="privacyScopeKey(scope.scope)">{{ privacyScopeName(scope.scope) }} · {{ privacyScopeStatusLabel(scope.status) }}</option>
+              }
+            </select></label>
+            <label>Contraseña actual<input name="exportProof" type="password" [(ngModel)]="password" autocomplete="current-password" required [disabled]="design || privacyContributionBusy()" /></label>
+            <label>Código 2FA si está activado<input name="exportFactor" [(ngModel)]="factor" autocomplete="one-time-code" [disabled]="design || privacyContributionBusy()" /></label>
+            <button class="button primary" type="submit" [disabled]="design || busy() || privacyContributionBusy() || privacyManifestLoading() || privacyExportForm.invalid || !mfa() || (mfa()!.enabled && !factorValid())">{{ privacyContributionBusy() ? "Preparando aporte…" : "Descargar aporte parcial" }}</button>
+          </form>
+          } @else if (privacyManifest() && !availablePrivacyExportScopes().length) {
+            <p class="muted" role="status">El manifiesto no informa alcances requeridos y disponibles para preparar en este momento.</p>
+          }
+        } @else {
+          @switch (privacyExportPrompt()) {
+            @case ("loading") { <p class="muted" role="status">Consultando las solicitudes existentes; los aportes aparecen cuando el servidor confirma una exportación pendiente.</p> }
+            @case ("unconfirmed") { <p class="muted">No se pudo confirmar la lista de solicitudes. Actualízala en “Solicitudes registradas” antes de preparar un aporte.</p> }
+            @default { <p class="muted">Aún no hay una exportación pendiente confirmada. Registra una solicitud arriba; cuando Identity la muestre como pendiente o en proceso, podrás preparar cada aporte parcial.</p> }
+          }
+        }
+        @if (privacyContributionMessage()) { <p role="status" aria-live="polite">{{ privacyContributionMessage() }}</p> }
+        @if (privacyContributionError()) { <p class="alert error" role="alert">No se pudo preparar el aporte: {{ privacyContributionError() }}</p> }
+      </article>
       <article class="panel">
         <h2>Solicitudes registradas.</h2>
         <button type="button" class="button small" (click)="loadPrivacy()" [disabled]="design || busy() || privacyLoading()">{{ privacyLoading() ? "Actualizando…" : "Actualizar solicitudes" }}</button>
@@ -316,7 +389,7 @@
             ><small>{{ item.createdAt | date: "medium" }}</small>
           </div>
         } @empty {
-          <p class="muted">{{ (busy() || privacyLoading()) ? "Consultando solicitudes…" : privacyError() ? "No hay una lista confirmada de solicitudes." : privacyLoaded() ? "Aún no has registrado solicitudes." : "Conecta tu cuenta para consultar solicitudes." }}</p>
+          <p class="muted" role="status">{{ (busy() || privacyLoading()) ? "Consultando solicitudes…" : privacyError() ? "No hay una lista confirmada de solicitudes." : privacyLoaded() ? "Aún no has registrado solicitudes." : "Conecta tu cuenta para consultar solicitudes." }}</p>
         }
       </article>
     }
