@@ -8,7 +8,7 @@ import { DashboardState, ProjectsApi, ConsumptionApi, WorkspaceStore } from '../
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const project=(id,workspaceId='alpha',day=1)=>({id,workspaceId,name:id,version:1,createdAt:`2026-10-${String(day).padStart(2,'0')}T00:00:00.000Z`});
 const usage=id=>({workspaceId:id,consumedSeconds:40,reservedSeconds:0,availableSeconds:3560});
-const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);return{resolve,promise};};
+const deferred=()=>{let resolve,reject;const promise=new Promise((done,fail)=>{resolve=done;reject=fail;});return{resolve,reject,promise};};
 function setup(api,billing={overview:async id=>usage(id)}) {
  const workspace={workspaceId:signal('alpha')};
  TestBed.configureTestingModule({providers:[DashboardState,{provide:ProjectsApi,useValue:api},{provide:ConsumptionApi,useValue:billing},{provide:WorkspaceStore,useValue:workspace},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
@@ -71,4 +71,31 @@ test('a source with the wrong project provenance is excluded rather than shown a
  const {state}=setup(api);
  try {await state.load('alpha');assert.deepEqual(state.sources(),[]);assert.notEqual(state.sourcesError(),'');assert.equal(state.drafts().length,1);}
  finally {TestBed.resetTestingModule();}
+});
+
+test('same-workspace refresh keeps the last confirmed projects, drafts and sources visible until the new result arrives',async()=>{
+ const pending=deferred();let projectQueries=0;
+ const api={
+  list:async()=>++projectQueries===1?{items:[project('confirmed')]}:pending.promise,
+  edits:async()=>({items:[{id:'draft-confirmed',uploadId:'source-confirmed',name:'Borrador confirmado',version:3,updatedAt:'2026-10-12T00:00:00.000Z'}]}),
+  upload:async()=>({id:'source-confirmed',projectId:'confirmed',state:'confirmed',bytes:1234,inspection:{status:'succeeded',result:{durationSeconds:8}}}),
+ };
+ const {state}=setup(api);
+ try {
+  await state.load('alpha');
+  const projects=state.projects(),drafts=state.drafts(),sources=state.sources();
+  const refreshing=state.load('alpha');
+  assert.equal(state.loading(),true);
+  assert.equal(state.projectsLoaded(),true);
+  assert.strictEqual(state.projects(),projects);
+  assert.strictEqual(state.drafts(),drafts);
+  assert.strictEqual(state.sources(),sources);
+  pending.reject({status:503});
+  await refreshing;
+  assert.deepEqual(state.projects().map(item=>item.id),['confirmed']);
+  assert.deepEqual(state.drafts().map(item=>item.id),['draft-confirmed']);
+  assert.deepEqual(state.sources().map(item=>item.id),['source-confirmed']);
+  assert.notEqual(state.error(),'');
+  assert.equal(state.loading(),false);
+ } finally {TestBed.resetTestingModule();}
 });

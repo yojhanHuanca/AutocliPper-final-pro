@@ -27,16 +27,21 @@ export class DashboardState {
   readonly draftsError = signal("");
   readonly sourcesError = signal("");
   private generation = 0;
+  private confirmedWorkspaceId = "";
   constructor() { inject(DestroyRef).onDestroy(() => { this.generation += 1; }); }
 
   async load(id: string): Promise<void> {
     const generation = ++this.generation;
-    this.projects.set([]); this.drafts.set([]); this.sources.set([]); this.usage.set(null);
-    this.projectsLoaded.set(false); this.detailsLoaded.set(false);
+    const keepConfirmedList = !!id && id === this.confirmedWorkspaceId;
+    if (!keepConfirmedList) {
+      this.projects.set([]); this.drafts.set([]); this.sources.set([]);
+      this.projectsLoaded.set(false); this.detailsLoaded.set(false);
+    }
+    this.usage.set(null);
     this.denied.set(false);
     this.error.set(""); this.usageError.set(""); this.draftsError.set(""); this.sourcesError.set("");
     this.loading.set(!!id);
-    if (!id) return;
+    if (!id) { this.confirmedWorkspaceId = ""; return; }
     try {
       const [projects, usage] = await Promise.allSettled([this.api.list(id), this.billing.overview(id)]);
       if (!this.current(generation, id)) return;
@@ -48,6 +53,7 @@ export class DashboardState {
       const ordered = [...projects.value.items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
       this.projects.set(ordered);
       this.projectsLoaded.set(true);
+      this.confirmedWorkspaceId = id;
       const recent = ordered.slice(0, 4);
       const pages = await Promise.allSettled(recent.map(project => this.api.edits(project.id)));
       if (!this.current(generation, id)) return;
@@ -80,6 +86,7 @@ export class DashboardState {
   }
   private closeAccess(): void {
     this.denied.set(true);
+    this.confirmedWorkspaceId = "";
     this.projects.set([]); this.drafts.set([]); this.sources.set([]); this.usage.set(null);
     this.projectsLoaded.set(false); this.detailsLoaded.set(false);
     this.error.set("El servidor no confirmó acceso a este espacio. Actualiza tus espacios o vuelve a iniciar sesión.");
