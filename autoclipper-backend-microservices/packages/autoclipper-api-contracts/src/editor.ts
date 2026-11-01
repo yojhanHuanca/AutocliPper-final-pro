@@ -4,6 +4,8 @@ import {framingSchema,splitScreenSchema,subtitleStyleSchema,subtitleCueSchema,in
 const noCaptions=z.object({source:z.literal("none")}).strict();
 const userCaptions=z.object({source:z.literal("user"),cues:z.array(subtitleCueSchema).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
 const transcriptCaptions=z.object({source:z.literal("transcript"),analysisId:z.uuid(),style:subtitleStyleSchema.optional()}).strict();
+export const editorSplitDraftRequest=z.object({cutSeconds:z.number().finite().nonnegative().max(14400)}).strict();
+export type EditorSplitDraftRequest=z.infer<typeof editorSplitDraftRequest>;
 export const editorSpec=z.object({version:z.literal(1),kind:z.literal("clip"),startSeconds:z.number().finite().nonnegative().max(14400),endSeconds:z.number().finite().positive().max(14400),aspect:z.enum(["source","vertical","square","horizontal"]),framing:framingSchema.optional(),splitScreen:splitScreenSchema.optional(),subtitles:z.union([noCaptions,userCaptions,transcriptCaptions]).default({source:"none"})}).strict().superRefine((value,context)=>{
   const validation=internalProcessingSpec.safeParse({version:1,kind:"clip",startSeconds:value.startSeconds,endSeconds:value.endSeconds,aspect:value.aspect,...(value.framing?{framing:value.framing}:{}),...(value.splitScreen?{splitScreen:value.splitScreen}:{}),...(value.subtitles.source==="user"?{subtitles:{provenance:"user",cues:value.subtitles.cues,...(value.subtitles.style?{style:value.subtitles.style}:{})}}:{})});
   if(!validation.success)context.addIssue({code:"custom",message:"Invalid editing timeline, framing or captions"});
@@ -51,4 +53,12 @@ export class EditorDraftDto {
   @ApiProperty() name!:string;
   @ApiProperty({minimum:1}) version!:number;
   @ApiProperty({type:EditorRevisionDto}) revision!:EditorRevisionDto;
+}
+export class EditorSplitDraftRequestDto {
+  @ApiProperty({minimum:0,maximum:14400,description:"Source-timeline timestamp inside the current draft range. Both output clips must remain at least 0.1 seconds."}) cutSeconds!:number;
+}
+export class EditorSplitDraftResultDto {
+  @ApiProperty({format:"uuid",description:"Input draft is retained unchanged; split returns two new drafts that reuse its source upload."}) sourceDraftId!:string;
+  @ApiProperty({type:EditorDraftDto}) left!:EditorDraftDto;
+  @ApiProperty({type:EditorDraftDto}) right!:EditorDraftDto;
 }

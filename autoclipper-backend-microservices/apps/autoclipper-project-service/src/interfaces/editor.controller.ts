@@ -1,8 +1,8 @@
 import {Body,Controller,Get,Inject,Param,Patch,Post,Query,Req,Res} from "@nestjs/common";
 import type {Request,Response} from "express";
-import {ApiBody,ApiCreatedResponse,ApiExtraModels,ApiHeader,ApiOkResponse,ApiProperty,ApiTags,ApiQuery,ApiForbiddenResponse} from "@nestjs/swagger";
+import {ApiBody,ApiCreatedResponse,ApiExtraModels,ApiHeader,ApiOkResponse,ApiProperty,ApiTags,ApiQuery,ApiForbiddenResponse,ApiResponse} from "@nestjs/swagger";
 import {z} from "zod";
-import {EditorDraftDto,EditorRevisionDto,EditorRevisionSummaryDto,EditorExportDto,EditorSpecDto,NoEditorCaptionsDto,UserEditorCaptionsDto,TranscriptEditorCaptionsDto,ErrorResponse} from "@autoclipper/api-contracts";
+import {EditorDraftDto,EditorRevisionDto,EditorRevisionSummaryDto,EditorExportDto,EditorSpecDto,EditorSplitDraftRequestDto,EditorSplitDraftResultDto,NoEditorCaptionsDto,UserEditorCaptionsDto,TranscriptEditorCaptionsDto,ErrorResponse} from "@autoclipper/api-contracts";
 import {body,uuid} from "@autoclipper/http-security";
 import {ProjectService} from "../application/project.service.js";
 class CreateEditDto {@ApiProperty({maxLength:150}) name!:string;@ApiProperty({type:EditorSpecDto}) spec!:EditorSpecDto;}
@@ -10,7 +10,7 @@ class UpdateEditDto {@ApiProperty({minimum:1,description:"Current draft version.
 class RenderRevisionDto {@ApiProperty({minimum:1}) revisionVersion!:number;}
 class RestoreRevisionDto {@ApiProperty({minimum:1}) version!:number;@ApiProperty({minimum:1}) revisionVersion!:number;}
 @ApiTags("editor")
-@ApiExtraModels(NoEditorCaptionsDto,UserEditorCaptionsDto,TranscriptEditorCaptionsDto,EditorRevisionSummaryDto,EditorExportDto)
+@ApiExtraModels(EditorDraftDto,NoEditorCaptionsDto,UserEditorCaptionsDto,TranscriptEditorCaptionsDto,EditorRevisionSummaryDto,EditorExportDto,EditorSplitDraftRequestDto,EditorSplitDraftResultDto)
 @Controller()
 export class EditorController {
   constructor(@Inject(ProjectService)readonly service:ProjectService){}
@@ -18,6 +18,7 @@ export class EditorController {
   create(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.editor.create(req,uuid(id),input,String(res.locals["correlationId"]));}
   @Get("edits/:id")@ApiOkResponse({type:EditorDraftDto,headers:{ETag:{description:"Quoted current draft version, for example \"3\".",schema:{type:"string"}}}}) async get(@Req()req:Request,@Param("id")id:string,@Res({passthrough:true})res:Response){const value=await this.service.editor.get(req,uuid(id));res.setHeader("ETag",`"${value.version}"`);return value;}
   @Patch("edits/:id")@ApiHeader({name:"If-Match",required:false,description:"Quoted expected version; must match the version in the body."})@ApiBody({type:UpdateEditDto})@ApiOkResponse({type:EditorDraftDto}) update(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.editor.update(req,uuid(id),input,String(res.locals["correlationId"]));}
+  @Post("edits/:id/split")@ApiHeader({name:"If-Match",required:true,description:"Quoted current source draft version; missing returns 428 and stale versions return 412."})@ApiHeader({name:"Idempotency-Key",required:true})@ApiBody({type:EditorSplitDraftRequestDto})@ApiCreatedResponse({type:EditorSplitDraftResultDto})@ApiResponse({status:400,type:ErrorResponse})@ApiResponse({status:403,type:ErrorResponse})@ApiResponse({status:409,type:ErrorResponse})@ApiResponse({status:412,type:ErrorResponse})@ApiResponse({status:428,type:ErrorResponse}) split(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.editor.split(req,uuid(id),input,String(res.locals["correlationId"]));}
   @Get("edits/:id/revisions")@ApiQuery({name:"beforeVersion",required:false,type:Number,minimum:1})@ApiOkResponse({schema:{type:"object",required:["items","nextBeforeVersion"],properties:{items:{type:"array",maxItems:50,items:{$ref:"#/components/schemas/EditorRevisionSummaryDto"}},nextBeforeVersion:{type:"integer",nullable:true}}}}) history(@Req()req:Request,@Param("id")id:string,@Query("beforeVersion")before:string|undefined){return this.service.editor.history(req,uuid(id),before);}
   @Get("edits/:id/revisions/:version")@ApiOkResponse({type:EditorRevisionDto}) revision(@Req()req:Request,@Param("id")id:string,@Param("version")number:string){return this.service.editor.getRevision(req,uuid(id),body(z.coerce.number().int().min(1).max(2147483646),number));}
   @Post("edits/:id/restore")@ApiHeader({name:"If-Match",required:false,description:"Quoted expected version; must match the version in the body."})@ApiBody({type:RestoreRevisionDto})@ApiCreatedResponse({type:EditorDraftDto}) restore(@Req()req:Request,@Param("id")id:string,@Body()input:unknown,@Res({passthrough:true})res:Response){return this.service.editor.restore(req,uuid(id),input,String(res.locals["correlationId"]));}

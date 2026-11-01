@@ -1,12 +1,13 @@
-import {BadRequestException,ConflictException,NotFoundException,PreconditionFailedException} from "@nestjs/common";
+import {BadRequestException,ConflictException,HttpException,NotFoundException,PreconditionFailedException} from "@nestjs/common";
 import type {Request} from "express";
 import type pg from "pg";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {editorSpec,internalProcessingSpec,type EditorSpec,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {editorSpec,editorSplitDraftRequest,internalProcessingSpec,type EditorSpec,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {authenticatedUser,body,digest,requireCsrf,uuid,type ServiceConfig} from "@autoclipper/http-security";
 import type {DerivativesManager} from "./derivatives.manager.js";
 import type {AnalysisManager} from "./analysis.manager.js";
+import {editorSplitIdempotencyKeys,splitEditorSpec} from "./editor-split.js";
 type Draft={id:string;upload_id:string;project_id:string;workspace_id:string;name:string;current_version:number;creator_id:string;request_hash:string;created_at:Date;updated_at:Date};
 type Revision={id:string;draft_id:string;version:number;author_id:string;action:"created"|"updated"|"restored";restored_from_version:number|null;spec:EditorSpec;render_spec:ValidatedProcessingSpec;created_at:Date};
 const version=z.number().int().min(1).max(2147483646);
@@ -20,6 +21,13 @@ export class EditorManager {
   private revisionSummary(row:Revision){return{id:row.id,version:row.version,authorId:row.author_id,action:row.action,restoredFromVersion:row.restored_from_version,createdAt:row.created_at.toISOString()};}
   private presentRevision(row:Revision){return{...this.revisionSummary(row),spec:row.spec,renderSpec:row.render_spec};}
   private present(draft:Draft,revision:Revision){return{id:draft.id,uploadId:draft.upload_id,projectId:draft.project_id,name:draft.name,version:draft.current_version,revision:this.presentRevision(revision)};}
+  private async splitReplay(client:pg.Pool|pg.PoolClient,creatorId:string,keys:[string,string],requestHash:string){
+    const left=(await client.query<Draft>("SELECT * FROM editor_drafts WHERE creator_id=$1 AND idempotency_key=$2",[creatorId,keys[0]])).rows[0];
+    const right=(await client.query<Draft>("SELECT * FROM editor_drafts WHERE creator_id=$1 AND idempotency_key=$2",[creatorId,keys[1]])).rows[0];
+    if(!left&&!right)return null;
+    if(!left||!right||left.request_hash!==requestHash||right.request_hash!==requestHash)throw new ConflictException();
+    return{left:this.present(left,await this.revision(client,left.id,1)),right:this.present(right,await this.revision(client,right.id,1))};
+  }
   private async materialize(req:Request,uploadId:string,spec:EditorSpec){
     const source=await this.derivatives.sourceForEditor(req,uploadId);
     if(spec.endSeconds>source.metadata.durationSeconds)throw new BadRequestException();
@@ -47,6 +55,43 @@ export class EditorManager {
       const existing=(await client.query<Draft>("SELECT * FROM editor_drafts WHERE creator_id=$1 AND idempotency_key=$2",[user.id,key])).rows[0];if(existing){if(existing.request_hash!==hash)throw new ConflictException();return this.present(existing,await this.revision(client,existing.id,existing.current_version));}
       const id=randomUUID(),draft=(await client.query<Draft>("INSERT INTO editor_drafts(id,upload_id,project_id,workspace_id,creator_id,name,idempotency_key,request_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",[id,uploadId,source.upload.project_id,source.upload.workspace_id,user.id,data.name,key,hash])).rows[0]!;
       const revision=await this.insertRevision(client,id,1,user.id,"created",data.spec,renderSpec,correlationId);return this.present(draft,revision);
+    });
+  }
+  async split(req:Request,id:string,input:unknown,correlationId:string){
+    requireCsrf(req,this.config);
+    const data=body(editorSplitDraftRequest,input),sourceDraft=await this.resource(req,id,"editor"),user=await authenticatedUser(req,this.config),requestKey=uuid(String(req.headers["idempotency-key"]??""));
+    const ifMatch=req.headers["if-match"];
+    if(typeof ifMatch!=="string")throw new HttpException("Precondition required",428);
+    const match=/^"([1-9][0-9]*)"$/u.exec(ifMatch);
+    if(!match)throw new BadRequestException();
+    const expectedVersion=body(version,Number(match[1]));
+    const requestHash=digest(JSON.stringify({sourceDraftId:id,expectedVersion,cutSeconds:data.cutSeconds}));
+    const keys=editorSplitIdempotencyKeys(user.id,requestKey);
+    const prior=await this.splitReplay(this.pool,user.id,keys,requestHash);
+    if(prior)return{...prior,sourceDraftId:id};
+    if(sourceDraft.current_version!==expectedVersion)throw new PreconditionFailedException();
+
+    const original=await this.revision(this.pool,id,expectedVersion),specs=splitEditorSpec(original.spec,data.cutSeconds);
+    if(!specs)throw new BadRequestException();
+    const [left,right]=await Promise.all([
+      this.materialize(req,sourceDraft.upload_id,specs[0]),
+      this.materialize(req,sourceDraft.upload_id,specs[1]),
+    ]);
+    const partName=(number:number)=>`${[...sourceDraft.name].slice(0,145).join("")} (${number})`;
+
+    return this.tx(async client=>{
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`editor-split:${user.id}:${requestKey}`]);
+      const replay=await this.splitReplay(client,user.id,keys,requestHash);
+      if(replay)return{...replay,sourceDraftId:id};
+      const locked=(await client.query<Draft>("SELECT * FROM editor_drafts WHERE id=$1 FOR UPDATE",[id])).rows[0];
+      if(!locked)throw new NotFoundException();
+      if(locked.current_version!==expectedVersion)throw new PreconditionFailedException();
+      const leftId=randomUUID(),rightId=randomUUID();
+      const insertDraft=async(draftId:string,name:string,key:string)=> (await client.query<Draft>("INSERT INTO editor_drafts(id,upload_id,project_id,workspace_id,creator_id,name,idempotency_key,request_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",[draftId,locked.upload_id,locked.project_id,locked.workspace_id,user.id,name,key,requestHash])).rows[0]!;
+      const leftDraft=await insertDraft(leftId,partName(1),keys[0]),rightDraft=await insertDraft(rightId,partName(2),keys[1]);
+      const leftRevision=await this.insertRevision(client,leftId,1,user.id,"created",specs[0],left.renderSpec,correlationId);
+      const rightRevision=await this.insertRevision(client,rightId,1,user.id,"created",specs[1],right.renderSpec,correlationId);
+      return{sourceDraftId:id,left:this.present(leftDraft,leftRevision),right:this.present(rightDraft,rightRevision)};
     });
   }
   async get(req:Request,id:string){const draft=await this.resource(req,id);return this.present(draft,await this.revision(this.pool,id,draft.current_version));}
