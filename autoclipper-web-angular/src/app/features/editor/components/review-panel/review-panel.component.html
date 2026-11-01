@@ -15,10 +15,12 @@
       <div class="panel-heading">
         <div>
           <span class="eyebrow">ESTADO DEL SERVIDOR</span>
-          <p>Estado: <span class="badge">{{ vm.review() ? reviewStatus(vm.review()!.status) : "Cargando" }}</span></p>
+          <p>Estado: <span class="badge">{{ vm.review() ? reviewStatus(vm.review()!.status) : reviewUnavailable() ? "No disponible" : "Consultando…" }}</span></p>
         </div>
-        <button class="button small" type="button" (click)="vm.loadReview()" [disabled]="vm.busy()">Actualizar</button>
+        <button class="button small" type="button" (click)="refreshReview()" [disabled]="vm.busy() || reviewRetrying()">{{ reviewRetrying() ? "Consultando…" : "Actualizar estado" }}</button>
       </div>
+      @if (reviewRetrying() && !vm.review()) { <p role="status">Consultando el estado de revisión…</p> }
+      @if (reviewUnavailable() && !vm.review()) { <div class="alert error" role="alert">{{ reviewRetryError() || "No se pudo confirmar el estado de revisión. No se habilitan transiciones." }} <button class="button small" type="button" (click)="refreshReview()" [disabled]="reviewRetrying() || vm.busy()">Reintentar</button></div> }
       @if (vm.review(); as review) {
         <p>Revisión de contenido {{ review.version }} · estado {{ review.reviewVersion }}</p>
         @if (review.approvedRevisionVersion) {
@@ -29,10 +31,17 @@
             <button class="button primary" type="button" (click)="vm.requestReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Solicitar revisión</button>
           }
           @if (review.status === 'review' && vm.canAdminCollaboration()) {
-            <button class="button" type="button" (click)="vm.returnReview()" [disabled]="vm.design || vm.busy() || vm.dirty()">Devolver al editor</button>
-            <button class="button primary" type="button" (click)="vm.approve()" [disabled]="vm.design || vm.busy() || vm.dirty()">Aprobar</button>
+            <button class="button" type="button" (click)="requestDecision('return')" [disabled]="vm.design || vm.busy() || vm.dirty()">Devolver al editor</button>
+            <button class="button primary" type="button" (click)="requestDecision('approve')" [disabled]="vm.design || vm.busy() || vm.dirty()">Aprobar</button>
           }
         </div>
+        @if (pendingDecision(); as decision) {
+          <div class="collaboration-confirm" role="group" [attr.aria-label]="decision === 'approve' ? 'Confirmar aprobación' : 'Confirmar devolución al editor'">
+            <p>{{ decision === 'approve' ? 'Vas a aprobar la revisión guardada ' + review.version + '.' : 'La revisión guardada ' + review.version + ' volverá al editor.' }} El servidor comprobará de nuevo la versión y el permiso.</p>
+            <button class="button primary" type="button" (click)="confirmDecision()" [disabled]="vm.busy()">{{ vm.busy() ? 'Guardando decisión…' : decision === 'approve' ? 'Confirmar aprobación' : 'Confirmar devolución' }}</button>
+            <button class="button" type="button" (click)="cancelDecision()" [disabled]="vm.busy()">Cancelar</button>
+          </div>
+        }
         <small class="muted">El servidor valida permisos, versión y transición permitida.</small>
         <h3>Aprobaciones registradas</h3>
         @for (approval of review.approvals; track approval.id) {
@@ -48,7 +57,10 @@
     </section>
 
     <section class="collaboration-section">
-      <h3>Observaciones del equipo</h3>
+      <div class="panel-heading"><h3>Observaciones del equipo</h3><button class="button small" type="button" (click)="refreshComments()" [disabled]="commentsRetrying() || vm.busy()">{{ commentsRetrying() ? "Actualizando…" : "Actualizar observaciones" }}</button></div>
+      @if (commentsRetrying() && !vm.comments().length) { <p role="status">Consultando observaciones…</p> }
+      @if (commentsUnavailable()) { <div class="alert error" role="alert">{{ commentsRetryError() || "No se pudo confirmar la lista de observaciones." }} <button class="button small" type="button" (click)="refreshComments()" [disabled]="commentsRetrying() || vm.busy()">Reintentar</button></div> }
+      @if (commentsRetrying() && vm.comments().length) { <p class="collaboration-stale-note" role="status">Se conservan las observaciones anteriores mientras se actualiza la lista.</p> }
       @if (vm.replyTarget(); as target) {
         <div class="alert" role="status">
           Nueva observación en respuesta a la marca de {{ target.timeSeconds }} s.
@@ -73,12 +85,20 @@
           @if (!item.deletedAt) {
             <div class="button-row">
               @if (vm.canEditCollaboration()) { <button class="button small" type="button" (click)="vm.replyTo(item)" [disabled]="vm.design || vm.busy()">Responder en esta marca</button> }
-              @if (canDeleteComment(item)) { <button class="button small" type="button" (click)="vm.deleteComment(item)" [disabled]="vm.design || vm.busy()">Retirar comentario</button> }
+              @if (canDeleteComment(item)) {
+                @if (pendingCommentRemoval() === item.id) {
+                  <div class="collaboration-confirm compact" role="group" [attr.aria-label]="'Confirmar retiro del comentario marcado en ' + item.timeSeconds + ' segundos'">
+                    <span>Se retirará esta observación de la revisión.</span>
+                    <button class="button small danger" type="button" (click)="confirmCommentRemoval(item)" [disabled]="vm.busy()">{{ vm.busy() ? "Retirando…" : "Confirmar retiro" }}</button>
+                    <button class="button small" type="button" (click)="cancelCommentRemoval()" [disabled]="vm.busy()">Cancelar</button>
+                  </div>
+                } @else { <button class="button small" type="button" (click)="requestCommentRemoval(item)" [disabled]="vm.design || vm.busy()">Retirar comentario</button> }
+              }
             </div>
           }
         </article>
       } @empty {
-        <p class="empty-inline">No hay observaciones en esta revisión.</p>
+        @if (!commentsUnavailable() && !commentsRetrying() && !vm.busy()) { <p class="empty-inline">No hay observaciones en esta revisión.</p> }
       }
       @if (vm.nextComment()) {
         <button class="button small" type="button" (click)="vm.moreComments()" [disabled]="vm.design || vm.busy()">Más comentarios</button>
@@ -114,22 +134,34 @@
       }
       <div class="panel-heading"><h3>Enlaces emitidos</h3><button class="button small" type="button" (click)="loadLinks()" [disabled]="vm.design || busy() || loadingLinks()">{{ loadingLinks() ? "Actualizando…" : "Actualizar" }}</button></div>
       @if (loadingLinks() && !linksLoaded()) { <p role="status">Consultando enlaces emitidos…</p> }
+      @if (linksError()) { <div class="alert error collaboration-load-error" role="alert">No se pudo confirmar la lista de enlaces. {{ linksError() }} <button class="button small" type="button" (click)="loadLinks()" [disabled]="loadingLinks()">Reintentar</button></div> }
+      @if (loadingLinks() && links().length) { <p class="collaboration-stale-note" role="status">Se conserva la lista confirmada mientras termina la actualización.</p> }
       @for (link of links(); track link.id) {
         <article class="collaboration-row">
           <strong>Revisión {{ link.revisionVersion }} · {{ linkStatus(link) }}</strong>
           <span>Creado {{ link.createdAt | date: "medium" }} · vence {{ link.expiresAt | date: "medium" }}</span>
           @if (link.processingId) { <small>Incluye exportación {{ link.processingId }}</small> } @else { <small>Solo vista y comentarios existentes</small> }
-          @if (!link.revokedAt && linkStatus(link) === 'Activo') { <button class="button small" type="button" (click)="revoke(link)" [disabled]="busy()">Revocar acceso</button> }
+          @if (!link.revokedAt && linkStatus(link) === 'Activo') {
+            @if (pendingLinkRevocation() === link.id) {
+              <div class="collaboration-confirm compact" role="group" [attr.aria-label]="'Confirmar revocación del enlace de revisión ' + link.revisionVersion">
+                <span>Quien tenga el enlace dejará de acceder a esta revisión.</span>
+                <button class="button small danger" type="button" (click)="revoke(link)" [disabled]="busy()">{{ busy() ? "Revocando…" : "Confirmar revocación" }}</button>
+                <button class="button small" type="button" (click)="cancelLinkRevocation()" [disabled]="busy()">Cancelar</button>
+              </div>
+            } @else { <button class="button small" type="button" (click)="requestLinkRevocation(link)" [disabled]="busy() || !linksLoaded()">Revocar acceso</button> }
+          }
         </article>
       } @empty {
-        <p class="empty-inline">Todavía no hay enlaces externos.</p>
+        @if (linksLoaded() && !linksError()) { <p class="empty-inline">Todavía no hay enlaces externos.</p> }
       }
     </section>
   }
   @case ('activity') {
     <section class="collaboration-section">
-      <div class="panel-heading"><h3>Actividad de la edición</h3><button class="button small" type="button" (click)="loadAudit()" [disabled]="vm.design || loadingAudit()">{{ loadingAudit() ? "Consultando…" : "Actualizar" }}</button></div>
+      <div class="panel-heading"><h3>Actividad de la edición</h3><button class="button small" type="button" (click)="loadAudit()" [disabled]="vm.design || loadingAudit()">{{ loadingAudit() ? "Consultando…" : "Actualizar actividad" }}</button></div>
       @if (loadingAudit() && !auditLoaded()) { <p role="status">Consultando actividad…</p> }
+      @if (auditError()) { <div class="alert error collaboration-load-error" role="alert">No se pudo confirmar la actividad. {{ auditError() }} <button class="button small" type="button" (click)="loadAudit()" [disabled]="loadingAudit()">Reintentar</button></div> }
+      @if (loadingAudit() && audit().length) { <p class="collaboration-stale-note" role="status">Se conserva la actividad confirmada mientras termina la actualización.</p> }
       @for (event of audit(); track event.id) {
         <article class="collaboration-row">
           <strong>{{ actionLabel(event.action) }}</strong>
@@ -138,7 +170,7 @@
           <small class="resource-id">Actor {{ event.actorId }} · ref. {{ event.correlationId }}</small>
         </article>
       } @empty {
-        <p class="empty-inline">No hay actividad registrada para esta edición.</p>
+        @if (auditLoaded() && !auditError()) { <p class="empty-inline">No hay actividad registrada para esta edición.</p> }
       }
       @if (auditCursor()) { <button class="button small" type="button" (click)="loadAudit(true)" [disabled]="vm.design || loadingAudit()">{{ loadingAudit() ? "Cargando…" : "Más actividad" }}</button> }
     </section>
