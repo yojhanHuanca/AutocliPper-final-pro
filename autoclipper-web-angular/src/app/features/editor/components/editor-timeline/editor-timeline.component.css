@@ -96,6 +96,16 @@
   .timeline-heading h2 { color:#1d2e4b; }
   .timeline-heading>strong { padding:6px 9px; border:1px solid #dce5f1; border-radius:7px; color:#244e9e; background:#f5f8fd; font-size:10px; font-variant-numeric:tabular-nums; }
   .timeline-action-note { max-width:80ch; color:#78869a; }
+  .timeline-split-confirm { display:grid; grid-template-columns:minmax(190px, 260px) minmax(220px, 1fr); gap:8px 18px; align-items:center; margin:10px 0 14px; padding:12px; border:1px solid #cbd9f1; border-radius:9px; background:#f6f9ff; }
+  .timeline-split-confirm label { display:grid; gap:5px; color:#334967; font-size:11px; font-weight:700; }
+  .timeline-split-input { display:flex; align-items:center; gap:8px; }
+  .timeline-split-input input { width:110px; min-height:38px; padding:6px 8px; border:1px solid #bacbe7; border-radius:6px; color:#162b4b; background:#fff; font:inherit; font-variant-numeric:tabular-nums; }
+  .timeline-split-input input:focus-visible { outline:3px solid #2859b8; outline-offset:2px; }
+  .timeline-split-input span,.timeline-split-confirm p { color:#667993; font-size:11px; font-weight:400; line-height:1.5; }
+  .timeline-split-confirm p { margin:0; }
+  .timeline-split-confirm .timeline-split-retry { grid-column:1 / -1; color:#805313; font-weight:600; }
+  .timeline-split-actions { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:7px; }
+  @media(max-width:600px) { .timeline-split-confirm { grid-template-columns:1fr; } .timeline-split-actions { grid-column:1; } }
   .source-scrubber { border-color:#dce5f1; background:#f7f9fc; }
   .source-scrubber label { color:#354c6d; font-size:11px; }
   .source-scrubber input { accent-color:#2859b8; }

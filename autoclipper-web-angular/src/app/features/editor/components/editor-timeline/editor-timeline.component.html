@@ -5,13 +5,29 @@
     @else if (vm.draft()) { <span>{{ vm.sourceDuration() === null ? 'Verificando duración de la fuente' : 'Corrige el intervalo del clip' }}</span> }
     @else { <span>Sin revisión cargada</span> }
     <div class="timeline-actions" aria-label="Herramientas de edición de tiempo">
-      <button type="button" class="button small" disabled title="El contrato de edición no ofrece dividir un borrador en dos clips.">Dividir clip</button>
+      <button type="button" class="button small" [disabled]="!vm.canSplitClip() || vm.splitConfirmation()" [title]="vm.dirty() ? 'Guarda los cambios antes de dividir el borrador.' : 'Crea dos borradores guardados a partir del intervalo actual.'" (click)="vm.requestSplit()">Dividir clip</button>
       <button type="button" class="button small" disabled title="El servidor no ofrece duplicar borradores.">Duplicar</button>
       <button type="button" class="button small danger" disabled title="El servidor no ofrece eliminar borradores desde el editor.">Eliminar</button>
       <span class="zoom-controls"><button type="button" aria-label="Alejar línea de tiempo" [disabled]="zoomPercent() <= 50" (click)="changeZoom(-25)">−</button><output>{{ zoomPercent() }}%</output><button type="button" aria-label="Acercar línea de tiempo" [disabled]="zoomPercent() >= 200" (click)="changeZoom(25)">+</button></span>
     </div>
   </div>
-  <p class="timeline-action-note">Dividir, duplicar y eliminar están desactivados: el API no ofrece esas operaciones para borradores.</p>
+  <p class="timeline-action-note">Dividir crea dos borradores persistidos desde la revisión guardada. No genera videos; la exportación se solicita por separado.</p>
+  @if (vm.splitConfirmation()) {
+    <div class="timeline-split-confirm" role="group" aria-label="Confirmar división del clip">
+      @if (vm.splitRetryRequired()) { <p class="timeline-split-retry" role="status">No se pudo confirmar la respuesta del servidor. Reintenta este mismo corte para evitar crear clips duplicados.</p> }
+      <label for="split-cut-seconds">Punto de corte en la fuente
+        <span class="timeline-split-input"><input id="split-cut-seconds" type="number" [min]="vm.spec.startSeconds + 0.1" [max]="vm.spec.endSeconds - 0.1" step="0.01" [ngModel]="vm.splitCutSeconds()" (ngModelChange)="vm.splitCutSeconds.set($event)" [disabled]="vm.busy() || vm.splitRetryRequired()" /><span>segundos</span></span>
+      </label>
+      <p>Se crearán dos borradores guardados para {{ vm.spec.startSeconds | number:'1.1-2' }}–{{ vm.splitCutSeconds() | number:'1.1-2' }} s y {{ vm.splitCutSeconds() | number:'1.1-2' }}–{{ vm.spec.endSeconds | number:'1.1-2' }} s. El clip original se conserva.</p>
+      <div class="timeline-split-actions">
+        <button type="button" class="button primary small" (click)="vm.confirmSplit()" [disabled]="vm.busy() || vm.splitCutSeconds() === null || vm.splitCutSeconds()! < vm.spec.startSeconds + 0.1 || vm.splitCutSeconds()! > vm.spec.endSeconds - 0.1">{{ vm.busy() ? 'Guardando clips…' : vm.splitRetryRequired() ? 'Reintentar división' : 'Confirmar división' }}</button>
+        <button type="button" class="button small" (click)="vm.cancelSplit()" [disabled]="vm.busy() || vm.splitRetryRequired()">Cancelar</button>
+      </div>
+    </div>
+  }
+  @if (!vm.canSplitClip() && vm.draft()) {
+    <p class="timeline-action-note">{{ vm.dirty() ? 'Guarda tus cambios antes de dividir.' : !vm.canEditCollaboration() ? 'Tu permiso actual es de solo lectura.' : vm.sourceDuration() === null ? 'La duración de la fuente debe estar confirmada.' : 'La división requiere un borrador guardado y un intervalo válido.' }}</p>
+  }
 
   @if (vm.sourceDuration(); as duration) {
     <div class="source-meta">Fuente inspeccionada · {{ duration | number: "1.1-1" }} s</div>

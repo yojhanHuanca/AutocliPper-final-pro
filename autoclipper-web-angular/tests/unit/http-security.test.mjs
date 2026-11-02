@@ -60,6 +60,22 @@ test('body-versioned comment deletion keeps CSRF protection on the DELETE reques
   await promise;
 });
 
+test('editor split sends CSRF, If-Match and idempotency headers in the same authenticated POST', async () => {
+  const api = TestBed.inject(ApiTransport);
+  const promise = api.postResponse('/edits/edit-1/split', { cutSeconds: 5 }, '"7"', 'split-request-key');
+  controller.expectOne(base + '/auth/csrf').flush({ csrfToken: 'test-only-csrf' });
+  await tick();
+  const request = controller.expectOne(base + '/edits/edit-1/split');
+  assert.equal(request.request.method, 'POST');
+  assert.equal(request.request.withCredentials, true);
+  assert.deepEqual(request.request.body, { cutSeconds: 5 });
+  assert.equal(request.request.headers.get('If-Match'), '"7"');
+  assert.equal(request.request.headers.get('Idempotency-Key'), 'split-request-key');
+  assert.equal(request.request.headers.get('X-CSRF-Token'), 'test-only-csrf');
+  request.flush({ sourceDraftId: 'edit-1', left: { id: 'left' }, right: { id: 'right' } });
+  await promise;
+});
+
 test('concurrent 401 responses share one refresh and preserve the original idempotency key', async () => {
   // Pre-acquire CSRF so its expiry is independent of this test's refresh.
   const security = TestBed.inject(ApiSecurity); const csrfPromise = security.csrf(); controller.expectOne(base + '/auth/csrf').flush({ csrfToken: 'test-only-csrf' }); await csrfPromise;

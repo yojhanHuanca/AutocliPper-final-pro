@@ -11,7 +11,7 @@ test('editor save and restore keep If-Match and derive the version ETag when res
   const writes=[];
   const transport={
     patchResponse:async(path,body,etag)=>{writes.push({method:'patch',path,body,etag});return {body:{id:'edit-1',version:2},headers:{get:()=>null}};},
-    postResponse:async(path,body,etag)=>{writes.push({method:'post',path,body,etag});return {body:{id:'edit-1',version:3},headers:{get:()=> '"3"'}};},
+    postResponse:async(path,body,etag,key)=>{writes.push({method:'post',path,body,etag,key});return {body:{id:'edit-1',version:3},headers:{get:()=> '"3"'}};},
   };
   TestBed.configureTestingModule({providers:[EditorApi,{provide:ApiTransport,useValue:transport},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
   try {
@@ -24,6 +24,19 @@ test('editor save and restore keep If-Match and derive the version ETag when res
       ['patch','/edits/edit-1','"1"'],
       ['post','/edits/edit-1/restore','"2"'],
     ]);
+    assert.equal(writes[1].key, undefined, 'Existing restore requests do not acquire an idempotency key implicitly.');
+  } finally { TestBed.resetTestingModule(); }
+});
+
+test('split posts the selected cut with both the quoted version and stable idempotency key', async () => {
+  const writes=[];
+  const result={sourceDraftId:'edit-1',left:{id:'edit-left',version:1},right:{id:'edit-right',version:1}};
+  const transport={postResponse:async(path,body,etag,key)=>{writes.push({path,body,etag,key});return{body:result};}};
+  TestBed.configureTestingModule({providers:[EditorApi,{provide:ApiTransport,useValue:transport},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+  try {
+    const api=TestBed.inject(EditorApi);
+    assert.equal(await api.split('edit/one',12.5,'"7"','stable-split-key'),result);
+    assert.deepEqual(writes,[{path:'/edits/edit%2Fone/split',body:{cutSeconds:12.5},etag:'"7"',key:'stable-split-key'}]);
   } finally { TestBed.resetTestingModule(); }
 });
 

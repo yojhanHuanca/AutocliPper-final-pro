@@ -72,6 +72,12 @@ export class EditorState {
   readonly receiptExport = computed(() => this.exports().find(item => item.id === this.renderReceipt()?.id) ?? null);
   readonly tab = signal("composition");
   readonly busy = signal(false);
+  readonly splitConfirmation = signal(false);
+  readonly splitCutSeconds = signal<number | null>(null);
+  readonly splitRetryRequired = signal(false);
+  readonly canSplitClip = computed(() => !this.design && !this.busy() && !!this.draft() &&
+    this.canEditCollaboration() && !this.dirty() && this.clipRangeUsable() &&
+    this.spec.endSeconds - this.spec.startSeconds >= 0.2 && !!this.etag);
   readonly error = signal("");
   readonly loadNotice = signal("");
   readonly conflict = signal(false);
@@ -382,6 +388,7 @@ export class EditorState {
   private etag: string | null = null;
   private initialForm = "";
   private renderAttempt: { revisionId: string; version: number; key: string } | null = null;
+  private splitAttempt: { fingerprint: string; editId: string; version: number; cutSeconds: number; key: string } | null = null;
   private commentKey = "";
   private commentBody = "";
   private timer?: ReturnType<typeof setTimeout>;
@@ -444,6 +451,9 @@ export class EditorState {
     this.exportPhase.set('idle');
     this.tab.set("composition");
     this.busy.set(false);
+    this.splitConfirmation.set(false);
+    this.splitCutSeconds.set(null);
+    this.splitRetryRequired.set(false);
     this.error.set("");
     this.loadNotice.set("");
     this.conflict.set(false);
@@ -485,6 +495,8 @@ export class EditorState {
     this.undoStack = [];
     this.redoStack = [];
     this.renderAttempt = null;
+    this.splitAttempt = null;
+    this.splitRetryRequired.set(false);
     this.commentKey = "";
     this.commentBody = "";
     this.touchForm();
@@ -835,6 +847,79 @@ export class EditorState {
         `Revisión ${version} recuperada como revisión ${restored.draft.version}.`,
       );
       await this.refreshRevisionMetadata();
+    });
+  }
+  requestSplit(): void {
+    if (!this.canSplitClip()) return;
+    if (this.splitRetryRequired() && this.splitAttempt?.editId === this.id &&
+        this.splitAttempt.version === this.draft()?.version) {
+      this.splitCutSeconds.set(this.splitAttempt.cutSeconds);
+      this.splitConfirmation.set(true);
+      return;
+    }
+    const start = this.spec.startSeconds;
+    const end = this.spec.endSeconds;
+    const playhead = this.sourceTime();
+    const cut = playhead !== null && playhead >= start + 0.1 && playhead <= end - 0.1
+      ? playhead : start + (end - start) / 2;
+    this.splitCutSeconds.set(Math.round(cut * 100) / 100);
+    this.splitConfirmation.set(true);
+    this.error.set("");
+    this.message.set("");
+  }
+  cancelSplit(): void {
+    if (!this.busy() && !this.splitRetryRequired()) this.splitConfirmation.set(false);
+  }
+  async confirmSplit(): Promise<void> {
+    if (!this.splitConfirmation() || !this.canSplitClip()) return;
+    const draft = this.draft();
+    const cutSeconds = this.splitCutSeconds();
+    if (!draft || cutSeconds === null || !Number.isFinite(cutSeconds) ||
+        cutSeconds < this.spec.startSeconds + 0.1 || cutSeconds > this.spec.endSeconds - 0.1) {
+      this.error.set("El punto de corte debe dejar al menos 0,1 segundos en cada clip.");
+      return;
+    }
+    const generation = this.editGeneration;
+    const fingerprint = `${draft.id}:${draft.version}:${cutSeconds}`;
+    if (this.splitRetryRequired() && this.splitAttempt?.fingerprint !== fingerprint) {
+      this.error.set("Reintenta el mismo punto de corte para confirmar el resultado de la operación anterior.");
+      return;
+    }
+    if (this.splitAttempt?.fingerprint !== fingerprint) {
+      this.splitAttempt = { fingerprint, editId: draft.id, version: draft.version, cutSeconds, key: crypto.randomUUID() };
+      this.splitRetryRequired.set(false);
+    }
+    const key = this.splitAttempt.key;
+    await this.run(async () => {
+      if (!this.etag) throw new Error("No se confirmó la versión del borrador. Actualiza el editor e inténtalo otra vez.");
+      let result: Schema<"EditorSplitDraftResultDto">;
+      try { result = await this.api.split(draft.id, cutSeconds, this.etag, key); }
+      catch (error) {
+        const status = error instanceof HttpErrorResponse ? error.status : 0;
+        if (status === 0 || status >= 500) this.splitRetryRequired.set(true);
+        else { this.splitAttempt = null; this.splitRetryRequired.set(false); }
+        throw error;
+      }
+      if (!this.isCurrentEdit(generation)) return;
+      if (result.sourceDraftId !== draft.id ||
+          result.left.projectId !== draft.projectId || result.right.projectId !== draft.projectId ||
+          result.left.uploadId !== draft.uploadId || result.right.uploadId !== draft.uploadId ||
+          result.left.id === result.right.id || result.left.id === draft.id || result.right.id === draft.id)
+        throw new Error("La respuesta de división no coincide con el proyecto y la fuente abiertos.");
+      const createdAt = result.left.revision.createdAt;
+      const rows = [result.left, result.right].map(item => ({
+        id: item.id, uploadId: item.uploadId, name: item.name,
+        version: item.version, updatedAt: item.revision.createdAt || createdAt,
+      }));
+      this.projectEdits.update(items => {
+        const byId = new Map(items.map(item => [item.id, item]));
+        for (const row of rows) byId.set(row.id, row);
+        return [...byId.values()];
+      });
+      this.splitAttempt = null;
+      this.splitRetryRequired.set(false);
+      this.splitConfirmation.set(false);
+      this.message.set("Se guardaron dos nuevos clips en el proyecto. No se inició ningún render.");
     });
   }
   private async refreshRevisionMetadata(generation = this.editGeneration): Promise<void> {

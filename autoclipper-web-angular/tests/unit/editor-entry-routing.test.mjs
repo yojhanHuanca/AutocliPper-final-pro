@@ -47,7 +47,9 @@ test('the real editor uses a project clip list, video preview, API-backed inspec
   assert.match(inspector, /Color<\/button>/);
   assert.match(inspector, /disabled title="La API no ofrece mezcla/);
   assert.match(inspector, /disabled title="EditorSpecDto no incluye controles de color/);
-  assert.match(timeline, /Dividir, duplicar y eliminar están desactivados/);
+  assert.match(timeline, /Dividir crea dos borradores persistidos/);
+  assert.match(timeline, /Duplicar/);
+  assert.match(timeline, /Eliminar/);
   assert.match(timeline, /publicación directa.*no está disponible: el servidor no ofrece una operación de publicación/);
   assert.match(timeline, /role="slider" aria-label="Inicio del recorte"/);
   assert.match(timeline, /role="slider" aria-label="Final del recorte"/);

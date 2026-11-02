@@ -25,11 +25,14 @@ export class ApiTransport {
       }),
     );
   }
-  postResponse<T>(path: string, body: unknown, etag?: string) {
+  postResponse<T>(path: string, body: unknown, etag?: string, key?: string) {
     return firstValueFrom(
       this.http.post<T>(`${this.base}${path}`, body, {
         observe: "response",
-        headers: etag ? { "If-Match": etag } : {},
+        headers: {
+          ...(etag ? { "If-Match": etag } : {}),
+          ...(key ? { "Idempotency-Key": key } : {}),
+        },
       }),
     );
   }

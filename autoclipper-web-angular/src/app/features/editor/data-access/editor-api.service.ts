@@ -60,6 +60,16 @@ export class EditorApi {
     if (!result.body) throw new Error("El servidor no devolvió la revisión.");
     return { draft: result.body, etag: currentEtag(result) };
   }
+  async split(id: string, cutSeconds: number, etag: string, key: string) {
+    const result = await this.api.postResponse<Schema<"EditorSplitDraftResultDto">>(
+      `/edits/${encodeURIComponent(id)}/split`,
+      { cutSeconds } satisfies Schema<"EditorSplitDraftRequestDto">,
+      etag,
+      key,
+    );
+    if (!result.body) throw new Error("El servidor no devolvió los dos clips guardados.");
+    return result.body;
+  }
   exports(id: string) {
     return this.api.get<Response<"/v1/edits/{id}/exports">>(
       `/edits/${encodeURIComponent(id)}/exports`,
