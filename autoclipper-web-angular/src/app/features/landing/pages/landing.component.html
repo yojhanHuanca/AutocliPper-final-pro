@@ -1,231 +1,353 @@
-<main id="main">
-  <nav class="section-rail" aria-label="Secciones de la página">
-    @for (section of sectionLinks; track section.id) {
-      <a [href]="'#' + section.id" [class.current]="activeSection() === section.id" [attr.aria-current]="activeSection() === section.id ? 'location' : null">{{ section.label }}</a>
-    }
+<div class="acl">
+  <!-- Intro: un directo horizontal se corta a 9:16 y se abre hacia el hero -->
+  <div class="acl-intro" aria-hidden="true">
+    <div class="acl-intro-stage">
+      <div class="acl-intro-frame">
+        <video class="acl-intro-media" data-video="hero" muted playsinline loop preload="auto"></video>
+        <span class="acl-intro-rec"><i></i><b class="acl-intro-time">00:00:00</b></span>
+        <span class="acl-intro-cut"></span>
+        <span class="acl-intro-cut"></span>
+      </div>
+      <div class="acl-intro-wave"></div>
+      <p class="acl-intro-word">Auto<b>Clipper</b></p>
+    </div>
+    <button class="acl-intro-skip" type="button">Saltar intro</button>
+  </div>
+
+  <div class="acl-cursor" aria-hidden="true"><i></i><span></span></div>
+  <div class="acl-spot" aria-hidden="true"></div>
+
+  <header class="acl-nav">
+    <a class="acl-nav-brand" routerLink="/" data-goto="hero" aria-label="AutoClipper, inicio"><ac-brand /></a>
+    <nav class="acl-links" aria-label="Secciones">
+      <a href="/#como-funciona" data-goto="transform">Cómo funciona</a>
+      <a href="/#funciones" data-goto="features">Funciones</a>
+      <a href="/#precios" data-goto="pricing">Precios</a>
+    </nav>
+    <div class="acl-nav-actions">
+      <a class="acl-login" routerLink="/login">Acceso</a>
+      <a class="acl-pill acl-shine" routerLink="/register">Empieza gratis</a>
+    </div>
+  </header>
+
+  <nav class="acl-dots" aria-label="Ir a sección">
+    <button type="button" data-goto="hero"><span>Inicio</span></button>
+    <button type="button" data-goto="problem"><span>El problema</span></button>
+    <button type="button" data-goto="transform"><span>Cómo funciona</span></button>
+    <button type="button" data-goto="features"><span>Funciones</span></button>
+    <button type="button" data-goto="platforms"><span>Plataformas</span></button>
+    <button type="button" data-goto="results"><span>Resultados</span></button>
+    <button type="button" data-goto="pricing"><span>Precios</span></button>
+    <button type="button" data-goto="cta"><span>Empezar</span></button>
   </nav>
-  <section class="hero" id="inicio">
-    <div class="hero-shell wrap">
-      <div class="hero-topline">
-        <div class="eyebrow"><span class="live-dot"></span> AUTOCLIPPER / ESTUDIO CREATIVO</div>
-        <button class="motion-control" type="button" [attr.aria-pressed]="reducedMotion()" [disabled]="prefersReducedMotion()" (click)="toggleMotion()">
-          Movimiento: {{ prefersReducedMotion() ? 'reducido por sistema' : reducedMotion() ? 'pausado' : 'activo' }}
-        </button>
-      </div>
-      <div class="hero-composition">
-        <div class="hero-copy">
-          <span class="eyebrow">UNA GRABACIÓN. MUCHOS MOMENTOS.</span>
-          <h1><span>El corte</span><span>que hace que</span><span><em>se queden.</em></span></h1>
-          <p>Encuentra la idea, elige el fragmento y conviértelo en un clip con subtítulos. Cada decisión sigue siendo tuya.</p>
-          <div class="hero-actions">
-            <a class="button" routerLink="/register">Empieza con tu video <ac-icon name="arrow" /></a>
-            <a class="text-link" routerLink="/login">Ya tengo cuenta</a>
-          </div>
-          <p class="hero-next-step">Crea un proyecto, carga un archivo y sigue editando cuando quieras.</p>
-        </div>
-        <div class="hero-art"><ac-hero-depth /></div>
-      </div>
-      <div class="hero-footnote">
-        <span>Cortes que eliges · Borradores que puedes retomar · Exportación privada</span>
-        <span>BAJA PARA VER CÓMO FUNCIONA ↓</span>
-      </div>
-    </div>
-  </section>
 
-  <ac-platform-carousel id="plataformas" [reducedMotion]="reducedMotion()" />
+  <div class="acl-jump" aria-hidden="true"><div class="acl-jump-grid"><i style="--j: 0"></i><i style="--j: 1"></i><i style="--j: 2"></i><i style="--j: 3"></i><i style="--j: 4"></i><i style="--j: 5"></i><i style="--j: 6"></i><i style="--j: 7"></i><i style="--j: 8"></i><i style="--j: 9"></i><i style="--j: 10"></i><i style="--j: 11"></i><i style="--j: 12"></i><i style="--j: 13"></i><i style="--j: 14"></i><i style="--j: 15"></i><i style="--j: 16"></i><i style="--j: 17"></i><i style="--j: 18"></i><i style="--j: 19"></i><i style="--j: 20"></i><i style="--j: 21"></i><i style="--j: 22"></i><i style="--j: 23"></i></div><p class="acl-jump-label"><small>Vamos a</small><b></b></p></div>
 
-  <section class="story-section wrap" id="proceso">
-    <div class="section-intro">
-      <span class="eyebrow">01 / DEL MATERIAL A LA HISTORIA</span>
-      <h2>El contenido ya es tuyo.<br /><em>Ahora dale otra vida.</em></h2>
-      <p>Explora los cuatro pasos. El momento lo eliges tú.</p>
-    </div>
-    <div class="story-layout">
-      <div class="story-screen" (mouseenter)="pauseSceneCycle()" (mouseleave)="resumeSceneCycle()" (focusin)="pauseSceneCycle()" (focusout)="resumeSceneCycle()">
-        <div class="screen-top">
-          <span><ac-icon name="scissors" /> AutoClipper / estudio</span
-          ><span>Ejemplo ilustrativo</span>
-        </div>
-        <div class="process-stage" aria-atomic="true">
-          @switch (scene()) {
-            @case (0) {
-              <div class="process-upload process-scene">
-                <div class="source-card">
-                  <img src="/images/streamer-studio-v1.webp" width="960" height="640" alt="Creador ficticio grabando frente a su micrófono" loading="lazy" />
-                  <span><ac-icon name="film" />sesion-creador.mp4</span>
-                  <span>00:42 · Video de ejemplo</span>
-                </div>
-                <div class="upload-check"><ac-icon name="check" /><span>Tu archivo, en tu espacio.<small>Formato y duración comprobados</small></span></div>
-                <div class="demo-progress"><i></i></div>
-              </div>
-            }
-            @case (1) {
-              <div class="process-transcript process-scene">
-                <div class="audio-source"><ac-icon name="captions" /><span>Del audio al texto<small>Transcripción de ejemplo</small></span></div>
-                <div class="process-wave" aria-hidden="true">@for (bar of bars; track $index) { <i [style.height.%]="bar"></i> }</div>
-                <div class="transcript-lines">
-                  @for (line of transcriptLines; track line.time) { <p><time>{{ line.time }}</time><span>{{ line.text }}</span></p> }
-                </div>
-              </div>
-            }
-            @case (2) {
-              <div class="process-cut process-scene">
-                <div class="cut-source">
-                  <img src="/images/streamer-studio-v1.webp" width="960" height="640" alt="Video de ejemplo con un encuadre vertical elegido manualmente" loading="lazy" />
-                  <div class="crop-frame"><span>9:16</span><i></i><i></i><i></i><i></i></div>
-                </div>
-                <div class="selection-ruler"><span>00:00</span><strong>00:12 → 00:24</strong><span>00:42</span><i></i></div>
-                <p class="demo-note"><ac-icon name="scissors" />Tú eliges qué parte conservar.</p>
-              </div>
-            }
-            @case (3) {
-              <div class="process-export process-scene">
-                <div class="export-portrait">
-                  <img src="/images/streamer-studio-v1.webp" width="960" height="640" alt="Vista vertical de un clip de ejemplo con subtítulos" loading="lazy" />
-                  <strong>Solo esa idea<br /><mark>que conecta.</mark></strong>
-                  <span>9:16</span>
-                </div>
-                <div class="export-files"><span class="export-check"><ac-icon name="check" /></span><h3>Tu clip.<br />Tus archivos.</h3><p>Video y subtítulos,<br />listos para llevar.</p><span>MP4 <ac-icon name="download" /></span><span>SRT <ac-icon name="captions" /></span><span>VTT <ac-icon name="captions" /></span></div>
-              </div>
-            }
-          }
-        </div>
-        <div class="story-controls" aria-label="Escenas de la demostración">
-          @for (title of sceneLabels; track $index) {
-            <button
-              type="button"
-              [class.active]="scene() === $index"
-              [attr.aria-pressed]="scene() === $index"
-              (click)="scene.set($index)"
-              [attr.aria-label]="'Ver paso ' + ($index + 1) + ': ' + chapters[$index].title"
-            >
-              <span>0{{ $index + 1 }}</span
-              >{{ title }}
-            </button>
-          }
-        </div>
-      </div>
-      <div class="story-chapters">
-        @for (chapter of chapters; track $index) {
-          <button class="chapter" type="button" [class.active]="scene() === $index" [attr.aria-pressed]="scene() === $index" (click)="scene.set($index)">
-            <span class="chapter-number">0{{ $index + 1 }}</span>
-            <span class="chapter-title">{{ chapter.title }}</span>
-            <span class="chapter-copy">{{ chapter.copy }}</span>
-            <span class="chapter-detail">{{ chapter.detail }}</span>
-          </button>
-        }
-      </div>
-    </div>
-  </section>
+  <p class="acl-hint" aria-hidden="true"><i></i>Desliza</p>
 
-  <section class="studio-section" id="estudio">
-    <div class="wrap">
-      <div class="section-intro">
-        <span class="eyebrow">02 / TU ESPACIO CREATIVO</span>
-        <h2>Menos ventanas.<br /><em>Más intención.</em></h2>
+  <main id="main" tabindex="-1" class="acl-scenes">
+    <!-- Hero -->
+    <section class="acl-scene acl-hero" data-scene="hero" data-len="0.35" data-out="zoom" aria-labelledby="acl-hero-title">
+      <div class="acl-hero-media">
+        <video class="acl-cover" data-video="hero" muted playsinline loop autoplay preload="auto"></video>
       </div>
-      <div class="studio-composition">
-        <div class="studio-rail">
-          <ac-icon name="film" /><ac-icon name="captions" /><ac-icon
-            name="settings"
-          /><ac-icon name="clock" />
-        </div>
-        <div class="studio-media">
-          <div class="caption-sheet">
-            <div class="sheet-heading"><ac-icon name="captions" /><span>Las palabras también cuentan.</span></div>
-            <p>Texto con tiempos de la fuente original</p>
-            @for (line of transcriptLines; track line.time) {
-              <div class="sheet-cue"><time>{{ line.time }}</time><span>{{ line.text }}</span></div>
-            }
-            <div class="saved-revision"><ac-icon name="check" /><span>Borrador guardado<small>Conserva tus decisiones en una revisión</small></span></div>
-          </div>
-        </div>
-        <div class="studio-inspector">
-          <span class="eyebrow">PROPUESTA VISUAL DEL EDITOR</span>
-          <h3>Una idea.<br />Tu forma de contarla.</h3>
-          <div>
-            <ac-icon name="captions" /><span>Subtítulos con tiempos</span>
-          </div>
-          <div>
-            <ac-icon name="scissors" /><span>Intervalo elegido por ti</span>
-          </div>
-          <div>
-            <ac-icon name="clock" /><span>Revisiones recuperables</span>
-          </div>
-          <a class="text-link" routerLink="/design/editor"
-            >Ver el editor <ac-icon name="arrow"
-          /></a>
-        </div>
-        <div class="studio-track">
-          <span>VIDEO</span>
-          <div></div>
-          <span>SUBTÍTULOS</span>
-          <div></div>
-        </div>
-      </div>
-      <div class="studio-notes">
-        <article>
-          <span>01</span>
-          <h3>Un corte con intención.</h3>
-          <p>
-            Elige un inicio y un final. Comprueba la transcripción y ajusta
-            el encuadre del borrador.
-          </p>
-        </article>
-        <article>
-          <span>02</span>
-          <h3>Cada versión cuenta.</h3>
-          <p>
-            Guarda el borrador para continuar después. Cada revisión conserva
-            el intervalo y los ajustes que elegiste.
-          </p>
-        </article>
-        <article>
-          <span>03</span>
-          <h3>El resultado es tuyo.</h3>
-          <p>
-            Exporta MP4 y subtítulos SRT/VTT mediante descargas privadas de
-            duración limitada.
-          </p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="capabilities wrap" id="alcance">
-    <div class="section-intro">
-      <span class="eyebrow">03 / SIN LETRA PEQUEÑA</span>
-      <h2>Un estudio en evolución.<br /><em>Una promesa clara.</em></h2>
-    </div>
-    <div class="capability-grid">
-      <article class="available">
-        <span class="eyebrow">VERIFICADO EN EL ENTORNO LOCAL</span>
-        <h3>Crear, revisar, exportar.</h3>
-        <ul>
-          <li><ac-icon name="check" />Carga privada e inspección de video</li>
-          <li><ac-icon name="check" />Transcripción en español con texto y tiempos</li>
-          <li><ac-icon name="check" />Selección con IA y revisión manual del clip</li>
-          <li><ac-icon name="check" />Borradores guardados para seguir editando</li>
-          <li><ac-icon name="check" />Descargas privadas de MP4, SRT y VTT</li>
-        </ul>
-      </article>
-      <article>
-        <span class="eyebrow">EN EL HORIZONTE · AÚN NO DISPONIBLE</span>
-        <h3>La historia continúa.</h3>
-        <p>
-          La traducción, la música y los pagos siguen pendientes. La importación de YouTube y la selección con IA se ejecutan en el entorno local.
+      <div class="acl-hero-shade"></div>
+      <span class="acl-live"><i></i><b class="acl-live-time">EN VIVO 02:41:17</b></span>
+      <h1 id="acl-hero-title" class="acl-hero-title acl-display">
+        <span class="acl-line" data-split>Tus directos</span>
+        <span class="acl-line acl-outline" data-split>en clips</span>
+        <span class="acl-line acl-accent" data-split>virales.</span>
+      </h1>
+      <div class="acl-hero-foot">
+        <p class="acl-hero-sub">
+          Sube tu directo. La IA lo transcribe, tú eliges el momento y AutoClipper te
+          entrega un clip vertical con subtítulos.
         </p>
-        <p>
-          Necesitas el entorno local activo para procesar videos. Compartir en YouTube o TikTok requiere registrar una aplicación OAuth y conectar tu cuenta. El envío a TikTok se confirma después en su aplicación.
-        </p>
-      </article>
-    </div>
-  </section>
-  <section class="closing wrap">
-    <div class="closing-logo"><ac-brand variant="full"/></div>
-    <span class="eyebrow">TU SIGUIENTE HISTORIA EMPIEZA CON UN CORTE</span>
-    <h2>Haz espacio para<br /><em>lo que importa.</em></h2>
-    <a class="button primary" routerLink="/register">Crear un proyecto <ac-icon name="arrow" /></a>
-    <a class="text-link" routerLink="/login">Iniciar sesión <ac-icon name="arrow" /></a>
-  </section>
-</main>
+        <div class="acl-hero-ctas">
+          <a class="acl-btn acl-btn-light acl-shine" routerLink="/register">Empieza gratis</a>
+          <a class="acl-btn acl-btn-ghost acl-shine" href="/#como-funciona" data-goto="transform">Ver cómo funciona</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- El problema -->
+    <section class="acl-scene acl-problem" data-scene="problem" data-len="1.4" data-out="iris" aria-labelledby="acl-problem-title">
+      <h2 id="acl-problem-title" class="acl-problem-title acl-display">
+        <span class="acl-line" data-split>Grabas horas.</span>
+        <span class="acl-line acl-muted" data-split>Nadie ve horas.</span>
+      </h2>
+      <div class="acl-timeline" aria-hidden="true">
+        <div class="acl-timeline-track"></div>
+        <div class="acl-timeline-fill"></div>
+        <span class="acl-hot" style="--x: 12%; --w: 1.8%"></span>
+        <span class="acl-hot" style="--x: 31%; --w: 1.2%"></span>
+        <span class="acl-hot" style="--x: 47%; --w: 2%"></span>
+        <span class="acl-hot" style="--x: 66%; --w: 1.5%"></span>
+        <span class="acl-hot" style="--x: 83%; --w: 1.4%"></span>
+        <div class="acl-timeline-head"></div>
+      </div>
+      <div class="acl-problem-meta">
+        <p>Duración del directo<b class="acl-mono acl-problem-hours">00:00:00</b></p>
+        <p class="acl-right">Momentos que importan<b class="acl-mono acl-problem-minutes">0 min</b></p>
+      </div>
+    </section>
+
+    <!-- La transformación -->
+    <section class="acl-scene acl-transform" data-scene="transform" data-len="3.2" data-out="slide" aria-labelledby="acl-transform-title">
+      <h2 id="acl-transform-title" class="acl-sr">Cómo funciona</h2>
+      <ol class="acl-steps">
+        <li class="acl-step"><i></i><em>01</em>Audio</li>
+        <li class="acl-step"><i></i><em>02</em>Transcripción</li>
+        <li class="acl-step"><i></i><em>03</em>Momento</li>
+        <li class="acl-step"><i></i><em>04</em>Clip 9:16</li>
+      </ol>
+      <div class="acl-transform-body">
+        <div class="acl-stage">
+          <div class="acl-frame"><span class="acl-frame-glow" aria-hidden="true"></span>
+            <video class="acl-cover" data-video="transform" muted playsinline loop autoplay preload="metadata"></video>
+            <p class="acl-caption" aria-hidden="true">
+              <span>Esto</span> <span>no</span> <span>lo</span> <span>esperaba</span> <span>nadie</span>
+            </p>
+          </div>
+          <div class="acl-wave" aria-hidden="true"></div>
+          <div class="acl-marks" aria-hidden="true">
+            <span class="acl-mark" style="--x: 14%; --w: 7%"><b>01:12:33</b></span>
+            <span class="acl-mark" style="--x: 46%; --w: 6%"><b>01:48:10</b></span>
+            <span class="acl-mark" style="--x: 74%; --w: 8%"><b>02:05:47</b></span>
+          </div>
+        </div>
+        <aside class="acl-panel" aria-label="Transcripción de ejemplo">
+          <p class="acl-panel-title">Transcripción · ES</p>
+          <p class="acl-tr"><span class="acl-ts">00:41:08</span>y bueno chat, hoy probamos el setup nuevo</p>
+          <p class="acl-tr acl-tr-pick"><span class="acl-ts">01:12:33</span>espera espera… ¿vieron eso? esto no lo esperaba nadie</p>
+          <p class="acl-tr"><span class="acl-ts">01:13:02</span>literal me quedé sin palabras, cuéntenme en el chat</p>
+          <p class="acl-tr"><span class="acl-ts">02:05:47</span>la próxima semana traigo una sorpresa enorme</p>
+          <div class="acl-done">
+            <p>Clip listo</p>
+            <b>0:32 · 1080×1920</b>
+            <span class="acl-done-chips"><span>MP4</span><span>SRT</span><span>VTT</span></span>
+          </div>
+        </aside>
+      </div>
+      <p class="acl-step-copy">
+        <span>Extraemos el audio de tu directo.</span>
+        <span>La IA lo transcribe con tiempos exactos.</span>
+        <span>Marcas el momento que quieres conservar.</span>
+        <span>Recibes el clip vertical con subtítulos.</span>
+      </p>
+    </section>
+
+    <!-- Funciones -->
+    <section class="acl-scene acl-features" data-scene="features" data-len="2.4" data-out="diagonal" aria-labelledby="acl-features-title">
+      <div class="acl-features-head">
+        <p class="acl-kicker">Funciones</p>
+        <h2 id="acl-features-title" class="acl-display"><span class="acl-line" data-split>Todo en un</span><span class="acl-line acl-grad" data-split>solo estudio.</span></h2>
+        <ol class="acl-flist">
+          <li><button type="button" data-feature="0"><i></i><em>01</em>Editor con versiones<small>Recorta, ajusta y guarda cada versión. Vuelve atrás cuando quieras.</small></button></li>
+          <li><button type="button" data-feature="1"><i></i><em>02</em>Pantalla dividida<small>Tu cámara arriba y el juego abajo, o lado a lado.</small></button></li>
+          <li><button type="button" data-feature="2"><i></i><em>03</em>Subtítulos automáticos<small>La IA transcribe y tú eliges el estilo.</small></button></li>
+          <li><button type="button" data-feature="3"><i></i><em>04</em>Revisión en equipo<small>Comentarios por segundo y aprobación final.</small></button></li>
+        </ol>
+      </div>
+      <div class="acl-studio" data-f="0" aria-hidden="true">
+        <div class="acl-studio-bar">
+          <span class="acl-studio-dots"><i></i><i></i><i></i></span>
+          <span class="acl-studio-file">directo_05-11.mp4 · AutoClipper Studio</span>
+          <span class="acl-studio-saved"><b></b>Guardado</span>
+        </div>
+        <div class="acl-studio-body">
+          <div class="acl-studio-tools">
+            <span class="t0">✂</span><span class="t1">◫</span><span class="t2">Aa</span><span class="t3">✎</span>
+          </div>
+          <div class="acl-studio-canvas">
+            <div class="acl-sp">
+              <div class="acl-sp-a"></div>
+              <div class="acl-sp-b"><span>GAMEPLAY</span></div>
+              <i class="acl-sp-div"></i>
+              <p class="acl-sp-cap"><s>Esto</s> <s>no</s> <s>lo</s> <s>esperaba</s></p>
+              <span class="acl-sp-pin">A</span>
+              <span class="acl-sp-stamp">✓ Aprobado</span>
+              <span class="acl-sp-frame"><i></i><i></i><i></i><i></i></span>
+            </div>
+            <span class="acl-studio-res acl-mono">1080 × 1920 · 30 fps</span>
+          </div>
+          <div class="acl-studio-side">
+            <div class="acl-pane acl-pane-0">
+              <p class="acl-pane-title">Historial</p>
+              <ul class="acl-versions">
+                <li class="new"><b>v5</b> Recorte 0:41 <em>ahora</em></li>
+                <li><b>v4</b> Ajuste de encuadre</li>
+                <li><b>v3</b> Subtítulos bold</li>
+                <li><b>v2</b> Recorte 0:32</li>
+              </ul>
+              <span class="acl-pane-btn b0">Guardar versión</span>
+            </div>
+            <div class="acl-pane acl-pane-1">
+              <p class="acl-pane-title">Diseño</p>
+              <div class="acl-layouts">
+                <span class="l0"><i></i><i></i>Arriba / abajo</span>
+                <span class="l1"><i></i><i></i>Lado a lado</span>
+                <span class="l2"><i></i>Solo cámara</span>
+              </div>
+              <p class="acl-pane-title">Audio</p>
+              <div class="acl-chips"><span class="c0">Cámara</span><span class="c1">Juego</span><span>Ninguno</span></div>
+            </div>
+            <div class="acl-pane acl-pane-2">
+              <p class="acl-pane-title">Subtítulos</p>
+              <span class="acl-pane-btn b2"><i></i>Generar con IA</span>
+              <ul class="acl-lines">
+                <li><em>01:12</em>espera espera… ¿vieron eso?</li>
+                <li><em>01:14</em>esto no lo esperaba</li>
+                <li><em>01:16</em>literal sin palabras</li>
+              </ul>
+              <div class="acl-chips acl-styles"><span class="s0">Clean</span><span class="s1">Boxed</span><span class="s2">Bold</span></div>
+            </div>
+            <div class="acl-pane acl-pane-3">
+              <p class="acl-pane-title">Revisión</p>
+              <p class="acl-cmt m0"><i style="--c: #4d7dff">A</i><span><b>Ana · 00:08</b>Este es el momento, súbelo</span></p>
+              <p class="acl-cmt m1"><i style="--c: #ff7a59">L</i><span><b>Luis · 00:21</b>Sube un poco el subtítulo</span></p>
+              <span class="acl-pane-btn b3">Aprobar revisión</span>
+            </div>
+          </div>
+        </div>
+        <div class="acl-studio-tl">
+          <div class="acl-tl-wave"></div>
+          <span class="acl-tl-sel"><i></i><i></i></span>
+          <span class="acl-tl-pin p0"></span><span class="acl-tl-pin p1"></span>
+          <span class="acl-tl-head"></span>
+        </div>
+        <span class="acl-studio-toast"></span>
+        <span class="acl-demo-cursor"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 2l16 9.5-7 1.6-3.6 6.9z" fill="#fff" stroke="#07080c" stroke-width="1.6" stroke-linejoin="round"/></svg><i></i></span>
+      </div>
+    </section>
+
+    <!-- Plataformas -->
+    <section class="acl-scene acl-platforms" data-scene="platforms" data-len="0.7" data-out="card" aria-label="Formatos para TikTok, Reels, Shorts, YouTube, Twitch y Kick">
+      <p class="acl-kicker acl-kicker-dark">Formatos listos para donde está tu audiencia</p>
+      <div class="acl-marquee" data-dir="1" aria-hidden="true">
+        <div class="acl-marquee-track acl-display">
+          <span>TikTok</span><i>✦</i><span class="acl-o">Reels</span><i>✦</i><span class="acl-c">Shorts</span><i>✦</i><span>YouTube</span><i>✦</i><span class="acl-o">Twitch</span><i>✦</i><span class="acl-c">Kick</span><i>✦</i>
+          <span>TikTok</span><i>✦</i><span class="acl-o">Reels</span><i>✦</i><span class="acl-c">Shorts</span><i>✦</i><span>YouTube</span><i>✦</i><span class="acl-o">Twitch</span><i>✦</i><span class="acl-c">Kick</span><i>✦</i>
+        </div>
+      </div>
+      <div class="acl-marquee" data-dir="-1" aria-hidden="true">
+        <div class="acl-marquee-track acl-display">
+          <span class="acl-c">Shorts</span><i>✦</i><span>Kick</span><i>✦</i><span class="acl-o">TikTok</span><i>✦</i><span class="acl-c">Twitch</span><i>✦</i><span>Reels</span><i>✦</i><span class="acl-o">YouTube</span><i>✦</i>
+          <span class="acl-c">Shorts</span><i>✦</i><span>Kick</span><i>✦</i><span class="acl-o">TikTok</span><i>✦</i><span class="acl-c">Twitch</span><i>✦</i><span>Reels</span><i>✦</i><span class="acl-o">YouTube</span><i>✦</i>
+        </div>
+      </div>
+      <div class="acl-formats" aria-hidden="true">
+        <span>9:16 vertical</span><span>1:1 cuadrado</span><span>16:9 horizontal</span><span>SRT · VTT</span>
+      </div>
+    </section>
+
+    <!-- Resultados -->
+    <section class="acl-scene acl-results" data-scene="results" data-len="1.1" data-out="wipe" aria-labelledby="acl-results-title">
+      <div class="acl-results-head">
+        <p class="acl-kicker">Resultados</p>
+        <h2 id="acl-results-title" class="acl-display"><span class="acl-line" data-split>Un directo.</span><span class="acl-line acl-grad" data-split>Decenas de clips.</span></h2>
+        <p class="acl-results-note">Pasa el cursor por un clip · Escenas ilustrativas</p>
+      </div>
+      <div class="acl-wall" aria-hidden="true">
+        <div class="acl-col" style="--s: 0.9">
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-0" muted playsinline loop preload="none"></video><figcaption>Esto no lo <b>esperaba</b></figcaption><span class="acl-mono">CLIP 01 · 0:32</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-1" muted playsinline loop preload="none"></video><figcaption>¿Vieron <b>eso?</b></figcaption><span class="acl-mono">CLIP 02 · 0:21</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-2" muted playsinline loop preload="none"></video><figcaption>Mi setup <b>2026</b></figcaption><span class="acl-mono">CLIP 03 · 0:45</span></figure>
+        </div>
+        <div class="acl-col" style="--s: 1.35">
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-3" muted playsinline loop preload="none"></video><figcaption>El mejor <b>consejo</b></figcaption><span class="acl-mono">CLIP 04 · 0:28</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-4" muted playsinline loop preload="none"></video><figcaption>La <b>sorpresa</b></figcaption><span class="acl-mono">CLIP 05 · 0:39</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-5" muted playsinline loop preload="none"></video><figcaption>Chat, <b>miren</b></figcaption><span class="acl-mono">CLIP 06 · 0:17</span></figure>
+        </div>
+        <div class="acl-col" style="--s: 0.75">
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-6" muted playsinline loop preload="none"></video><figcaption>Me quedé sin <b>palabras</b></figcaption><span class="acl-mono">CLIP 07 · 0:26</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-7" muted playsinline loop preload="none"></video><figcaption>3 errores que <b>evito</b></figcaption><span class="acl-mono">CLIP 08 · 0:51</span></figure>
+          <figure class="acl-clip acl-tilt" data-tilt data-cursor="Play"><video data-video="clip-8" muted playsinline loop preload="none"></video><figcaption>Nadie habla de <b>esto</b></figcaption><span class="acl-mono">CLIP 09 · 0:33</span></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Precios -->
+    <section class="acl-scene acl-pricing" data-scene="pricing" data-len="0.6" data-out="iris" aria-labelledby="acl-pricing-title">
+      <div class="acl-pricing-head">
+        <div>
+          <p class="acl-kicker">Precios</p>
+          <h2 id="acl-pricing-title" class="acl-display"><span class="acl-line" data-split>Elige tu</span><span class="acl-line acl-grad-dark" data-split>ritmo.</span></h2>
+        </div>
+        <div class="acl-billing" role="group" aria-label="Periodo de facturación">
+          <button type="button" class="is-on" data-billing="month" aria-pressed="true">Mensual</button>
+          <button type="button" data-billing="year" aria-pressed="false">Anual <em>−20%</em></button>
+        </div>
+      </div>
+      <div class="acl-plans">
+        <article class="acl-plan acl-tilt" data-tilt>
+          <h3>Gratis</h3>
+          <p class="acl-plan-for">Para probar con tus primeros directos.</p>
+          <p class="acl-price"><b data-month="S/ 0" data-year="S/ 0">S/ 0</b><span>/mes</span></p>
+          <ul>
+            <li>1 hora de material al mes</li>
+            <li>Transcripción con IA</li>
+            <li>Subtítulos editables</li>
+            <li>Exportación MP4, SRT y VTT</li>
+          </ul>
+          <a class="acl-plan-btn acl-shine" routerLink="/register">Crear cuenta</a>
+        </article>
+        <article class="acl-plan acl-plan-hot acl-tilt" data-tilt>
+          <span class="acl-plan-tag">Más elegido</span>
+          <h3>Creador</h3>
+          <p class="acl-plan-for">Para streamers que publican cada semana.</p>
+          <p class="acl-price"><b data-month="S/ 39" data-year="S/ 31">S/ 39</b><span>/mes</span></p>
+          <ul>
+            <li>10 horas de material al mes</li>
+            <li>Pantalla dividida</li>
+            <li>Editor con historial de versiones</li>
+            <li>Estilos de subtítulos para redes</li>
+          </ul>
+          <a class="acl-plan-btn acl-shine" routerLink="/register">Empezar con Creador</a>
+        </article>
+        <article class="acl-plan acl-tilt" data-tilt>
+          <h3>Equipo</h3>
+          <p class="acl-plan-for">Para agencias y equipos de edición.</p>
+          <p class="acl-price"><b data-month="S/ 119" data-year="S/ 95">S/ 119</b><span>/mes</span></p>
+          <ul>
+            <li>40 horas de material al mes</li>
+            <li>Hasta 5 miembros por espacio</li>
+            <li>Comentarios y aprobaciones</li>
+            <li>Enlaces de revisión con caducidad</li>
+          </ul>
+          <a class="acl-plan-btn acl-shine" routerLink="/register">Empezar con Equipo</a>
+        </article>
+      </div>
+      <p class="acl-pricing-note">Precios referenciales en soles. Los pagos todavía no están habilitados.</p>
+    </section>
+
+    <!-- CTA final -->
+    <section class="acl-scene acl-cta" data-scene="cta" data-len="0.45" data-out="lift" aria-labelledby="acl-cta-title">
+      <span class="acl-blob acl-blob-a" aria-hidden="true"></span><span class="acl-blob acl-blob-b" aria-hidden="true"></span>
+      <h2 id="acl-cta-title" class="acl-display acl-glow">
+        <span class="acl-line">¿Listo para</span>
+        <span class="acl-line">clipear?</span>
+      </h2>
+      <a class="acl-magnet" routerLink="/register"><span>Empieza<br />gratis →</span></a>
+    </section>
+
+    <!-- Footer -->
+    <footer class="acl-scene acl-footer" data-scene="footer" data-len="0.2">
+      <div class="acl-footer-top">
+        <div class="acl-footer-brand">
+          <a class="acl-footer-logo acl-tilt" data-tilt routerLink="/" data-goto="hero" aria-label="AutoClipper, volver al inicio"><ac-brand variant="full" /></a>
+          <p class="acl-footer-pitch">De horas de directo a clips listos para publicar.</p>
+        </div>
+        <div class="acl-footer-cols">
+          <div><p>Producto</p><a href="/#como-funciona" data-goto="transform">Cómo funciona</a><a href="/#funciones" data-goto="features">Funciones</a><a href="/#precios" data-goto="pricing">Precios</a></div>
+          <div><p>Cuenta</p><a routerLink="/register">Crear cuenta</a><a routerLink="/login">Acceso</a></div>
+          <div><p>Créditos</p><span>Fotografías generadas · Personas ficticias</span></div>
+        </div>
+      </div>
+      <div class="acl-footer-legal">
+        <span>© 2026 AutoClipper · Hecho en Lima</span>
+        <button type="button" class="acl-top" data-goto="hero">Volver arriba ↑</button>
+      </div>
+    </footer>
+  </main>
+</div>

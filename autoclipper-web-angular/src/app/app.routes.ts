@@ -18,18 +18,19 @@ export const routes: Routes = [
       ),
   },
   {
+    // La landing tiene su propia navegación y footer animados.
+    path: "",
+    pathMatch: "full",
+    loadChildren: () =>
+      import("./features/landing/landing.routes").then((m) => m.routes),
+  },
+  {
     path: "",
     loadComponent: () =>
       import("./layouts/public/public-layout.component").then(
         (m) => m.PublicLayoutComponent,
       ),
     children: [
-      {
-        path: "",
-        pathMatch: "full",
-        loadChildren: () =>
-          import("./features/landing/landing.routes").then((m) => m.routes),
-      },
       {
         path: "",
         loadChildren: () =>

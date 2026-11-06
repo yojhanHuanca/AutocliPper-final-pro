@@ -251,3 +251,31 @@
     }
   }
 }
+
+/* ===== Navbar flotante y footer (mismo estilo que la landing) ===== */
+.landing-nav { position: fixed; z-index: 50; top: 14px; left: 50%; transform: translateX(-50%); width: min(1120px, calc(100% - 28px)); min-height: 60px; margin: 0; padding: 0 10px 0 20px; display: flex; justify-content: space-between; border-radius: 99px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 10px 40px rgba(35, 84, 187, 0.18), 0 0 0 1px rgba(7, 8, 12, 0.06); backdrop-filter: blur(14px); color: #07080c; animation: nav-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes nav-in { from { opacity: 0; transform: translate(-50%, -24px); } }
+.landing-nav::before { display: none; }
+.landing-nav .brand, .landing-nav-links, .landing-nav-actions { min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.landing-nav .brand { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.landing-nav .brand:hover { transform: scale(1.04) rotate(-1deg); }
+.landing-nav .brand ac-brand { width: 150px; }
+.landing-nav-links { gap: 6px; font-size: 15px; font-weight: 500; }
+.landing-nav-links a, .landing-nav-login { position: relative; padding: 9px 14px; border-radius: 99px; color: #2b2e38; transition: background 0.2s, color 0.2s; }
+.landing-nav-links a::after, .landing-nav-login::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 5px; height: 2px; border-radius: 2px; background: #2354bb; transform: scaleX(0); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.landing-nav-links a:hover, .landing-nav-login:hover { background: #edf2fc; color: #2354bb; }
+.landing-nav-links a:hover::after, .landing-nav-login:hover::after { transform: scaleX(1); }
+.landing-nav-actions { gap: 8px; font-size: 15px; font-weight: 600; }
+.landing-nav-login { min-height: 42px; display: inline-flex; align-items: center; }
+.landing-nav-start { position: relative; overflow: hidden; min-height: 44px; background: linear-gradient(120deg, #2354bb, #4d7dff); background-size: 170% 100%; color: #fff; padding: 0 20px; gap: 8px; transition: background-position 0.4s, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s; }
+.landing-nav-start::after { content: ""; position: absolute; inset: -2px; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%); transform: translateX(-120%); transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.landing-nav-start:hover { background-position: 100% 0; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(77, 125, 255, 0.4); }
+.landing-nav-start:hover::after { transform: translateX(120%); }
+.landing-nav-start ac-icon { transition: transform 0.3s; }
+.landing-nav-start:hover ac-icon { transform: translateX(4px); }
+.landing-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin: 0; max-width: none; padding: 22px clamp(18px, 4.2vw, 80px); background: #fff; border-top: 1px solid #e2e7f0; color: #5c6478; font-size: 14px; }
+.landing-footer .brand ac-brand { width: 140px; }
+@media (max-width: 760px) { .landing-nav { min-height: 54px; } .landing-nav .brand ac-brand { width: 128px; } }
+
+.landing-nav { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
+.nav-hidden .landing-nav { transform: translate(-50%, -130%); opacity: 0; }

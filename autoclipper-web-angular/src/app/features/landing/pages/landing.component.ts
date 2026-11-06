@@ -1,139 +1,72 @@
-import { BrandComponent } from '../../../shared/ui/brand/brand.component';
 import {
-  Component,
   AfterViewInit,
+  Component,
   DestroyRef,
+  ElementRef,
+  ViewEncapsulation,
   inject,
-  signal,
-  computed,
-  effect,
 } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { IconComponent } from "../../../shared/ui/icon/icon.component";
-import { createAccentCycle, LANDING_ACCENTS } from '../landing-accent';
-import { PlatformCarouselComponent } from '../components/platform-carousel/platform-carousel.component';
-import { HeroDepthComponent } from '../components/hero-depth/hero-depth.component';
+import { Router, RouterLink } from "@angular/router";
+import { interceptRouteLinks, transitionForHref } from "../../../shared/ui/route-transition";
+import { BrandComponent } from "../../../shared/ui/brand/brand.component";
+import { CLIP_VIDEOS, HERO_VIDEO, TRANSFORM_VIDEO, type LandingVideo } from "../landing-media";
+import { startLandingMotion } from "../landing-motion";
+
+const INTRO_SEEN_KEY = "ac-landing-intro-seen";
 
 @Component({
   selector: "ac-landing",
-  imports: [BrandComponent, RouterLink, IconComponent, PlatformCarouselComponent, HeroDepthComponent],
-  host: {
-    "[class.motion-paused]": "reducedMotion()",
-    "[class.motion-enabled]": "motionOverride() === true",
-    "[style.--accent]": "accent().color",
-    "[style.--accent-hover]": "accent().hover",
-    "[style.--tint]": "accent().tint",
-  },
+  imports: [RouterLink, BrandComponent],
   templateUrl: "./landing.component.html",
   styleUrl: "./landing.component.css",
+  encapsulation: ViewEncapsulation.None,
 })
 export class LandingComponent implements AfterViewInit {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroy = inject(DestroyRef);
-  readonly scene = signal(0);
-  readonly scenePaused = signal(false);
-  private sceneCycleTimer: number | undefined;
-  private readonly onVisibilityChange = () => this.syncSceneCycle();
-  readonly activeSection = signal('inicio');
-  readonly sectionLinks = [
-    { id: 'inicio', label: 'Inicio' },
-    { id: 'plataformas', label: 'Plataformas' },
-    { id: 'proceso', label: 'Cómo funciona' },
-    { id: 'estudio', label: 'El estudio' },
-    { id: 'alcance', label: 'Disponible hoy' },
-  ];
-  readonly prefersReducedMotion = signal(false);
-  readonly motionOverride = signal<boolean | null>(null);
-  readonly reducedMotion = computed(() => !(this.motionOverride() ?? !this.prefersReducedMotion()));
-  private readonly accentIndex = signal(0);
-  readonly accent = computed(() => LANDING_ACCENTS[this.accentIndex()]);
-  constructor() {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    this.prefersReducedMotion.set(preference.matches);
-    const onPreference = () => this.prefersReducedMotion.set(preference.matches);
-    preference.addEventListener('change', onPreference);
-    const cycle = createAccentCycle(index => this.accentIndex.set(index), (tick, ms) => {
-      const timer = window.setInterval(tick, ms);
-      return () => window.clearInterval(timer);
-    });
-    effect(() => cycle.configure(false, this.reducedMotion()));
-    effect(() => {
-      this.reducedMotion();
-      this.scenePaused();
-      this.syncSceneCycle();
-    });
-    document.addEventListener('visibilitychange', this.onVisibilityChange);
-    this.destroy.onDestroy(() => {
-      cycle.destroy();
-      this.stopSceneCycle();
-      document.removeEventListener('visibilitychange', this.onVisibilityChange);
-      preference.removeEventListener('change', onPreference);
-    });
-  }
-  toggleMotion(): void {
-    this.motionOverride.set(this.reducedMotion());
-  }
-  pauseSceneCycle(): void { this.scenePaused.set(true); }
-  resumeSceneCycle(): void { this.scenePaused.set(false); }
-  private syncSceneCycle(): void {
-    this.stopSceneCycle();
-    if (document.hidden || this.reducedMotion() || this.scenePaused()) return;
-    this.sceneCycleTimer = window.setInterval(() => {
-      this.scene.update(current => (current + 1) % this.sceneLabels.length);
-    }, 4800);
-  }
-  private stopSceneCycle(): void {
-    if (this.sceneCycleTimer === undefined) return;
-    window.clearInterval(this.sceneCycleTimer);
-    this.sceneCycleTimer = undefined;
-  }
+  private readonly router = inject(Router);
+
   ngAfterViewInit(): void {
-    const updateActive = () => {
-      let current = 'inicio';
-      for (const section of this.sectionLinks) {
-        const element = document.getElementById(section.id);
-        if (element && element.getBoundingClientRect().top <= window.innerHeight * .38) current = section.id;
-      }
-      if (document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 60) current = 'alcance';
-      this.activeSection.set(current);
-    };
-    window.addEventListener('scroll', updateActive, { passive: true });
-    window.addEventListener('resize', updateActive);
-    this.destroy.onDestroy(() => {
-      window.removeEventListener('scroll', updateActive);
-      window.removeEventListener('resize', updateActive);
+    const root = this.host.nativeElement.querySelector<HTMLElement>(".acl");
+    if (!root) return;
+    const media: Record<string, LandingVideo> = { hero: HERO_VIDEO, transform: TRANSFORM_VIDEO };
+    CLIP_VIDEOS.forEach((clip, index) => (media[`clip-${index}`] = clip));
+
+    const stop = startLandingMotion(root, {
+      reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      finePointer: window.matchMedia("(pointer: fine)").matches,
+      skipIntro: readIntroSeen(),
+      media,
+      onIntroDone: () => writeIntroSeen(),
     });
-    updateActive();
+    this.destroy.onDestroy(stop);
+
+    // Salidas hacia acceso/registro con transición de pantalla completa.
+    // Los botones de los planes crecen desde su propia tarjeta.
+    const stopLinks = interceptRouteLinks(root, (url) => this.router.navigateByUrl(url), (anchor) => {
+      const plan = anchor.closest<HTMLElement>(".acl-plan");
+      if (plan) {
+        const name = plan.querySelector("h3")?.textContent?.trim() ?? "";
+        return { mode: "card", label: `Plan ${name}`, kicker: "Elegiste", from: plan.getBoundingClientRect() };
+      }
+      return transitionForHref(anchor.getAttribute("href") ?? "/", anchor);
+    });
+    this.destroy.onDestroy(stopLinks);
   }
-  readonly bars = Array.from(
-    { length: 64 },
-    (_, n) => 20 + (Math.sin(n * 1.7) + 1) * 30,
-  );
-  readonly sceneLabels = ["Carga", "Transcribe", "Edita", "Exporta"];
-  readonly transcriptLines = [
-    { time: "00:12–00:16", text: "No necesitas contarlo todo." },
-    { time: "00:16–00:20", text: "Solo encontrar esa idea que conecta." },
-    { time: "00:20–00:24", text: "Y darle el espacio que merece." },
-  ];
-  readonly chapters = [
-    {
-      title: "Trae tu historia.",
-      copy: "Elige un archivo local. Comprobamos su formato y duración antes de procesarlo.",
-      detail: "Carga privada · hasta 30 GB y 10 horas",
-    },
-    {
-      title: "Cada palabra, en su lugar.",
-      copy: "Consulta la transcripción con tiempos para encontrar la idea que quieres conservar.",
-      detail: "Audio a texto · transcripción local",
-    },
-    {
-      title: "Haz el corte tuyo.",
-      copy: "Tú decides el inicio, el final y el encuadre. Guarda el borrador para seguir trabajando.",
-      detail: "Selección manual · control creativo",
-    },
-    {
-      title: "Llévate tu clip.",
-      copy: "Descarga el video procesado y los subtítulos. Tú eliges dónde y cuándo compartirlo.",
-      detail: "MP4 · SRT · VTT",
-    },
-  ];
+}
+
+function readIntroSeen(): boolean {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeIntroSeen(): void {
+  try {
+    sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+  } catch {
+    /* almacenamiento no disponible: la intro se vuelve a mostrar, sin errores */
+  }
 }
