@@ -117,6 +117,43 @@ test('administrative reauthentication uses CSRF and never replays its one-use fa
   controller.expectNone(base + '/admin/jobs?limit=25');
 });
 
+test('clearing session security rejects a late CSRF response without erasing a newer token', async () => {
+  const security = TestBed.inject(ApiSecurity);
+  const stale = security.csrf();
+  const staleRequest = controller.expectOne(base + '/auth/csrf');
+  security.clear();
+  const current = security.csrf();
+  const currentRequest = controller.expectOne(base + '/auth/csrf');
+  staleRequest.flush({ csrfToken: 'old-session-csrf' });
+  await assert.rejects(stale, /sesión cambió/i);
+  currentRequest.flush({ csrfToken: 'current-session-csrf' });
+  assert.equal(await current, 'current-session-csrf');
+  assert.equal(await security.csrf(), 'current-session-csrf');
+});
+
+test('a refresh whose CSRF acquisition crosses a session clear is never sent', async () => {
+  const security = TestBed.inject(ApiSecurity);
+  const refreshing = security.refresh();
+  const csrf = controller.expectOne(base + '/auth/csrf');
+  security.clear();
+  csrf.flush({ csrfToken: 'stale-session-csrf' });
+  await assert.rejects(refreshing, /sesión cambió/i);
+  controller.expectNone(base + '/auth/refresh');
+});
+
+test('an in-flight refresh cannot report success after session security is cleared', async () => {
+  const security = TestBed.inject(ApiSecurity);
+  const csrfPromise = security.csrf();
+  controller.expectOne(base + '/auth/csrf').flush({ csrfToken: 'test-only-csrf' });
+  await csrfPromise;
+  const refreshing = security.refresh();
+  await tick();
+  const request = controller.expectOne(base + '/auth/refresh');
+  security.clear();
+  request.flush({ ok: true });
+  await assert.rejects(refreshing, /sesión cambió/i);
+});
+
 test('stale editor revisions retain a recoverable conflict message', () => {
   assert.match(errorMessage(new HttpErrorResponse({ status: 412 })), /tus cambios siguen en el formulario/);
 });

@@ -58,6 +58,9 @@ ac-workspace-team { display: block; }
 @media(max-width:700px) { .team-overview { align-items: flex-start; flex-direction: column; } .team-overview-role { padding: 0; border: 0; } .team-member-row { flex-wrap: wrap; } .team-member-role { margin-left: auto; text-align: right; } .team-member-actions { width: 100%; justify-content: flex-start; padding-left: 45px; } .team-confirm-copy { text-align: left; } .team-invite-panel form { grid-template-columns: 1fr 1fr; } .team-invite-panel form > label:first-child { grid-column: 1/-1; } .team-invite-panel form > button { grid-column: 1/-1; } .team-transfer { grid-template-columns: 1fr; gap: 18px; } }
 @media(max-width:500px) { .team-role-guide { grid-template-columns: 1fr; } .team-role-card { min-height: 0; } .team-design-note { align-items: flex-start; flex-direction: column; } .team-invite-panel form { grid-template-columns: 1fr; } .team-invite-panel form > label:first-child,.team-invite-panel form > button { grid-column: auto; } .team-member-actions { padding-left: 0; } .team-member-identity small { overflow-wrap: anywhere; } }
 }
+@layer components {
+  .team-studio :is(.team-self-label,.team-invitation-identity > span,.team-invitation-identity small,.team-invitation-status.status-expired,.team-invitation-status.status-revoked,.team-invitation-confirm > span,.team-access-card p,.team-access-card dt,.team-workflow li p) { color:#596579; }
+}
 
 @layer components {
 .team-studio { min-width:0; }
@@ -161,4 +164,5 @@ ac-workspace-team { display: block; }
 @media(max-width:900px) { .team-space-layout { grid-template-columns:1fr; } .team-context { grid-template-columns:1fr 1fr; align-items:start; } .team-account-shortcut { grid-column:1/-1; } }
 @media(max-width:600px) { .team-studio-heading { flex-direction:column; align-items:stretch; gap:20px; } .team-studio-heading h1 { font-size:32px; } .team-studio-heading .button { align-self:flex-start; } .team-studio .team-overview,.team-studio .team-members,.team-studio .team-invite-panel { padding:22px; } .team-context { grid-template-columns:1fr; } .team-studio .team-invite-panel form { grid-template-columns:1fr; } .team-studio .team-invite-panel form > label,.team-studio .team-invite-panel form > button { grid-column:auto; } .team-studio .team-invite-panel input,.team-studio .team-invite-panel select { font-size:16px; } .team-studio .team-member-actions { padding-left:0; } .team-ownership > summary { padding:19px; flex-wrap:wrap; gap:11px; } }
 @media(max-width:500px) { .team-invitations-heading,.team-invitation-row { align-items:flex-start; flex-direction:column; } .team-invitation-confirm { justify-content:flex-start; } }
+ac-workspace-team .team-studio :is(a,button,select,input,summary):focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 52%,transparent); outline-offset:3px; }
 }

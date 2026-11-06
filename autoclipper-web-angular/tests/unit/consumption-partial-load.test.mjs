@@ -38,6 +38,27 @@ test('consumption denial from either endpoint clears all cached totals, rows and
 test('consumption access denial has a distinct message from overview loading failures',()=>{
   assert.match(template,/@if \(accessDenied\(\)\) \{[\s\S]*?No se pudo confirmar el acceso a todos los datos de consumo[\s\S]*?\} @else if \(overviewError\(\)\)/);
   assert.match(template,/El resumen de consumo no se pudo cargar: \{\{ overviewError\(\) \}\}/);
+  assert.match(template,/Reintentar resumen/);
+  assert.match(template,/Reintentar movimientos/);
+  assert.match(template,/!ledgerError\(\)\.includes\('cursor repetido'\)/,'A repeated server cursor is explained without offering an identical retry loop.');
+});
+
+test('allocation distinguishes consumed, reserved and available seconds with an accessible meter and per-pipeline rows',()=>{
+  assert.match(template,/role="progressbar"[\s\S]*aria-valuetext/);
+  assert.match(template,/Consumido[\s\S]*Reservado[\s\S]*Disponible/);
+  assert.match(template,/Cada fila es un movimiento confirmado por etapa\./);
+  assert.match(template,/ID de pipeline: ' \+ entry\.pipelineId/);
+  assert.match(template,/class="badge movement-badge"/);
+  for(const kind of ['reserve','consume','release']) assert.ok(template.includes(`entry.kind === '${kind}'`));
+  assert.doesNotMatch(template,/\$\s?\d/i,'Consumption is material usage and never invents monetary amounts.');
+});
+
+test('consumption filters and allocation detail remain usable on mobile and by keyboard',()=>{
+  const css=readFileSync(new URL('../../src/app/features/consumption/pages/consumption.component.css',import.meta.url),'utf8');
+  assert.match(css,/@media \(max-width: 560px\)[\s\S]*?\.quota-meter-legend \{ display:grid;/);
+  assert.match(css,/\.ledger-stage-chip:focus-visible/);
+  assert.match(css,/ac-consumption :is\(button,summary\):focus-visible/);
+  assert.match(css,/\.table-scroll:focus-visible/);
 });
 
 test('a workspace change invalidates late consumption without querying an empty selection',async()=>{

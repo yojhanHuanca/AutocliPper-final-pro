@@ -15,7 +15,7 @@ test('the editor empty workspace shows no synthetic clips or media and directs u
   assert.match(template, /class="editor-empty-timeline-tracks"/);
   assert.match(template, /role="tablist" aria-label="Herramientas del clip"/);
   for (const tool of ['Recorte', 'Texto', 'Formato', 'Subtítulos', 'Audio', 'Color']) assert.match(template, new RegExp(`>${tool}<\\/button>`));
-  assert.match(template, /routerLink="\/app\/projects"/);
+  assert.match(template, /\[routerLink\]="vm\.design \? '\/design\/projects' : '\/app\/projects'"/);
   assert.doesNotMatch(template, /ac-editor-demo|editor-demo\.mp4|MP4 sintético|Proyecto de muestra/);
   assert.doesNotMatch(component, /EditorDemoComponent/);
   assert.match(css, /\.editor-empty-workspace[\s\S]*?\.editor-empty-timeline-tracks/);

@@ -12,7 +12,7 @@ RUN printf '%s\n' \
       > /etc/apt/sources.list \
     && rm /etc/apt/sources.list.d/debian.sources \
     && apt-get update -o APT::Update::Error-Mode=any \
-    && apt-get install --yes --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 \
+    && apt-get install --yes --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 python3 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN apt-get update -o APT::Update::Error-Mode=any \
     && apt-get install --yes --no-install-recommends fonts-dejavu-core=2.37-6 \
@@ -23,6 +23,7 @@ COPY --from=build --chown=node:node /app/packages ./packages
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/package.json ./package.json
 ENV NODE_ENV=production HOST=0.0.0.0 NODE_OPTIONS=--max-old-space-size=256
+ADD --checksum=sha256:e51e69e89489f199530f13d32a4342da3ddb2cf34842f364603a066db05afbf3 --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp /usr/local/bin/yt-dlp
 USER node
 CMD ["node", "apps/autoclipper-api-gateway/dist/main.js"]
 

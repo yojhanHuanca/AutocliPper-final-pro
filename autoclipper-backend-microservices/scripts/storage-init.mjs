@@ -23,6 +23,6 @@ try {
   await s3.send(new PutBucketLifecycleConfigurationCommand({ Bucket: config.S3_BUCKET, LifecycleConfiguration: {
     Rules: [{ ID: 'abort-incomplete-multipart-uploads', Status: 'Enabled', Filter: { Prefix: '' }, AbortIncompleteMultipartUpload: { DaysAfterInitiation: 1 } }]
   } }));
-  await s3.send(new PutBucketCorsCommand({Bucket:config.S3_BUCKET,CORSConfiguration:{CORSRules:[{AllowedOrigins:[config.CORS_ORIGIN],AllowedMethods:['PUT','GET','HEAD'],AllowedHeaders:['content-type','x-amz-checksum-sha256'],ExposeHeaders:['ETag'],MaxAgeSeconds:300}]}}));
+  await s3.send(new PutBucketCorsCommand({Bucket:config.S3_BUCKET,CORSConfiguration:{CORSRules:[{AllowedOrigins:[config.CORS_ORIGIN],AllowedMethods:['PUT','GET','HEAD'],AllowedHeaders:['content-type','x-amz-checksum-sha256','range'],ExposeHeaders:['ETag','Accept-Ranges','Content-Range','Content-Length'],MaxAgeSeconds:300}]}}));
   console.log('Private bucket available; incomplete multipart uploads expire after one day.');
 } finally { s3.destroy(); }

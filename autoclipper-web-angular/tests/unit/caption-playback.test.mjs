@@ -1,7 +1,7 @@
 import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { playbackWindow, renderedCaptionCues } from '../../.local/tests/client.mjs';
+import { playbackWindow, renderedCaptionCues, sourceCaptionAtTime } from '../../.local/tests/client.mjs';
 
 const entries=[
   {index:3,startSeconds:9,endSeconds:12,text:'Cruza el inicio'},
@@ -32,4 +32,13 @@ test('missing, invalid or incompatible media metadata never supplies a playback 
 test('only cues actually present in the immutable render are linked; invalid cues cannot create seeks',()=>{
   assert.deepEqual(renderedCaptionCues([{...entries[0],text:'Otro texto'},{...entries[1],startSeconds:NaN},{...entries[2],endSeconds:14}],spec,6),[]);
   assert.deepEqual(renderedCaptionCues(entries,{...spec,subtitles:undefined},6),[]);
+});
+
+test('source preview captions follow source time and remain inside the selected clip',()=>{
+  assert.equal(sourceCaptionAtTime(entries,10,16,10),entries[0]);
+  assert.equal(sourceCaptionAtTime(entries,10,16,11.5),entries[0]);
+  assert.equal(sourceCaptionAtTime(entries,10,16,12.2),entries[1]);
+  assert.equal(sourceCaptionAtTime(entries,10,16,15.5),entries[2]);
+  for (const time of [null,NaN,Infinity,9.9,16,18]) assert.equal(sourceCaptionAtTime(entries,10,16,time),null);
+  assert.equal(sourceCaptionAtTime([{...entries[0],startSeconds:NaN}],10,16,11),null);
 });

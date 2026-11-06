@@ -59,3 +59,23 @@ test('dashboard differentiates confirmed empty results from failed or partial pr
   assert.match(template, /Se conserva la última lista confirmada mientras vuelves a consultar\./);
   assert.doesNotMatch(template, /Creado \{\{ project\.createdAt[^}]*\}\} · Versión \{\{ project\.version \}\}/, 'Internal project versions are not presented as creator activity.');
 });
+
+test('dashboard puts a confirmed active render ahead of drafts and links it back to its own project', () => {
+  const template = readFileSync(new URL('../../src/app/features/dashboard/pages/dashboard.component.html', import.meta.url), 'utf8');
+  const active = template.indexOf('@if (resumeProcessing(); as job)');
+  const draft = template.indexOf('@else if (resumeDraft(); as draft)');
+  assert.ok(active >= 0 && draft > active, 'Active processing is the first resume action when the server confirms one.');
+  assert.match(template, /\[routerLink\]="projectDestination\(job\.projectId\)"/);
+  assert.match(template, /Procesamientos recientes/);
+  assert.match(template, /vm\.processingError\(\) \? 'No se confirmó la lista de renders\.'/);
+  const state = readFileSync(new URL('../../src/app/features/dashboard/state/dashboard.state.ts', import.meta.url), 'utf8');
+  assert.match(state, /\/projects\/\$\{encodeURIComponent\(project\.id\)\}\/processing/);
+  assert.match(state, /const recent = ordered\.slice\(0, 4\)/, 'Job reads stay bounded to the recent project window.');
+  assert.match(state, /processing\.slice\(0, 6\)/, 'The dashboard shows only a bounded set of real jobs.');
+});
+
+test('dashboard job rows collapse cleanly on small screens and keep a visible keyboard focus', () => {
+  const css = readFileSync(new URL('../../src/app/features/dashboard/pages/dashboard.component.css', import.meta.url), 'utf8');
+  assert.match(css, /@media\(max-width:600px\)[\s\S]*?\.home-job-row \{ grid-template-columns:auto minmax\(0,1fr\) 14px;/);
+  assert.match(css, /\.creator-home :is\(button,a\):focus-visible/);
+});

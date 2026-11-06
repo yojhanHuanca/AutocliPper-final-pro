@@ -1,3 +1,4 @@
+import { SocialPublishComponent } from "../../../shared/ui/social-publish/social-publish.component";
 import { DESIGN_MODE } from "../../../core/config/design-mode.token";
 import { SettingsApi } from "../data-access/settings-api.service";
 import type { PrivacyContributionScope } from "../data-access/settings-api.service";
@@ -51,7 +52,7 @@ const privacyScopeNames: Record<PrivacyContributionScope, string> = {
 @Component({
   encapsulation: ViewEncapsulation.None,
   selector: "ac-settings",
-  imports: [FormsModule, DatePipe, IconComponent, RouterLink, AccountSectionNavComponent],
+  imports: [FormsModule, DatePipe, IconComponent, RouterLink, AccountSectionNavComponent, SocialPublishComponent],
   templateUrl: "./settings.component.html",
   styleUrl: "./settings.component.css",
 })
@@ -71,6 +72,13 @@ export class SettingsComponent {
   readonly tab = signal("Perfil");
   readonly workspaceStore = inject(WorkspaceStore);
   readonly activeWorkspace = computed(() => this.workspaceStore.workspaces().find((workspace) => workspace.id === this.workspaceStore.workspaceId()) ?? null);
+  readonly twitchStatus = signal<{ configured: boolean; linked: boolean; account: { id?: string; login?: string } | null } | null>(null);
+  readonly twitchStatusConfirmed = signal(false);
+  readonly twitchStatusLoading = signal(false);
+  readonly twitchStatusError = signal("");
+  readonly twitchBusy = signal(false);
+  readonly twitchDisconnectConfirmation = signal(false);
+  private twitchStatusGeneration = 0;
   readonly profile = signal<Schema<"ProfileResponseDto"> | null>(null);
   readonly mfa = signal<Schema<"MfaStatusResponseDto"> | null>(null);
   readonly sessions = signal<Schema<"SessionResponseDto">[]>([]);
@@ -120,7 +128,10 @@ export class SettingsComponent {
       this.recoveryCodes.set([]);
       clearInterval(this.setupTimer);
     });
-    if (!this.design) void this.load();
+    if (!this.design) {
+      void this.load();
+      void this.loadTwitchLinkStatus();
+    }
   }
   async load(): Promise<void> {
     await this.run(async () => {
@@ -143,7 +154,7 @@ export class SettingsComponent {
         this.name = profile.name;
         this.timezone = profile.preferences.timezone;
         this.locale = profile.preferences.locale;
-        this.theme = profile.preferences.theme;
+        this.theme = this.appearance.profileTheme(profile.id, profile.preferences.theme);
         this.emailNotifications = profile.preferences.emailNotifications;
         this.appearance.applyFromProfile(profile.id, profile.preferences.theme);
       } else { this.profileError.set(errorMessage(results[0].reason)); failures.push(`${labels[0]}: ${this.profileError()}`); }
@@ -183,9 +194,9 @@ export class SettingsComponent {
       this.name = updated.name;
       this.timezone = updated.preferences.timezone;
       this.locale = updated.preferences.locale;
-      this.theme = updated.preferences.theme;
       this.emailNotifications = updated.preferences.emailNotifications;
-      this.appearance.applyFromProfile(updated.id, updated.preferences.theme);
+      this.appearance.applyFromUserChoice(updated.id, updated.preferences.theme);
+      this.theme = this.appearance.profileTheme(updated.id, updated.preferences.theme);
       const user = this.session.user();
       if (user) this.session.user.set({ ...user, name: updated.name });
       this.message.set("Perfil actualizado.");
@@ -197,13 +208,86 @@ export class SettingsComponent {
   workspaceRoleLabel(role: string): string {
     return workspaceRoleLabel(role);
   }
+  profileThemeMatches(): boolean {
+    const profile = this.profile();
+    return !profile || this.theme === this.appearance.profileTheme(profile.id, profile.preferences.theme);
+  }
+  async loadTwitchLinkStatus(): Promise<void> {
+    if (this.design || !this.alive || this.twitchStatusLoading() || typeof this.api.twitchLinkStatus !== "function") return;
+    const generation = ++this.twitchStatusGeneration;
+    this.twitchStatusConfirmed.set(false);
+    this.twitchStatusLoading.set(true);
+    this.twitchStatusError.set("");
+    try {
+      const status = await this.api.twitchLinkStatus();
+      if (!this.alive || generation !== this.twitchStatusGeneration) return;
+      this.twitchStatus.set(status);
+      this.twitchStatusConfirmed.set(true);
+      this.twitchDisconnectConfirmation.set(false);
+      if (status.linked && this.route.snapshot.queryParamMap?.get("provider") === "twitch" && this.route.snapshot.queryParamMap?.get("status") === "linked") {
+        this.message.set("Twitch confirmó la conexión. La cuenta vinculada ya está disponible para comprobar clips compatibles.");
+      }
+    } catch (error) {
+      if (this.alive && generation === this.twitchStatusGeneration) {
+        this.twitchStatusError.set(errorMessage(error));
+        this.twitchDisconnectConfirmation.set(false);
+      }
+    } finally {
+      if (this.alive && generation === this.twitchStatusGeneration) this.twitchStatusLoading.set(false);
+    }
+  }
+  async connectTwitch(): Promise<void> {
+    const status = this.twitchStatus();
+    if (this.design || !this.twitchStatusConfirmed() || !status?.configured || status.linked || this.twitchBusy()) return;
+    this.twitchBusy.set(true);
+    this.twitchStatusError.set("");
+    try {
+      const { authorizationUrl } = await this.api.linkTwitch();
+      const target = new URL(authorizationUrl);
+      if (target.origin !== "https://id.twitch.tv" || target.username || target.password) throw new Error("El servidor devolvió un destino de autorización no válido.");
+      window.location.assign(target.toString());
+    } catch (error) {
+      this.twitchStatusError.set(errorMessage(error));
+      this.twitchBusy.set(false);
+    }
+  }
+  async disconnectTwitch(): Promise<void> {
+    const status = this.twitchStatus();
+    if (this.design || !this.twitchStatusConfirmed() || !status?.linked || this.twitchBusy()) return;
+    if (!this.twitchDisconnectConfirmation()) {
+      this.twitchDisconnectConfirmation.set(true);
+      return;
+    }
+    this.twitchBusy.set(true);
+    this.twitchStatusConfirmed.set(false);
+    this.twitchStatusError.set("");
+    try {
+      const result = await this.api.unlinkTwitch();
+      if (!this.alive) return;
+      if (result.unlinked !== true) throw new Error("El servidor no confirmó la desconexión de Twitch.");
+      this.twitchStatus.set({ ...status, linked: false, account: null });
+      this.twitchDisconnectConfirmation.set(false);
+      this.message.set("Twitch se desvinculó de AutoClipper. La revocación del token en Twitch depende de la confirmación de ese proveedor.");
+      await this.loadTwitchLinkStatus();
+    } catch (error) {
+      if (this.alive) {
+        this.twitchStatusError.set(errorMessage(error));
+        this.twitchDisconnectConfirmation.set(false);
+      }
+    } finally {
+      if (this.alive) this.twitchBusy.set(false);
+    }
+  }
+  cancelTwitchDisconnect(): void {
+    if (!this.twitchBusy()) this.twitchDisconnectConfirmation.set(false);
+  }
   resetProfile(): void {
     const profile = this.profile();
     if (!profile) return;
     this.name = profile.name;
     this.timezone = profile.preferences.timezone;
     this.locale = profile.preferences.locale;
-    this.theme = profile.preferences.theme;
+    this.theme = this.appearance.profileTheme(profile.id, profile.preferences.theme);
     this.emailNotifications = profile.preferences.emailNotifications;
     this.error.set('');
     this.message.set('Cambios descartados.');

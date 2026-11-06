@@ -1,16 +1,16 @@
-<div class="app-shell" [class.menu-open]="menuOpen()">
+<div class="app-shell" [class.menu-open]="menuOpen()" [class.editor-mode]="isEditorRoute()">
   <aside id="workspace-navigation" class="sidebar" aria-label="Navegación del estudio" [attr.role]="mobile() && menuOpen() ? 'dialog' : null" [attr.aria-modal]="mobile() && menuOpen() ? true : null" (click)="onSidebarClick($event)">
     <button class="button small workspace-menu-close" type="button" (click)="closeNavigation()">Cerrar navegación</button>
-    <a class="brand" routerLink="/"><ac-brand/></a>
+    <a class="brand" [routerLink]="base" [attr.aria-label]="design ? 'Ir al inicio de la exploración' : 'Ir al inicio del estudio'"><ac-brand/></a>
     <div class="workspace-select">
       <span class="workspace-avatar"><ac-icon name="film" /></span>
       <div>
         <label for="workspace">ESPACIO DE TRABAJO</label
         ><select
           id="workspace"
-          [disabled]="design || !workspace.workspaces().length"
+          [disabled]="design || workspaceSwitching() || !workspace.workspaces().length"
           [value]="workspace.workspaceId()"
-          (change)="workspace.workspaceId.set($any($event.target).value)"
+          (change)="selectWorkspace($any($event.target).value)"
         >
           @if (design) {
             <option>Vista de estructura</option>
@@ -26,26 +26,23 @@
     </div>
     <span class="nav-caption">CREA Y ORGANIZA</span>
     <nav aria-label="Estudio">
-      <a
+      <a title="Inicio" aria-label="Inicio"
         [routerLink]="base"
         routerLinkActive="active"
+        ariaCurrentWhenActive="page"
         [routerLinkActiveOptions]="{ exact: true }"
         ><ac-icon name="grid" />Inicio</a
       >
-      <a [routerLink]="base + '/projects'" routerLinkActive="active"
+      <a title="Proyectos" aria-label="Proyectos" [routerLink]="base + '/projects'"
+        [class.active]="isProjectArea()"
+        [attr.aria-current]="isProjectArea() ? 'page' : null"
         ><ac-icon name="folder" />Proyectos</a
       >
-      <a [routerLink]="base + '/team'" routerLinkActive="active"
+      <a title="Equipo y espacio" aria-label="Equipo y espacio" [routerLink]="base + '/team'" routerLinkActive="active" ariaCurrentWhenActive="page"
         ><ac-icon name="users" />Equipo y espacio</a
       >
-      <span class="nav-disabled"
-        ><ac-icon name="film" />Biblioteca global<small>Previsto</small></span
-      >
-      <span class="nav-disabled"
-        ><ac-icon name="clock" />Calendario<small>Previsto</small></span
-      >
       @if (!design) {
-        <a routerLink="/app/consumption" routerLinkActive="active"
+        <a title="Consumo" aria-label="Consumo" routerLink="/app/consumption" routerLinkActive="active" ariaCurrentWhenActive="page"
           ><ac-icon name="chart" />Consumo</a
         >
       }
@@ -62,21 +59,21 @@
       /></a>
     </div>
     <nav class="sidebar-bottom" aria-label="Cuenta">
-      <a [routerLink]="base + '/settings'" routerLinkActive="active"
+      <a title="Configuración" aria-label="Configuración" [routerLink]="base + '/settings'" routerLinkActive="active" ariaCurrentWhenActive="page"
         ><ac-icon name="settings" />Configuración</a
       >
       @if (design) {
-        <a routerLink="/design/admin"
+        <a title="Estructura admin" aria-label="Estructura admin" routerLink="/design/admin"
           ><ac-icon name="shield" />Estructura admin<small>Previsto</small></a
         >
       }
-      <a routerLink="/"><ac-icon name="arrow" />Volver a la web</a>
+      <a title="Volver a la web" aria-label="Volver a la web" routerLink="/"><ac-icon name="arrow" />Volver a la web</a>
     </nav>
     <div class="sidebar-user">
       <span class="avatar">{{
         design ? "AC" : session.user()?.name?.slice(0, 2)?.toUpperCase()
       }}</span>
-      <div>
+      <div class="topbar-location">
         <strong>{{
           design ? "Exploración visual" : session.user()?.name
         }}</strong
@@ -97,8 +94,8 @@
   @if (mobile() && menuOpen()) { <button type="button" class="workspace-backdrop" tabindex="-1" aria-label="Cerrar navegación" (click)="closeNavigation()"></button> }
   <div class="app-body" [inert]="mobile() && menuOpen()">
     <header class="app-topbar">
-      <div>
-        <button
+      <div class="topbar-location">
+        @if (!isEditorRoute()) { <button
           class="icon-button mobile-menu"
           type="button"
           aria-label="Abrir o cerrar navegación"
@@ -107,7 +104,30 @@
           (click)="openNavigation()"
         >
           <ac-icon name="menu" /></button
-        ><span>Mi espacio <span class="muted">/ Estudio</span></span>
+        > }
+        <div class="topbar-context">
+          <span class="workspace-context">{{ currentWorkspaceName() }}</span>
+          <nav class="workspace-breadcrumbs" aria-label="Ruta de navegación">
+            @if (currentRouteLabel() === 'Inicio') {
+              <span aria-current="page">Inicio</span>
+            } @else {
+              <a [routerLink]="base">Inicio</a>
+              @if (isProjectArea()) {
+                <span class="breadcrumb-separator" aria-hidden="true">/</span>
+                @if (currentRouteLabel() === 'Proyectos') {
+                  <span aria-current="page">Proyectos</span>
+                } @else {
+                  <a [routerLink]="base + '/projects'">Proyectos</a>
+                  <span class="breadcrumb-separator" aria-hidden="true">/</span>
+                  <span aria-current="page">{{ currentRouteLabel() }}</span>
+                }
+              } @else {
+                <span class="breadcrumb-separator" aria-hidden="true">/</span>
+                <span aria-current="page">{{ currentRouteLabel() }}</span>
+              }
+            }
+          </nav>
+        </div>
       </div>
       <div class="topbar-right">
         <span class="connection" [class.connected]="gatewayState() === 'active'" [attr.aria-label]="design ? 'Exploración de diseño' : gatewayLabel()" aria-live="polite" aria-atomic="true">{{
@@ -130,7 +150,8 @@
     @if (error()) {
       <p class="alert error" role="alert">{{ error() }}</p>
     }
-    <main id="main" class="app-main"><router-outlet /></main>
+    @if (workspaceSwitching()) { <div class="workspace-switch-overlay" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span>Cambiando de espacio y abriendo sus proyectos…</span></div> }
+    <main id="main" class="app-main" [inert]="workspaceSwitching()"><router-outlet /></main>
     <footer class="app-footer">
       <span>AutoClipper / Estudio creativo</span
       ><span>{{

@@ -23,12 +23,17 @@ test("authorized user-specified clips, real burned subtitles, WAV extraction and
       await execute(process.env.FFMPEG_PATH??"ffmpeg",["-v","error","-f","lavfi","-i","color=c=blue:s=320x240:r=30","-f","lavfi","-i","sine=frequency=440:sample_rate=48000","-t","3","-c:v","libx264","-threads","1","-pix_fmt","yuv420p","-c:a","aac",path],{timeout:30000,windowsHide:true});
       const bytes=await readFile(path);
       const intent=await alice.c.request(`/projects/${project.value.id}/uploads`,"POST",{mode:"put",bytes:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex"),contentType:"video/mp4"},{"idempotency-key":randomUUID()});assert.equal(intent.status,201);uploadId=intent.value.id;
+      assert.equal((await alice.c.request(`/uploads/${uploadId}/source-playback`)).status,409,'unconfirmed source cannot be played');
       assert.equal((await alice.c.request(`/uploads/${uploadId}/processing`,"POST",spec,{"idempotency-key":randomUUID()})).status,409);
       const stored=await fetch(intent.value.url,{method:"PUT",headers:intent.value.headers,body:bytes});assert.ok(stored.ok);
       assert.equal((await alice.c.request(`/uploads/${uploadId}/confirm`,"POST")).status,200);
       await eventually(async()=>{const status=await alice.c.request(`/uploads/${uploadId}`);return status.value.inspection?.status==="succeeded";},30000);
+      const source=await alice.c.request(`/uploads/${uploadId}/source-playback`);assert.equal(source.status,200);assert.equal(source.headers.get("cache-control"),"no-store");assert.equal(source.headers.get("referrer-policy"),"no-referrer");assert.equal(source.value.expiresInSeconds,120);assert.equal(source.value.contentType,"video/mp4");assert.equal(source.value.bytes,bytes.length);assert.equal(source.value.sha256,createHash("sha256").update(bytes).digest("hex"));
+      assert.deepEqual(Object.keys(source.value).sort(),["bytes","contentType","expiresInSeconds","sha256","url"]);
+      const ranged=await fetch(source.value.url,{headers:{range:"bytes=0-15"}});assert.equal(ranged.status,206);assert.equal(ranged.headers.get("content-range"),`bytes 0-15/${bytes.length}`);assert.deepEqual(Buffer.from(await ranged.arrayBuffer()),bytes.subarray(0,16));
     });
     await t.test("cross-user source access, invalid timestamps and fabricated AI provenance are rejected",async()=>{
+      assert.equal((await bob.c.request(`/uploads/${uploadId}/source-playback`)).status,403);
       assert.equal((await bob.c.request(`/uploads/${uploadId}/processing`,"POST",spec,{"idempotency-key":randomUUID()})).status,403);
       for(const invalid of [{...spec,endSeconds:4,subtitles:undefined},{...spec,startSeconds:-1},{...spec,subtitles:{provenance:"ai",cues:spec.subtitles.cues}},{...spec,subtitles:{provenance:"user",cues:[{startSeconds:0,endSeconds:1,text:"Outside clip"}]}}])assert.equal((await alice.c.request(`/uploads/${uploadId}/processing`,"POST",invalid,{"idempotency-key":randomUUID()})).status,400);
     });
@@ -84,6 +89,7 @@ test("authorized user-specified clips, real burned subtitles, WAV extraction and
       assert.equal((await alice.c.request(`/projects/${project.value.id}/processing`)).value.items.length,3);
       assert.equal((await alice.c.request(`/projects/${project.value.id}`,"DELETE")).status,200);
       assert.equal((await alice.c.request(`/processing/${clipId}/download?kind=video`)).status,404);
+      assert.equal((await alice.c.request(`/uploads/${uploadId}/source-playback`)).status,404);
     });
   }finally{await rm(directory,{recursive:true,force:true});}
 });

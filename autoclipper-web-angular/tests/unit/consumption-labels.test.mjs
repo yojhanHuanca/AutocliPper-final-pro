@@ -1,7 +1,7 @@
 import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { consumptionKindLabel, consumptionLedgerEmptyStateMessage, consumptionLedgerKindCount, consumptionLedgerStageCount, consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaTotal, consumptionStageLabel, filterLedger, filterLedgerByStage, pipelineShortId } from '../../.local/tests/client.mjs';
+import { consumptionKindLabel, consumptionLedgerEmptyStateMessage, consumptionLedgerKindCount, consumptionLedgerStageCount, consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaSegment, consumptionQuotaTotal, consumptionStageLabel, filterLedger, filterLedgerByStage, pipelineShortId } from '../../.local/tests/client.mjs';
 
 test('consumption ledger translates known API vocabulary and keeps full IDs available', () => {
   assert.deepEqual(['audio','analysis','render','other'].map(consumptionStageLabel), ['Audio','Transcripción','Renderizado','other']);
@@ -52,6 +52,11 @@ test('versioned development limits come from the assigned plan and include reser
   };
   assert.equal(consumptionQuotaTotal(usage), 100);
   assert.equal(consumptionQuotaProgress(usage), 40);
+  assert.equal(consumptionQuotaSegment(usage.consumedSeconds,usage),25);
+  assert.equal(consumptionQuotaSegment(usage.reservedSeconds,usage),15);
+  assert.equal(consumptionQuotaSegment(usage.availableSeconds,usage),10);
+  assert.equal(consumptionQuotaSegment(-4,usage),0,'A segment never renders a negative width.');
+  assert.equal(consumptionQuotaSegment(300,usage),100,'A segment is capped at the assigned limit.');
 });
 
 test('ledger empty state does not repeat the alert when an empty page failed', () => {

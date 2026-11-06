@@ -40,6 +40,21 @@ export class WorkspaceTeamComponent {
   readonly design = inject(DESIGN_MODE);
   readonly activeWorkspace = computed(() => this.workspaceStore.workspaces().find((workspace) => workspace.id === this.workspaceStore.workspaceId()) ?? null);
   readonly actorRole = computed<WorkspaceRole | null>(() => this.activeWorkspace()?.role ?? null);
+  readonly pageTitle = computed(() => {
+    if (this.design) return "Equipo y permisos";
+    const active = this.activeWorkspace();
+    if (active?.kind === "team") return "Personas y permisos del equipo";
+    if (active?.kind === "personal") return "Tu espacio personal";
+    if (!this.workspaceStore.loaded()) return "Consultando espacios";
+    return this.workspaceStore.workspaces().length ? "Selecciona un espacio" : "Sin espacios disponibles";
+  });
+  readonly pageDescription = computed(() => {
+    if (this.design) return "Conecta una cuenta para consultar miembros, roles e invitaciones reales.";
+    const active = this.activeWorkspace();
+    if (active?.kind === "team") return "Consulta quién tiene acceso, confirma los permisos y administra las invitaciones compatibles con tu rol.";
+    if (active?.kind === "personal") return "Consulta tu acceso o crea un espacio compartido para colaborar con otras personas.";
+    return this.workspaceStore.loaded() ? "Elige un espacio en la barra lateral para consultar sus miembros y permisos." : "Estamos verificando los espacios disponibles para tu cuenta.";
+  });
   readonly workspacePermissionsUnconfirmed = signal(false);
   readonly workspaceListRefreshFailed = signal(false);
   readonly canManage = computed(() => !this.design && !this.forbidden() && !this.workspacePermissionsUnconfirmed() && !this.loading() && this.actorRole() !== null && canManageWorkspace(this.actorRole()!));
@@ -202,6 +217,12 @@ export class WorkspaceTeamComponent {
 
   roleLabel(role: WorkspaceRole): string {
     return workspaceRoleLabel(role);
+  }
+  activePermissionLabel(): string {
+    if (this.forbidden()) return "Sin acceso confirmado";
+    if (this.workspacePermissionsUnconfirmed() || this.workspaceListRefreshFailed()) return "Por confirmar";
+    const role = this.activeWorkspace()?.role;
+    return role ? this.roleLabel(role) : "Sin rol confirmado";
   }
   roleDraft(member: Schema<"MemberDto">): AssignableWorkspaceRole {
     return this.roleDrafts()[member.userId] ?? (member.role === "owner" ? "reader" : member.role);

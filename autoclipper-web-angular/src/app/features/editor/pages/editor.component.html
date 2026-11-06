@@ -1,9 +1,9 @@
 @if (vm.draft(); as draft) {
-  <nav class="editor-project-path" aria-label="Volver al proyecto"><a [routerLink]="vm.design ? '/design/projects' : ['/app/projects', draft.projectId]">← {{ vm.project()?.name || 'Volver al proyecto' }}</a><span>Editor de clip</span></nav>
+  <nav class="editor-project-path" aria-label="Volver al proyecto"><a [routerLink]="vm.design ? ['/design/projects', draft.projectId] : ['/app/projects', draft.projectId]">← {{ vm.project()?.name || 'Volver al proyecto' }}</a><span>Editor de clip</span></nav>
 }
 <section class="editor-heading">
   <div>
-    <span class="eyebrow">EL ESTUDIO / EDITOR</span>
+    <span class="eyebrow">Estudio de edición</span>
     <h1>{{ vm.draft()?.name ?? (vm.busy() ? 'Cargando revisión…' : vm.error() ? 'No pudimos cargar el borrador' : 'Editor de clips') }}</h1>
     @if (vm.draft()) {
       <div class="editor-draft-meta" aria-label="Estado de la revisión">
@@ -23,11 +23,19 @@
   <div class="button-row">
     <button class="button" type="button" (click)="vm.undo()" [disabled]="!vm.canUndo()" aria-label="Deshacer cambio" title="Deshacer cambio">↶ Deshacer</button>
     <button class="button" type="button" (click)="vm.redo()" [disabled]="!vm.canRedo()" aria-label="Rehacer cambio" title="Rehacer cambio">↷ Rehacer</button>
+    <button class="button primary editor-export-action" type="button" (click)="exportRevision()" [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || !vm.draft() || (vm.dirty() && !vm.canSaveRevision())" [attr.aria-busy]="vm.exportPhase() !== 'idle'" [attr.aria-describedby]="vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy() ? 'export-validation-help' : null">
+      @if (vm.exportPhase() === 'saving') { Guardando revisión… }
+      @else if (vm.exportPhase() === 'requesting') { Solicitando exportación… }
+      @else if (vm.dirty()) { Guardar y exportar }
+      @else if (vm.currentRenderPending()) { Ver exportación }
+      @else { Exportar revisión }
+      <ac-icon name="download" />
+    </button>
     <button class="button" type="button" (click)="vm.tab.set('history')">
       <ac-icon name="clock" />Historial</button
     ><button class="button" type="button" (click)="vm.tab.set('review')"><ac-icon name="users" />Revisión</button>
     <button class="button" type="button" (click)="vm.tab.set('exports')"><ac-icon name="download" />Exportaciones</button>
-    <a class="button" [routerLink]="['/app/projects', vm.draft()!.projectId]" title="Añadir otra fuente desde el proyecto">Añadir fuente<ac-icon name="arrow" /></a>
+    <a class="button" [routerLink]="vm.design ? ['/design/projects', vm.draft()!.projectId] : ['/app/projects', vm.draft()!.projectId]" title="Añadir otra fuente desde el proyecto">Añadir fuente<ac-icon name="arrow" /></a>
     @if (vm.dirty()) { <button class="button primary" type="button" (click)="vm.save()" [disabled]="!vm.canSaveRevision() || vm.busy()">Guardar borrador</button> }
     @if (vm.canRequestReview()) { <button
       class="button"
@@ -36,24 +44,9 @@
       [disabled]="vm.design || vm.busy() || vm.dirty()"
     >
       Enviar a revisión</button> }
-    <button
-      class="button primary"
-      type="button"
-      (click)="vm.dirty() ? vm.saveAndRender() : vm.render()"
-      [disabled]="vm.design || !vm.canEditCollaboration() || vm.busy() || !vm.draft() || (vm.dirty() && !vm.canSaveRevision())"
-      [attr.aria-busy]="vm.exportPhase() !== 'idle'"
-      [attr.aria-describedby]="vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy() ? 'export-validation-help' : null"
-    >
-      @if (vm.exportPhase() === 'saving') { Guardando revisión… }
-      @else if (vm.exportPhase() === 'requesting') { Solicitando exportación… }
-      @else if (vm.dirty()) { Guardar y exportar }
-      @else if (vm.currentRenderPending()) { Ver exportación }
-      @else { Exportar revisión }
-      <ac-icon name="download" />
-    </button>
   </div>
   } @else if (!vm.busy() && !vm.error()) {
-    <div class="button-row"><a class="button primary" routerLink="/app/projects">Elegir proyecto<ac-icon name="arrow" /></a></div>
+    <div class="button-row"><a class="button primary" [routerLink]="vm.design ? '/design/projects' : '/app/projects'">Elegir proyecto<ac-icon name="arrow" /></a></div>
   }
 </section>
 @if (vm.draft() && vm.dirty() && !vm.canSaveRevision() && !vm.busy()) {
@@ -102,7 +95,15 @@
 }
 @if (vm.captionActionError()) { <div class="alert error" role="alert">{{ vm.captionActionError() }}</div> }
 @if (vm.draft()) {
+  <dl class="studio-metrics" aria-label="Métricas del clip">
+    <div><dt>Duración del clip</dt><dd>{{ vm.clipRangeUsable() ? ((vm.spec.endSeconds - vm.spec.startSeconds) | number:'1.1-2') + ' s' : '—' }}</dd><small>{{ vm.clipRangeUsable() ? ((vm.spec.startSeconds | number:'1.1-2') + ' – ' + (vm.spec.endSeconds | number:'1.1-2') + ' s en la fuente') : 'Selecciona un intervalo válido' }}</small></div>
+    <div><dt>Video original</dt><dd>{{ vm.sourceDuration() === null ? '—' : (vm.sourceDuration() | number:'1.1-2') + ' s' }}</dd><small>{{ vm.sourceDuration() === null ? 'Duración pendiente' : (vm.sourceResolution() ?? 'Duración inspeccionada') }}</small></div>
+    <div><dt>Formato</dt><dd>{{ vm.spec.aspect === 'vertical' ? '9:16' : vm.spec.aspect === 'square' ? '1:1' : vm.spec.aspect === 'horizontal' ? '16:9' : 'Original' }}</dd><small>Encuadre del borrador</small></div>
+    <div><dt>Subtítulos</dt><dd>{{ vm.timelineCues().length }}</dd><small>Segmentos dentro del recorte</small></div>
+    <div><dt>Exportaciones</dt><dd>{{ vm.currentRevisionExports().length }}</dd><small>{{ vm.currentRenderPending() ? 'Generando MP4…' : 'De la revisión ' + vm.draft()!.version }}</small></div>
+  </dl>
   <div class="editor-layout">
+    <ac-editor-rail />
     <section class="editor-clip-list" aria-labelledby="editor-clip-list-title">
       <header class="editor-clip-list-heading"><div><span class="eyebrow">PROYECTO</span><h2 id="editor-clip-list-title">Clips del proyecto</h2></div><span class="editor-clip-count">{{ vm.projectEdits().length }}</span></header>
       @if (vm.projectEditsLoading()) { <p class="editor-clip-empty" role="status">Consultando borradores reales del proyecto…</p> }
@@ -148,7 +149,7 @@
           <div class="frame-corners"><ac-icon name="film" /></div>
           <strong id="editor-empty-preview-title">Tu video aparecerá aquí</strong>
           <p>Selecciona un MP4 confirmado desde un proyecto para abrirlo en el editor.</p>
-          <a class="button primary" routerLink="/app/projects">Ir a proyectos<ac-icon name="arrow" /></a>
+          <a class="button primary" [routerLink]="vm.design ? '/design/projects' : '/app/projects'">Ir a proyectos<ac-icon name="arrow" /></a>
         </div>
       </div>
       <div class="preview-foot"><ac-icon name="shield" /><span>La vista previa solo se habilita para una fuente autorizada del proyecto.</span></div>
@@ -177,7 +178,7 @@
   <section class="editor-empty-state" aria-labelledby="editor-empty-title">
     <div class="editor-empty-copy">
       <span class="editor-empty-icon"><ac-icon name="film" /></span>
-      <div><span class="eyebrow">REVISIÓN NO DISPONIBLE</span><h2 id="editor-empty-title">No encontramos esta revisión.</h2><p>No cargamos datos parciales. Reintenta la consulta o vuelve a proyectos para abrir una revisión guardada.</p><a class="button primary" routerLink="/app/projects">Volver a proyectos<ac-icon name="arrow" /></a></div>
+      <div><span class="eyebrow">REVISIÓN NO DISPONIBLE</span><h2 id="editor-empty-title">No encontramos esta revisión.</h2><p>No cargamos datos parciales. Reintenta la consulta o vuelve a proyectos para abrir una revisión guardada.</p><a class="button primary" [routerLink]="vm.design ? '/design/projects' : '/app/projects'">Volver a proyectos<ac-icon name="arrow" /></a></div>
     </div>
   </section>
 }

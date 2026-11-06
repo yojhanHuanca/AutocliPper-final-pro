@@ -10,6 +10,7 @@ import { AppModule } from '../../apps/autoclipper-identity-service/dist/app.modu
 import {verifyWorkspacePrivacy} from './workspace-privacy-fixture.mjs';
 import {verifyProjectPrivacy} from './project-privacy-fixture.mjs';
 import {verifyBillingPrivacy} from './billing-privacy-fixture.mjs';
+import {verifyTaskPrivacy} from './task-privacy-fixture.mjs';
 
 // Synthetic users/MFA/link state are SQL fixtures, not SMTP or Google acceptance.
 // The requests, authentication, CSRF, factor verification and database are real.
@@ -36,9 +37,9 @@ export async function verifyPrivacyProfileExports(config){
     app=await NestFactory.create(AppModule,{logger:false,abortOnError:false});configureHttp(app,loadServiceConfig(),'privacy-fixture');await app.listen(0,'127.0.0.1');
     const base=(await app.getUrl())+'/v1';
     function client(){
-      const jar=new Map();let csrf;
-      return {jar,async request(path,method='GET',input,headers={}){
-        const response=await fetch(base+path,{method,headers:{origin:'http://localhost:4200',cookie:[...jar].map(([key,value])=>`${key}=${value}`).join(';'),...(csrf?{'x-csrf-token':csrf}:{}),...(input===undefined?{}:{'content-type':'application/json'}),...headers},...(input===undefined?{}:{body:JSON.stringify(input)}),signal:AbortSignal.timeout(10000)});
+      const jar=new Map();let csrf,rateClientIp;
+      return {jar,setRateClientIp(value){rateClientIp=value;},async request(path,method='GET',input,headers={}){
+        const response=await fetch(base+path,{method,headers:{origin:'http://localhost:4200',cookie:[...jar].map(([key,value])=>`${key}=${value}`).join(';'),...(csrf?{'x-csrf-token':csrf}:{}),...(rateClientIp?{'x-service-token':config.internalToken,'x-client-ip':rateClientIp}:{}),...(input===undefined?{}:{'content-type':'application/json'}),...headers},...(input===undefined?{}:{body:JSON.stringify(input)}),signal:AbortSignal.timeout(10000)});
         for(const cookie of response.headers.getSetCookie()){const [pair]=cookie.split(';'),index=pair.indexOf('=');jar.set(pair.slice(0,index),pair.slice(index+1));}
         const value=await response.json();if(value.csrfToken)csrf=value.csrfToken;
         httpChecks++;return {status:response.status,value,headers:response.headers};
@@ -103,12 +104,18 @@ export async function verifyPrivacyProfileExports(config){
     assert.equal((await a.request('/auth/logout','POST')).status,200);
     assert.equal((await a.request(path,'POST',{password,factor:factors.shift()},{'idempotency-key':key})).status,401);
     const profileChecks=httpChecks;
+    // Each synthetic acceptance phase gets its own 10-minute rate bucket while retaining the same account/session.
+    a.setRateClientIp('127.0.0.2');
+    assert.equal((await a.request('/auth/csrf')).status,200);
+    assert.equal((await a.request('/auth/login','POST',{email,password,factor:factors.shift()})).status,200);
     const sharedContext={userId,otherId,password,email,otherEmail,factors,a,b,anonymous,requestId:request.value.id};
     const workspaceContribution=await verifyWorkspacePrivacy(config,base,client,encryptionKey,sharedContext);
     const projectContribution=await verifyProjectPrivacy(config,base,client,encryptionKey,sharedContext);
+    a.setRateClientIp('127.0.0.3');
     const billingContribution=await verifyBillingPrivacy(config,base,client,db,owner,a,b,anonymous,userId,otherId,password,factors,request.value.id);
-    const manifest=await a.request(`/auth/privacy-requests/${request.value.id}/manifest`);assert.equal(manifest.status,200);assert.equal(manifest.value.globalFulfillment,'pending');assert.equal(manifest.value.requiredScopes,6);assert.equal(manifest.value.preparedScopes,4);assert.equal(manifest.value.data,undefined);assert.ok(manifest.value.scopes.filter(value=>value.supported).every(value=>value.status==='prepared'));assert.ok(manifest.value.scopes.filter(value=>!value.supported).every(value=>value.status==='not_implemented'));
-    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution,billingContribution,privacyReconciliation:{status:'passed',requiredScopes:manifest.value.requiredScopes,preparedScopes:manifest.value.preparedScopes,pendingScopes:manifest.value.scopes.filter(value=>value.status!=='prepared').map(value=>value.scope),noGlobalPayload:true,noDeletion:true}};
+    const taskContribution=await verifyTaskPrivacy(config,base,client,encryptionKey);
+    const manifest=await a.request(`/auth/privacy-requests/${request.value.id}/manifest`);assert.equal(manifest.status,200);assert.equal(manifest.value.globalFulfillment,'pending');assert.equal(manifest.value.requiredScopes,6);assert.equal(manifest.value.preparedScopes,4);assert.equal(manifest.value.data,undefined);assert.ok(manifest.value.scopes.every(value=>value.supported));assert.deepEqual(manifest.value.scopes.filter(value=>value.status!=='prepared').map(value=>value.scope),['analysis-attribution-v1','media-task-attribution-v1']);
+    return {status:'passed',httpChecks:profileChecks,receipts:receipts.length,globalFulfillment:'pending',storedPersonalPayloads:0,workspaceContribution,projectContribution,billingContribution,taskContribution,privacyReconciliation:{status:'passed',requiredScopes:manifest.value.requiredScopes,preparedScopes:manifest.value.preparedScopes,pendingScopes:manifest.value.scopes.filter(value=>value.status!=='prepared').map(value=>value.scope),noGlobalPayload:true,noDeletion:true}};
   }catch(error){if(!error.privacyCheckpoint)error.privacyCheckpoint=checkpoint;throw error;}
   finally{if(app)await app.close();await db.end();await owner.end();}
 }

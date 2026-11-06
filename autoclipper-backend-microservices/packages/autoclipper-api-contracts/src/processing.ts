@@ -15,7 +15,7 @@ const clipFields={version:z.literal(1),kind:z.literal("clip"),startSeconds:secon
 const userSubtitles=z.object({provenance:z.literal("user"),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
 const transcriptSubtitles=z.object({provenance:z.literal("transcript"),transcriptId:z.uuid(),cues:z.array(cue).min(1).max(200),style:subtitleStyleSchema.optional()}).strict();
 function clipRules(value:{startSeconds:number;endSeconds:number;aspect:string;framing?:z.infer<typeof framingSchema>|undefined;splitScreen?:z.infer<typeof splitScreenSchema>|undefined;subtitles?:{cues:z.infer<typeof cue>[]} | undefined},context:z.RefinementCtx){
-  if(value.endSeconds-value.startSeconds<0.1||value.endSeconds-value.startSeconds>120)context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
+  if(value.endSeconds-value.startSeconds<0.1-1e-9||value.endSeconds-value.startSeconds>120+1e-9)context.addIssue({code:"custom",message:"Clip duration must be 0.1 to 120 seconds"});
   if(value.framing&&value.aspect==="source")context.addIssue({code:"custom",message:"Manual framing requires a fixed output aspect"});
   if(value.splitScreen&&value.aspect==="source")context.addIssue({code:"custom",message:"Split screen requires a fixed output aspect"});
   let previous=value.startSeconds;

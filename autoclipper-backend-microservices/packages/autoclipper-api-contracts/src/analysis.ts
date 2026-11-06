@@ -1,36 +1,62 @@
 import {z} from "zod";
 import {ApiProperty,ApiPropertyOptional,getSchemaPath} from "@nestjs/swagger";
 
-export const selectionSpec=z.object({mode:z.literal("llm"),count:z.number().int().min(1).max(3),minSeconds:z.number().finite().min(1).max(120),maxSeconds:z.number().finite().min(1).max(120),instructions:z.string().trim().max(2000).default("")}).strict().refine(value=>value.minSeconds<=value.maxSeconds);
-export const analysisSpec=z.object({version:z.literal(1),provider:z.enum(["whisper_cpp","deepgram"]),language:z.enum(["auto","es","en"]).default("auto"),selection:z.union([z.object({mode:z.literal("none")}).strict(),selectionSpec]).default({mode:"none"})}).strict();
+export const LOCAL_TRANSCRIPTION_MAX_SECONDS=7200;
+export const contentType=z.enum(["general","tutorial","interview","gameplay","commentary","reaction"]);
+export const CURRENT_SELECTION_PROMPT_VERSION="segment-selection-v2" as const;
+export const selectionPromptVersion=z.enum(["segment-selection-v1",CURRENT_SELECTION_PROMPT_VERSION]);
+export const selectionInstructions=z.string().trim().max(2000).refine(value=>![...value].some(character=>{const code=character.codePointAt(0)!;return code<=8||(code>=11&&code<=31)||(code>=127&&code<=159);}));
+const selectionBounds=z.object({count:z.number().int().min(1).max(3),minSeconds:z.number().finite().min(1).max(120),maxSeconds:z.number().finite().min(1).max(120)});
+export const selectionSpec=selectionBounds.extend({mode:z.literal("llm"),contentType:contentType.default("general"),instructions:selectionInstructions.default("")}).strict().refine(value=>value.minSeconds<=value.maxSeconds);
+export const localSelectionSpec=selectionBounds.extend({mode:z.literal("local")}).strict().refine(value=>value.minSeconds<=value.maxSeconds);
+export type LocalSelectionSpec=z.infer<typeof localSelectionSpec>;
+export const analysisSpec=z.object({version:z.literal(1),provider:z.enum(["whisper_cpp","deepgram"]),language:z.enum(["auto","es","en"]).default("auto"),selection:z.union([z.object({mode:z.literal("none")}).strict(),localSelectionSpec,selectionSpec]).default({mode:"none"})}).strict();
 export type AnalysisSpec=z.infer<typeof analysisSpec>;
 export const proposalSchema=z.object({startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive(),title:z.string().trim().min(1).max(150),description:z.string().max(2000),hashtags:z.array(z.string().regex(/^#[\p{L}\p{N}_]{1,80}$/u)).max(12),explanation:z.string().trim().min(1).max(2000),score:z.number().finite().min(0).max(1).optional()}).strict();
 export const selectionOutput=z.object({segments:z.array(proposalSchema).min(1).max(3)}).strict();
+export function selectionOutputForCount(count:number){
+  if(!Number.isInteger(count)||count<1||count>3)throw new RangeError("Selection count must be from 1 to 3.");
+  return z.object({segments:z.array(proposalSchema).length(count)}).strict();
+}
 export type SegmentProposal=z.infer<typeof proposalSchema>;
 export const transcriptSegmentSchema=z.object({startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive(),text:z.string().trim().min(1).max(2000),speaker:z.number().int().nonnegative().optional()}).strict();
 export const transcriptDataSchema=z.object({language:z.string().min(2).max(16),languageSource:z.enum(["detected","requested"]),durationSeconds:z.number().finite().positive(),segments:z.array(transcriptSegmentSchema).min(1).max(20000),provider:z.enum(["whisper_cpp","deepgram"]),model:z.string().min(1).max(200),revision:z.string().min(1).max(200),engineVersion:z.string().max(100),modelSha256:z.string().regex(/^[a-f0-9]{64}$/).nullable(),requestId:z.string().max(200).nullable(),estimatedExternalCostUsd:z.number().finite().nonnegative(),diarization:z.boolean()}).strict();
-export const selectionResultSchema=selectionOutput.extend({provider:z.literal("ollama"),model:z.string().min(1).max(200),revision:z.string().regex(/^[a-f0-9]{64}$/),promptVersion:z.literal("segment-selection-v1"),usage:z.object({inputTokens:z.number().int().nonnegative(),outputTokens:z.number().int().nonnegative()}).strict(),estimatedExternalCostUsd:z.literal(0)}).strict();
+const selectionResultBase=selectionOutput.extend({model:z.string().min(1).max(200),revision:z.string().regex(/^[a-f0-9]{64}$/),promptVersion:selectionPromptVersion,usage:z.object({inputTokens:z.number().int().nonnegative(),outputTokens:z.number().int().nonnegative()}).strict()});
+const localSelectionResult=selectionOutput.extend({provider:z.literal("local"),model:z.literal("deterministic-window-v1"),revision:z.string().regex(/^[a-f0-9]{64}$/),promptVersion:z.literal("segment-selection-local-v1"),usage:z.object({inputTokens:z.literal(0),outputTokens:z.literal(0)}).strict(),estimatedExternalCostUsd:z.literal(0)}).strict();
+export const selectionResultSchema=z.discriminatedUnion("provider",[
+  localSelectionResult,
+  selectionResultBase.extend({provider:z.literal("ollama"),estimatedExternalCostUsd:z.literal(0)}).strict(),
+  selectionResultBase.extend({provider:z.literal("openai"),estimatedExternalCostUsd:z.number().finite().nonnegative()}).strict(),
+  selectionResultBase.extend({provider:z.literal("gemini"),estimatedExternalCostUsd:z.number().finite().nonnegative()}).strict(),
+]);
 export const analysisStatus=z.object({id:z.uuid(),status:z.enum(["queued","transcribing","selecting","succeeded","failed","cancelled"]),attempts:z.number().int().nonnegative(),errorCode:z.string().max(100).nullable(),startedAt:z.iso.datetime().nullable(),finishedAt:z.iso.datetime().nullable(),transcript:transcriptDataSchema.extend({id:z.uuid()}).nullable(),selection:selectionResultSchema.nullable(),providerOutcomeUnknown:z.boolean(),phases:z.array(z.object({phase:z.enum(["transcribing","selecting"]),attempt:z.number().int().positive(),startedAt:z.iso.datetime(),finishedAt:z.iso.datetime().nullable(),errorCode:z.string().max(100).nullable()}).strict()).max(6)}).strict();
 export type AnalysisStatus=z.infer<typeof analysisStatus>;
 export const transcriptRenderSpec=z.union([
-  z.object({version:z.literal(1),proposalIndex:z.number().int().min(0).max(2),aspect:z.enum(["source","vertical","square","horizontal"])}).strict(),
-  z.object({version:z.literal(1),startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive(),aspect:z.enum(["source","vertical","square","horizontal"])}).strict(),
+  z.object({version:z.literal(1),proposalIndex:z.number().int().min(0).max(2),aspect:z.enum(["source","vertical","square","horizontal"]),subtitles:z.enum(["transcript","none"]).default("transcript")}).strict(),
+  z.object({version:z.literal(1),startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive(),aspect:z.enum(["source","vertical","square","horizontal"]),subtitles:z.enum(["transcript","none"]).default("transcript")}).strict(),
 ]);
 export class NoSelectionDto {
   @ApiProperty({enum:["none"]}) mode!:string;
+}
+export class LocalSelectionDto {
+  @ApiProperty({enum:["local"]}) mode!:string;
+  @ApiProperty({minimum:1,maximum:3}) count!:number;
+  @ApiProperty({minimum:1,maximum:120}) minSeconds!:number;
+  @ApiProperty({minimum:1,maximum:120}) maxSeconds!:number;
 }
 export class LlmSelectionDto {
   @ApiProperty({enum:["llm"]}) mode!:string;
   @ApiProperty({minimum:1,maximum:3}) count!:number;
   @ApiProperty({minimum:1,maximum:120}) minSeconds!:number;
   @ApiProperty({minimum:1,maximum:120}) maxSeconds!:number;
+  @ApiPropertyOptional({enum:["general","tutorial","interview","gameplay","commentary","reaction"],default:"general"}) contentType?:string;
   @ApiPropertyOptional({maxLength:2000,default:""}) instructions?:string;
 }
 export class AnalysisSpecDto {
   @ApiProperty({enum:[1]}) version!:number;
   @ApiProperty({enum:["whisper_cpp","deepgram"]}) provider!:string;
   @ApiPropertyOptional({enum:["auto","es","en"],default:"auto"}) language?:string;
-  @ApiPropertyOptional({oneOf:[{$ref:getSchemaPath(NoSelectionDto)},{$ref:getSchemaPath(LlmSelectionDto)}],description:"none preserves a real transcript without simulating AI segment selection."}) selection?:NoSelectionDto|LlmSelectionDto;
+  @ApiPropertyOptional({oneOf:[{$ref:getSchemaPath(NoSelectionDto)},{$ref:getSchemaPath(LocalSelectionDto)},{$ref:getSchemaPath(LlmSelectionDto)}],description:"local selects deterministic, evenly distributed transcript windows without a generative model; llm requires separately authorized paid execution."}) selection?:NoSelectionDto|LocalSelectionDto|LlmSelectionDto;
 }
 export class TranscriptSegmentDto {
   @ApiProperty() startSeconds!:number;
@@ -80,12 +106,12 @@ export class SelectionUsageDto {
 }
 export class SelectionResultDto {
   @ApiProperty({type:[SegmentProposalDto],minItems:1,maxItems:3}) segments!:SegmentProposalDto[];
-  @ApiProperty({enum:["ollama"]}) provider!:string;
+  @ApiProperty({enum:["local","ollama","openai","gemini"]}) provider!:string;
   @ApiProperty() model!:string;
-  @ApiProperty({description:"Pinned model SHA-256."}) revision!:string;
-  @ApiProperty({enum:["segment-selection-v1"]}) promptVersion!:string;
+  @ApiProperty({description:"Pinned local-model digest or external selector configuration fingerprint."}) revision!:string;
+  @ApiProperty({enum:["segment-selection-v1",CURRENT_SELECTION_PROMPT_VERSION,"segment-selection-local-v1"]}) promptVersion!:string;
   @ApiProperty({type:SelectionUsageDto}) usage!:SelectionUsageDto;
-  @ApiProperty({enum:[0]}) estimatedExternalCostUsd!:number;
+  @ApiProperty({minimum:0,description:"Estimated external model cost; zero for local Ollama."}) estimatedExternalCostUsd!:number;
 }
 export class AnalysisPhaseDto {
   @ApiProperty({enum:["transcribing","selecting"]}) phase!:string;
@@ -99,9 +125,11 @@ export class ManualTranscriptRenderDto {
   @ApiProperty({minimum:0}) startSeconds!:number;
   @ApiProperty({minimum:0,description:"Clip duration 0.1–120 seconds, within source."}) endSeconds!:number;
   @ApiProperty({enum:["source","vertical","square","horizontal"]}) aspect!:string;
+  @ApiPropertyOptional({enum:["transcript","none"],default:"transcript"}) subtitles?:string;
 }
 export class ProposalTranscriptRenderDto {
   @ApiProperty({enum:[1]}) version!:number;
   @ApiProperty({minimum:0,maximum:2,description:"Index into the persisted real LLM proposals."}) proposalIndex!:number;
   @ApiProperty({enum:["source","vertical","square","horizontal"]}) aspect!:string;
+  @ApiPropertyOptional({enum:["transcript","none"],default:"transcript"}) subtitles?:string;
 }

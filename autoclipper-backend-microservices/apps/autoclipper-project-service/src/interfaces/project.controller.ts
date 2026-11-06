@@ -13,8 +13,10 @@ import {
   HttpCode,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import {
   ApiProperty,
+  ApiPropertyOptional,
   ApiBody,
   ApiTags,
   ApiHeader,
@@ -34,6 +36,9 @@ import {
   SignedPartDto,
   UploadStatusDto,
   ConfirmedUploadDto,
+  SourceLinkResolutionDto,
+  YoutubeVideoMetadataDto,
+  SourceLinkCapabilitiesDto,
 } from "@autoclipper/api-contracts";
 import { uuid } from "@autoclipper/http-security";
 import { ProjectService } from "../application/project.service.js";
@@ -58,8 +63,14 @@ class PartDto {
   @ApiProperty({ minimum: 1 }) partNumber!: number;
   @ApiProperty({ pattern: "^[a-f0-9]{64}$" }) sha256!: string;
 }
+class SourceLinkDto {
+  @ApiProperty({maxLength:2048,format:"uri",description:"Twitch clip or VOD, YouTube, or Kick URL. Twitch VOD import requires an explicit interval and broadcaster/editor OAuth permission."}) url!:string;
+  @ApiPropertyOptional({minimum:5,maximum:Number.MAX_SAFE_INTEGER,description:"Required for Twitch VOD imports: zero-based second in the VOD where the excerpt ends. The selected VOD duration is the effective upper bound."}) vodOffsetSeconds?:number;
+  @ApiPropertyOptional({minimum:5,maximum:60,description:"Required for Twitch VOD imports: clip duration in seconds."}) durationSeconds?:number;
+  @ApiPropertyOptional({minLength:1,maxLength:140,description:"Optional title for the Twitch clip created from a VOD."}) title?:string;
+}
 @ApiTags("projects")
-@ApiExtraModels(PutUploadIntentDto, MultipartUploadIntentDto)
+@ApiExtraModels(PutUploadIntentDto, MultipartUploadIntentDto, SourceLinkResolutionDto, YoutubeVideoMetadataDto, SourceLinkCapabilitiesDto)
 @Controller()
 export class ProjectController {
   @Post("internal/admin-jobs")@HttpCode(200)@ApiExcludeEndpoint() adminJobs(@Req()req:Request,@Body()input:unknown){return this.service.adminJobs(req,input);}
@@ -115,6 +126,12 @@ export class ProjectController {
   @Delete("projects/:id") trash(@Req() req: Request, @Param("id") id: string) {
     return this.service.trash(req, uuid(id));
   }
+  @Post("projects/:id/source-links/resolve") @HttpCode(200) @ApiBody({type:SourceLinkDto}) @ApiOkResponse({type:SourceLinkResolutionDto})
+  resolveSourceLink(@Req()req:Request,@Param("id")id:string,@Body()input:SourceLinkDto){return this.service.resolveSourceLink(req,uuid(id),input);}
+  @Get("projects/:id/source-links/capabilities") @ApiOkResponse({type:SourceLinkCapabilitiesDto,description:"Provider preview/import/processing capabilities for this project and user; never includes provider credentials."})
+  sourceLinkCapabilities(@Req()req:Request,@Param("id")id:string){return this.service.sourceLinkCapabilities(req,uuid(id));}
+  @Post("projects/:id/source-links/import") @HttpCode(200) @ApiHeader({name:"Idempotency-Key",required:true}) @ApiBody({type:SourceLinkDto})
+  importSourceLink(@Req()req:Request,@Param("id")id:string,@Body()input:SourceLinkDto){return this.service.importSourceLink(req,uuid(id),input,String(req.res?.locals["correlationId"]??randomUUID()));}
   @Post("projects/:id/uploads")
   @ApiHeader({ name: "Idempotency-Key", required: true })
   @ApiBody({ type: UploadDto })

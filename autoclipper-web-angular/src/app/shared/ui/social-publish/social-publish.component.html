@@ -1,0 +1,34 @@
+<details class="social-panel">
+  <summary>{{ processingId() ? 'Compartir este clip · YouTube / TikTok' : 'Cuentas para publicar · YouTube / TikTok' }}</summary>
+  <p>Conecta la cuenta donde quieres enviar tus clips.</p>
+  @if (design) { <p>La conexión de cuentas está disponible al iniciar sesión.</p> }
+  @if (error()) { <p class="social-error" role="alert">{{ error() }} <button class="button small" type="button" (click)="refreshConnections()" [disabled]="busy()">Reintentar</button></p> }
+  <div class="social-connections">
+    @for (account of connections(); track account.provider) {
+      <div class="social-account"><strong>{{ account.provider === 'youtube' ? 'YouTube' : 'TikTok' }}</strong>
+        <p>{{ !account.configured ? 'Pendiente de configuración OAuth en el servidor' : account.linked ? 'Cuenta conectada' : 'Sin conectar' }}</p>
+        @if (account.configured) { <button class="button small" type="button" (click)="account.linked ? disconnect(account.provider) : connect(account.provider)" [disabled]="busy()">{{ account.linked ? 'Desconectar' : 'Conectar cuenta' }}</button> }
+      </div>
+    }
+  </div>
+  @if (processingId() && loaded() && !publication()) {
+    <form class="social-fields" (ngSubmit)="publish()">
+      <label>Destino<select name="socialProvider" [(ngModel)]="provider"><option value="youtube">YouTube</option><option value="tiktok">TikTok · bandeja del creador</option></select></label>
+      <label>Título<input name="socialTitle" [(ngModel)]="title" [placeholder]="clipTitle()" maxlength="100" /></label>
+      @if (provider === 'youtube') {
+        <label>Descripción<textarea name="socialDescription" [(ngModel)]="description" maxlength="5000" rows="3"></textarea></label>
+        <label>Visibilidad<select name="socialPrivacy" [(ngModel)]="privacy"><option value="private">Privado</option><option value="unlisted">No listado</option><option value="public">Público</option></select></label>
+      } @else { <p>TikTok recibirá el video en tu bandeja. El título, la descripción, la visibilidad y la publicación final se confirman dentro de TikTok.</p> }
+      <label>¿Este contenido está creado para niños?<select name="socialKids" [(ngModel)]="madeForKids" required><option value="" disabled>Selecciona una opción</option><option value="no">No</option><option value="yes">Sí</option></select></label>
+      <label class="social-consent"><input type="checkbox" name="socialConsent" [(ngModel)]="consent" required />He revisado el clip y autorizo su envío a la cuenta seleccionada.</label>
+      <button class="button primary" type="submit" [disabled]="design || busy() || !selectedConnection()?.linked || !selectedConnection()?.configured || !consent || !madeForKids">{{ busy() ? 'Solicitando envío…' : provider === 'youtube' ? 'Enviar a YouTube' : 'Enviar a la bandeja de TikTok' }}</button>
+    </form>
+  }
+  @if (publication(); as job) {
+    <div class="social-status" role="status" aria-live="polite"><strong>{{ stateLabel(job.state) }}</strong>
+      @if (job.errorCode) { <p>Código: {{ job.errorCode }}</p> }
+      @if (safeRemoteUrl(job.remoteUrl); as url) { <p><a [href]="url" target="_blank" rel="noopener noreferrer">Ver video en YouTube</a></p> }
+      <button class="button small" type="button" (click)="poll()">Actualizar estado</button>
+    </div>
+  }
+</details>

@@ -21,6 +21,7 @@ import {
   consumptionLedgerEmptyStateMessage,
   consumptionPlanLabel,
   consumptionQuotaProgress,
+  consumptionQuotaSegment,
   consumptionQuotaTotal,
   consumptionStageLabel,
   filterLedger,
@@ -68,6 +69,7 @@ export class ConsumptionComponent {
   readonly ledgerEmptyStateMessage = consumptionLedgerEmptyStateMessage;
   readonly planLabel = consumptionPlanLabel;
   readonly quotaProgress = consumptionQuotaProgress;
+  readonly quotaSegment = consumptionQuotaSegment;
   readonly quotaTotal = consumptionQuotaTotal;
   readonly shortPipelineId = pipelineShortId;
   readonly workspace = inject(WorkspaceStore);

@@ -122,3 +122,13 @@ Pantalla dividida reutiliza esa revisión y el mismo renderer: Project autoriza 
 La orquestación de intervalo manual permanece en Project: una intención persistente y un historial inmutable encadenan audio→ASR local→render mediante las peticiones/outboxes existentes. Cada transición y petición hija se confirma atómicamente; las referencias son FK internas y Project consulta el estado remoto por contratos, sin acceso a tablas de Media/Analysis. Reserva espacio desde el inicio y lo transfiere a los hijos; cancelación, revocación o plazo impiden nuevas etapas y esperan conciliación/limpieza. Ver [contrato, límites y evidencia de orquestación](stage-3-orchestration.md). No equivale a selección LLM real.
 
 La admisión nueva pasa por Project: los pipelines reservan consumo en Billing antes de crear audio. `PROCESSING_ADMISSION_MODE=commercial` bloquea las rutas manuales de creación de audio/análisis/render/editor que no participan en ese ledger; `development` las conserva bajo las cuotas técnicas existentes. La política se captura en el servidor y no puede sustituirse mediante cabeceras o rol de workspace. No se aplica al dispatcher ni a lectura/descarga/cancelación de intenciones históricas: estas mantienen su política original sin retroactividad. [Inventario y límites](stage-6-commercial-admission.md).
+
+## Requisito del usuario para primera presentación — 16 de octubre de 2026
+
+La primera presentación/entregable debe incluir arquitectura del sistema, responsabilidades de microservicios, propiedad de seis bases PostgreSQL, flujo de procesamiento, despliegue y límites de confianza.
+
+El usuario exige Cloudflare como entrada pública. Diseñar acceso público web y API a través de Cloudflare; no exponer directamente el origen. Mantener PostgreSQL, Redis y APIs internas en redes privadas: no interpretar el requisito como publicar tráfico interno o bases por proxy HTTP.
+
+Pendiente resolver y verificar: dominio/proxy/TLS, controles de origen, compatibilidad y límites del plan para cargas grandes, multipart y timeouts; URLs firmadas de carga/descarga actualmente directas a almacenamiento deben adaptarse a un dominio/flujo que cumpla la entrada Cloudflare sin comprometer privacidad, firmas, costos ni streaming. No asumir que todas las cargas/render deban atravesar el gateway. Workers procesan asíncronamente.
+
+Esta es una decisión de arquitectura por implementar y verificar; no implica despliegue actual ni contratación de un plan. Primera entrega debe distinguir arquitectura implementada localmente de arquitectura de nube prevista e incluir diagrama de contexto, contenedores/servicios y despliegue.

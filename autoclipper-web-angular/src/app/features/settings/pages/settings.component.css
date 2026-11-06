@@ -91,6 +91,13 @@ ac-settings { display:block; }
 @media(max-width:800px) { .account-layout { grid-template-columns:1fr; gap:20px; } .account-rail { position:static; gap:0; } .account-identity,.account-rail-note,.account-team-shortcut { display:none; } .account-navigation { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; } .account-nav-item { justify-content:center; min-height:64px; padding:11px 8px; } .account-nav-item > ac-icon:last-child,.account-nav-item small { display:none; } .account-nav-item > ac-icon { width:16px; height:16px; } .account-content > .panel { padding:22px; } }
 @media(max-width:500px) { .account-heading h1 { font-size:32px; } .account-heading-symbol { display:none; } .account-heading p { font-size:12px; } .account-card-title { align-items:flex-start; gap:12px; } .account-card-icon { width:35px; height:35px; border-radius:9px; } .account-card-icon ac-icon { width:19px; height:19px; } .account-content h2 { font-size:21px; } .account-form-actions .button { flex:1 1 150px; justify-content:center; } .account-studio input:not([type=checkbox]),.account-studio select,.account-studio textarea { font-size:16px; } .account-studio .recovery-codes { grid-template-columns:1fr; } }
 }
+@layer components {
+  .account-studio .account-nav-item:not(.active),
+  .account-studio .account-nav-item small,
+  .account-studio .workspace-preferences-note,
+  .account-studio .workspace-access-summary dt,
+  .account-studio .workspace-access-state p { color:#596579; }
+}
 .account-studio .privacy-scope-status { display:grid; gap:7px; margin:14px 0; padding:0; list-style:none; }
 .account-studio .privacy-scope-status li { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:9px; background:#fafbfd; font-size:11px; }
 .account-studio .privacy-scope-status li span { color:var(--muted); text-align:right; }
@@ -249,3 +256,12 @@ html[data-theme="dark"] .account-studio .sensitive-box > strong,html[data-theme=
 html[data-theme="dark"] .account-studio .account-status-pill { border-color:var(--border); background:var(--surface-2); color:var(--muted); }
 html[data-theme="dark"] .account-studio .account-status-pill.is-ready { color:var(--accent); }
 @media(max-width:800px) { .account-navigation { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.account-twitch-card .panel-heading { align-items:flex-start; }
+.account-twitch-card .panel-heading h2 { margin:6px 0; }
+.account-twitch-card .panel-heading p { margin:0; color:var(--muted); font-size:12px; line-height:1.7; }
+.account-provider-state { display:flex; align-items:flex-start; gap:13px; margin:12px 0 17px; }
+.account-provider-state .workspace-access-icon { flex:0 0 42px; }
+.account-provider-state strong { display:block; padding-top:3px; color:var(--text); font-size:13px; overflow-wrap:anywhere; }
+.account-provider-state p { margin:6px 0 0; color:var(--muted); font-size:11px; line-height:1.75; }
+.account-twitch-card .session-revoke-confirm { justify-content:flex-start; margin-top:15px; }
+@media(max-width:500px) { .account-twitch-card .panel-heading { flex-direction:column; } }

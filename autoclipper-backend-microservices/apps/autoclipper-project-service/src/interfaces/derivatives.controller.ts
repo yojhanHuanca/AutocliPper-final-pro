@@ -1,7 +1,7 @@
-import {Controller,Post,Get,Delete,Req,Res,Body,Param,Query,Inject,HttpCode} from "@nestjs/common";
+import {Controller,Post,Get,Delete,Req,Res,Body,Param,Query,Inject,HttpCode,Header} from "@nestjs/common";
 import type {Request,Response} from "express";
 import {ApiTags,ApiBody,ApiHeader,ApiCreatedResponse,ApiOkResponse,ApiQuery,ApiExtraModels,ApiForbiddenResponse,getSchemaPath} from "@nestjs/swagger";
-import {ProcessingSpecDto,ProcessingStatusDto,AudioProcessingSpecDto,ClipProcessingSpecDto,ErrorResponse} from "@autoclipper/api-contracts";
+import {ProcessingSpecDto,ProcessingStatusDto,AudioProcessingSpecDto,ClipProcessingSpecDto,ErrorResponse,SourcePlaybackDto} from "@autoclipper/api-contracts";
 import {uuid} from "@autoclipper/http-security";
 import {ProjectService} from "../application/project.service.js";
 @ApiTags("processing")
@@ -22,4 +22,9 @@ export class DerivativesController {
   @ApiQuery({name:"kind",enum:["video","audio","srt","vtt"]})
   @ApiOkResponse({schema:{type:"object",required:["url","expiresInSeconds","contentType","bytes","sha256"],properties:{url:{type:"string",format:"uri"},expiresInSeconds:{type:"integer",example:120},contentType:{type:"string"},bytes:{type:"integer"},sha256:{type:"string"}}}})
   download(@Req()req:Request,@Param("id")id:string,@Query("kind")kind:string){return this.service.derivatives.download(req,uuid(id),kind);}
+  @Get("uploads/:id/source-playback")
+  @Header("Cache-Control","no-store")
+  @Header("Referrer-Policy","no-referrer")
+  @ApiOkResponse({type:SourcePlaybackDto,description:"Issues a 120-second private inline playback URL after project editor authorization. The signed storage URL supports standard Range requests; it is a bearer capability and must not be logged or placed in referrers."})
+  sourcePlayback(@Req()req:Request,@Param("id")id:string){return this.service.derivatives.sourcePlayback(req,uuid(id));}
 }

@@ -23,6 +23,13 @@
     </section>
   }
   <div class="preview-label">
+    @if (vm.previewSession() && vm.canEditCollaboration()) {
+      <button class="button small" type="button" (click)="vm.requestSourcePlayback()"
+        [disabled]="vm.busy() || !vm.sourceDuration() || vm.sourcePlaybackStatus() === 'loading'"
+        [attr.aria-busy]="vm.sourcePlaybackStatus() === 'loading'">
+        {{ vm.sourcePlaybackStatus() === 'loading' ? 'Abriendo fuente…' : 'Volver al video original' }}
+      </button>
+    }
     <span>{{
       vm.previewUrl() ? "Exportación del servidor" : vm.sourcePlaybackSession() ? "Fuente original · cambios aún sin renderizar" : "Vista previa del clip"
     }}</span

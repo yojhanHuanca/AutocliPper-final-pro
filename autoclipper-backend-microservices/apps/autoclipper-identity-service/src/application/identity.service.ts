@@ -40,13 +40,16 @@ import {
 import { mailTransport, seal, unseal } from "../infrastructure/mail.js";
 import { MfaManager } from "./mfa.manager.js";
 import { GoogleIdentityAdapter } from "../infrastructure/google.js";
+import { TwitchAdapter, TWITCH_CLIP_SCOPE, TWITCH_CLIP_DOWNLOAD_HELIX_REQUEST_BUDGET, TWITCH_VOD_CLIP_CREATE_HELIX_REQUEST_BUDGET, TWITCH_HELIX_REQUEST_BUDGET_PER_FIXED_MINUTE, hasTwitchClipScope } from "../infrastructure/twitch.js";
 import { googleProof } from "../domain/google-identity.js";
-import {adminReauth,privacyProfileProof,privacyWorkspaceResult,privacyWorkspaceAuthorityRequest,privacyProjectResult,privacyProjectAuthorityRequest,privacyBillingResult,privacyBillingAuthorityRequest,privacyRequestManifest} from "@autoclipper/api-contracts";
+import {adminReauth,privacyProfileProof,privacyWorkspaceResult,privacyWorkspaceAuthorityRequest,privacyProjectResult,privacyProjectAuthorityRequest,privacyBillingResult,privacyBillingAuthorityRequest,privacyMediaResult,privacyAnalysisResult,privacyMediaAuthorityRequest,privacyAnalysisAuthorityRequest,privacyRequestManifest} from "@autoclipper/api-contracts";
 import {AdminManager} from "./admin.manager.js";
 import {preparePrivacyProfile} from "./privacy-exports.js";
 import {issueWorkspaceCapability,authorizeWorkspaceCapability} from "./privacy-capabilities.js";
 import {issueProjectCapability,authorizeProjectCapability} from "./privacy-project-capabilities.js";
 import {issueBillingCapability,authorizeBillingCapability} from "./privacy-billing-capabilities.js";
+import {issueTaskPrivacyCapability,authorizeTaskPrivacyCapability,type TaskPrivacyScope} from './privacy-task-capabilities.js';
+import {twitchSourceCapabilityRequest,twitchSourceCapabilityStatus,twitchVodClipCreateRequest} from "@autoclipper/api-contracts";
 
 type UserRow = PublicUser & { password_hash: string; verified_at: Date | null };
 type SessionRow = {
@@ -57,7 +60,7 @@ type SessionRow = {
   revoked_at: Date | null;
   expires_at: Date;
 };
-const privacyScopes=[['identity-profile-v1',true],['workspace-memberships-v1',true],['project-attribution-v1',true],['media-task-attribution-v1',false],['analysis-attribution-v1',false],['consumption-attribution-v1',true]] as const;
+const privacyScopes=[['identity-profile-v1',true],['workspace-memberships-v1',true],['project-attribution-v1',true],['media-task-attribution-v1',true],['analysis-attribution-v1',true],['consumption-attribution-v1',true]] as const;
 @Injectable()
 export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly config = loadServiceConfig();
@@ -77,9 +80,60 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly mfa = new MfaManager(this.encryptionKey);
   readonly admin = new AdminManager(this.pool,this.config,this.redis);
   readonly google = new GoogleIdentityAdapter();
+  readonly twitch = new TwitchAdapter();
   private dummyHash = "";
   private timer: NodeJS.Timeout | undefined;
+  private privacyCapabilityTimer: NodeJS.Timeout | undefined;
+  private twitchValidationTimer: NodeJS.Timeout | undefined;
   private sending: Promise<void> | undefined;
+  private pruningPrivacyCapabilities: Promise<void> | undefined;
+  private async refreshTwitchLink(userId:string,rejectedAccessToken:string) {
+    const client=await this.pool.connect(),lockKey=`twitch-refresh:${userId}`;
+    let locked=false;
+    let discardClient:Error|undefined;
+    try {
+      const deadline=Date.now()+10000;
+      while(Date.now()<deadline) {
+        try {locked=Boolean((await client.query<{locked:boolean}>("SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked",[lockKey])).rows[0]?.locked);}
+        catch(error){discardClient=error instanceof Error?error:new Error("TWITCH_REFRESH_LOCK_FAILED");throw error;}
+        if(locked)break;
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      if(!locked)throw new ServiceUnavailableException({code:"TWITCH_TOKEN_REFRESH_BUSY"});
+      const row=(await client.query<{token_cipher:string;twitch_user_id:string}>("SELECT token_cipher,twitch_user_id FROM twitch_links WHERE user_id=$1",[userId])).rows[0];
+      if(!row)throw new NotFoundException();
+      let saved=JSON.parse(unseal(row.token_cipher,this.encryptionKey,`twitch:${userId}`)) as {accessToken:string;refreshToken:string};
+      let rotated=false;
+      const persist=async(refreshed:Awaited<ReturnType<TwitchAdapter["refresh"]>>) => {
+        saved={accessToken:refreshed.accessToken,refreshToken:refreshed.refreshToken};rotated=true;
+        const cipher=seal(JSON.stringify(saved),this.encryptionKey,`twitch:${userId}`);
+        for(let attempt=0;;attempt++) {
+          try {
+            await client.query("UPDATE twitch_links SET token_cipher=$1,token_validated_at=now(),scope=$2,expires_at=now()+($3::text||' seconds')::interval,updated_at=now() WHERE user_id=$4",[cipher,refreshed.scopes,refreshed.expiresIn,userId]);
+            return;
+          } catch(error) {
+            if(attempt>=2)throw error;
+            await new Promise(resolve=>setTimeout(resolve,25*(attempt+1)));
+          }
+        }
+      };
+      if(saved.accessToken===rejectedAccessToken)await persist(await this.twitch.refresh(saved.refreshToken));
+      let verified;
+      try {verified=await this.twitch.validate(saved.accessToken);}
+      catch(error) {
+        if(!(error instanceof UnauthorizedException)||rotated)throw error;
+        await persist(await this.twitch.refresh(saved.refreshToken));
+        verified=await this.twitch.validate(saved.accessToken);
+      }
+      if(verified.userId!==row.twitch_user_id)throw new UnauthorizedException();
+      if(!rotated)await client.query("UPDATE twitch_links SET token_validated_at=now() WHERE user_id=$1",[userId]);
+      return {saved,verified};
+    } finally {
+      try {if(locked)await client.query("SELECT pg_advisory_unlock(hashtextextended($1,0))",[lockKey]);}
+      catch(error){discardClient=error instanceof Error?error:new Error("TWITCH_REFRESH_UNLOCK_FAILED");logger.error({code:"TWITCH_REFRESH_UNLOCK_FAILED"});}
+      finally {client.release(discardClient);}
+    }
+  }
   async onModuleInit() {
     if (!/^[0-9a-f]{64}$/.test(this.encryptionKey))
       throw new Error("AUTH_ENCRYPTION_KEY invalid");
@@ -99,6 +153,34 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
           });
     }, 1000);
     this.timer.unref();
+    this.privacyCapabilityTimer=setInterval(()=>{
+      if(!this.pruningPrivacyCapabilities)this.pruningPrivacyCapabilities=this.pruneExpiredPrivacyCapabilities().catch(()=>logger.error({code:"PRIVACY_CAPABILITY_CLEANUP_FAILED"})).finally(()=>{this.pruningPrivacyCapabilities=undefined;});
+    },60000);
+    this.privacyCapabilityTimer.unref();
+    if(this.twitch.configured) {
+      void this.validateTwitchLinks(true).catch(()=>logger.warn({code:"TWITCH_TOKEN_VALIDATION_FAILED"}));
+      this.twitchValidationTimer=setInterval(()=>{void this.validateTwitchLinks().catch(()=>logger.warn({code:"TWITCH_TOKEN_VALIDATION_FAILED"}));},60*60*1000);
+      this.twitchValidationTimer.unref();
+    }
+  }
+  private async validateTwitchLinks(force=false) {
+    if(!this.twitch.configured) return;
+    const rows=(await this.pool.query<{user_id:string;token_cipher:string}>(`SELECT user_id,token_cipher FROM twitch_links ${force?"":"WHERE token_validated_at<now()-interval '55 minutes'"} ORDER BY token_validated_at LIMIT 100`)).rows;
+    for(const row of rows) {
+      try {
+        const saved=JSON.parse(unseal(row.token_cipher,this.encryptionKey,`twitch:${row.user_id}`)) as {accessToken:string;refreshToken:string};
+        try {await this.twitch.validate(saved.accessToken);await this.pool.query("UPDATE twitch_links SET token_validated_at=now() WHERE user_id=$1",[row.user_id]);}
+        catch(error) {
+          if(!(error instanceof UnauthorizedException)) throw error;
+          try {
+            await this.refreshTwitchLink(row.user_id,saved.accessToken);
+          } catch(refreshError) {
+            if(refreshError instanceof UnauthorizedException)await this.pool.query("DELETE FROM twitch_links WHERE user_id=$1",[row.user_id]);
+            else throw refreshError;
+          }
+        }
+      } catch {logger.warn({code:"TWITCH_LINK_VALIDATION_FAILED"});}
+    }
   }
   private hash(value: string) {
     return argon2.hash(value, {
@@ -249,7 +331,148 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     setCookie(res,"access",tokens.access,900000);
     setCookie(res,"refresh",tokens.refresh,2592000000);
   }
-  providers() { return { google: { configured: Boolean(this.google.clientId) } }; }
+  providers() { return { google: { configured: Boolean(this.google.clientId) }, twitch: { configured: this.twitch.configured } }; }
+  async linkTwitch(req:Request,res:Response) {
+    requireCsrf(req,this.config);
+    const user=await this.me(req);
+    this.twitch.requireConfigured();
+    await this.limit(req,`twitch:link:${user.id}`);
+    const state=opaqueToken();
+    const prior=cookie(req,"twitch_state");
+    if(/^[A-Za-z0-9_-]{43}$/.test(prior)) await this.redis.del(`identity:twitch:${digest(prior)}`);
+    await this.redis.set(`identity:twitch:${digest(state)}`,user.id,"EX",300);
+    setCookie(res,"twitch_state",state,300000);
+    return {authorizationUrl:this.twitch.authorizationUrl(state),expiresInSeconds:300,scope:TWITCH_CLIP_SCOPE};
+  }
+  async twitchLinkStatus(req:Request) {
+    const user=await this.me(req);
+    if(!this.twitch.configured) return {configured:false,linked:false,account:null};
+    const row=(await this.pool.query<{twitch_user_id:string;login:string}>("SELECT twitch_user_id,login FROM twitch_links WHERE user_id=$1",[user.id])).rows[0];
+    return {configured:this.twitch.configured,linked:Boolean(row),account:row?{id:row.twitch_user_id,login:row.login}:null};
+  }
+  async twitchCallback(req:Request,res:Response) {
+    const stateValue=typeof req.query["state"]==="string"?req.query["state"]:"";
+    const code=typeof req.query["code"]==="string"?req.query["code"]:"";
+    const stateCookie=cookie(req,"twitch_state");
+    setCookie(res,"twitch_state","",0);
+    if(!/^[A-Za-z0-9_-]{43}$/.test(stateValue)||stateValue!==stateCookie) throw new UnauthorizedException();
+    const userId=await this.redis.getdel(`identity:twitch:${digest(stateValue)}`);
+    if(!userId) throw new UnauthorizedException();
+    if((await this.me(req)).id!==userId) throw new UnauthorizedException();
+    if(req.query["error"]||!code||code.length>4096) throw new HttpException({code:"TWITCH_CONSENT_DENIED"},400);
+    const tokens=await this.twitch.exchange(code);
+    const verified=await this.twitch.validate(tokens.accessToken);
+    if(!hasTwitchClipScope(verified.scopes)) throw new HttpException({code:"TWITCH_CLIP_SCOPE_REQUIRED"},403);
+    const value=JSON.stringify({accessToken:tokens.accessToken,refreshToken:tokens.refreshToken});
+    await this.tx(async client=>{
+      const result=await client.query<{twitch_user_id:string}>(
+        "INSERT INTO twitch_links(user_id,twitch_user_id,login,token_cipher,token_validated_at,scope,expires_at) VALUES($1,$2,$3,$4,now(),$5,now()+($6::text||' seconds')::interval) ON CONFLICT(user_id) DO UPDATE SET twitch_user_id=EXCLUDED.twitch_user_id,login=EXCLUDED.login,token_cipher=EXCLUDED.token_cipher,token_validated_at=now(),scope=EXCLUDED.scope,expires_at=EXCLUDED.expires_at,updated_at=now() WHERE twitch_links.twitch_user_id=EXCLUDED.twitch_user_id OR NOT EXISTS(SELECT 1 FROM twitch_links WHERE twitch_user_id=EXCLUDED.twitch_user_id AND user_id<>EXCLUDED.user_id) RETURNING twitch_user_id",
+        [userId,verified.userId,verified.login,seal(value,this.encryptionKey,`twitch:${userId}`),tokens.scopes,tokens.expiresIn],
+      );
+      if(!result.rows[0]) throw new ConflictException({code:"TWITCH_ACCOUNT_ALREADY_LINKED"});
+      await this.audit(client,userId,"twitch.linked",req);
+      return result.rows[0];
+    });
+    return {linked:true,provider:"twitch",account:{id:verified.userId,login:verified.login}};
+  }
+  async unlinkTwitch(req:Request) {
+    requireCsrf(req,this.config);
+    const user=await this.me(req);
+    // Delete and retrieve the exact credential in one transaction. A separate
+    // SELECT followed by DELETE could revoke an old token while deleting a
+    // concurrently re-linked credential for the same user.
+    const row=await this.tx(async client=>{
+      // Refresh uses a session advisory lock with this key. Holding the matching
+      // transaction lock makes unlink wait for an in-flight rotation, then delete
+      // the current ciphertext instead of allowing refresh to race past deletion.
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`twitch-refresh:${user.id}`]);
+      const deleted=(await client.query<{token_cipher:string}>("DELETE FROM twitch_links WHERE user_id=$1 RETURNING token_cipher",[user.id])).rows[0];
+      if(deleted)await this.audit(client,user.id,"twitch.unlinked",req);
+      return deleted;
+    });
+    if(!row) return {unlinked:true};
+    let accessToken:string|undefined;
+    try {
+      accessToken=(JSON.parse(unseal(row.token_cipher,this.encryptionKey,`twitch:${user.id}`)) as {accessToken:string}).accessToken;
+    } catch { /* Revocation is best-effort; local deletion always takes effect. */ }
+    // Revoke only after committing local deletion. A slow/failed provider call must not
+    // leave a credential available to the application after the user unlinks it.
+    if(accessToken)try {
+      await fetch("https://id.twitch.tv/oauth2/revoke",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:this.twitch.clientId,token:accessToken}),signal:AbortSignal.timeout(5000),redirect:"error"});
+    } catch { /* Local revocation is authoritative for this application. */ }
+    return {unlinked:true};
+  }
+  async internalTwitchClipDownload(req:Request,input:unknown) {
+    requireInternal(req,this.config);
+    const data=body(z.object({userId:z.uuid(),clipId:z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)}).strict(),input);
+    if(!this.twitch.configured) return {available:false as const,reasonCode:"TWITCH_OAUTH_NOT_CONFIGURED"};
+    const row=(await this.pool.query<{token_cipher:string;login:string;twitch_user_id:string}>("SELECT token_cipher,login,twitch_user_id FROM twitch_links WHERE user_id=$1",[data.userId])).rows[0];
+    if(!row) return {available:false as const,reasonCode:"TWITCH_ACCOUNT_NOT_LINKED"};
+    const rateKey=`identity:twitch:downloads:${Math.floor(Date.now()/60000)}`;
+    const rate=await this.redis.incrby(rateKey,TWITCH_CLIP_DOWNLOAD_HELIX_REQUEST_BUDGET);
+    await this.redis.expire(rateKey,120);
+    if(rate>TWITCH_HELIX_REQUEST_BUDGET_PER_FIXED_MINUTE) return {available:false as const,reasonCode:"TWITCH_RATE_LIMITED"};
+    let saved=JSON.parse(unseal(row.token_cipher,this.encryptionKey,`twitch:${data.userId}`)) as {accessToken:string;refreshToken:string};
+    try {
+      let verified;
+      try {verified=await this.twitch.validate(saved.accessToken);}
+      catch(error) {
+        if(!(error instanceof UnauthorizedException)) throw error;
+        ({saved,verified}=await this.refreshTwitchLink(data.userId,saved.accessToken));
+      }
+      if(verified.userId!==row.twitch_user_id) return {available:false as const,reasonCode:"TWITCH_ACCOUNT_BINDING_INVALID"};
+      try {return {available:true as const,...await this.twitch.clipDownload(saved.accessToken,verified.userId,data.clipId)};}
+      catch(error) {
+        if(!(error instanceof UnauthorizedException)) throw error;
+        ({saved,verified}=await this.refreshTwitchLink(data.userId,saved.accessToken));
+        return {available:true as const,...await this.twitch.clipDownload(saved.accessToken,verified.userId,data.clipId)};
+      }
+    } catch(error) {
+      if(error instanceof HttpException) {
+        const response=error.getResponse();
+        const code=response&&typeof response==="object"&&"code" in response&&typeof response.code==="string"?response.code:"TWITCH_IMPORT_UNAVAILABLE";
+        return {available:false as const,reasonCode:code};
+      }
+      throw error;
+    }
+  }
+  async internalTwitchVodClipCreate(req:Request,input:unknown) {
+    requireInternal(req,this.config);
+    const data=body(twitchVodClipCreateRequest,input);
+    if(!this.twitch.configured)return {state:"rejected" as const,reasonCode:"TWITCH_OAUTH_NOT_CONFIGURED"};
+    const row=(await this.pool.query<{token_cipher:string;login:string;twitch_user_id:string}>("SELECT token_cipher,login,twitch_user_id FROM twitch_links WHERE user_id=$1",[data.userId])).rows[0];
+    if(!row)return {state:"rejected" as const,reasonCode:"TWITCH_ACCOUNT_NOT_LINKED"};
+    const rateKey=`identity:twitch:downloads:${Math.floor(Date.now()/60000)}`;
+    const rate=await this.redis.incrby(rateKey,TWITCH_VOD_CLIP_CREATE_HELIX_REQUEST_BUDGET);
+    await this.redis.expire(rateKey,120);
+    if(rate>TWITCH_HELIX_REQUEST_BUDGET_PER_FIXED_MINUTE)return {state:"rejected" as const,reasonCode:"TWITCH_RATE_LIMITED"};
+    let saved: {accessToken:string;refreshToken:string},verified;
+    try {
+      saved=JSON.parse(unseal(row.token_cipher,this.encryptionKey,`twitch:${data.userId}`)) as {accessToken:string;refreshToken:string};
+      try {verified=await this.twitch.validate(saved.accessToken);}
+      catch(error) {
+        if(!(error instanceof UnauthorizedException))throw error;
+        ({saved,verified}=await this.refreshTwitchLink(data.userId,saved.accessToken));
+      }
+      if(verified.userId!==row.twitch_user_id)return {state:"rejected" as const,reasonCode:"TWITCH_ACCOUNT_BINDING_INVALID"};
+      if(!hasTwitchClipScope(verified.scopes))return {state:"rejected" as const,reasonCode:"TWITCH_CLIP_SCOPE_REQUIRED"};
+      const clip=await this.twitch.createVodClip(saved.accessToken,verified.userId,data.vodId,data.vodOffsetSeconds,data.durationSeconds,data.title);
+      return {state:"created" as const,...clip};
+    } catch(error) {
+      const response=error instanceof HttpException?error.getResponse():null;
+      const code=response&&typeof response==="object"&&"code" in response&&typeof response.code==="string"?response.code:"TWITCH_VOD_CLIP_CREATE_FAILED";
+      if(code==="TWITCH_VOD_CLIP_CREATE_OUTCOME_UNKNOWN")return {state:"outcome_unknown" as const,reasonCode:code};
+      if(error instanceof HttpException)return {state:"rejected" as const,reasonCode:code};
+      return {state:"rejected" as const,reasonCode:"TWITCH_VOD_CLIP_CREATE_FAILED"};
+    }
+  }
+  async internalTwitchSourceCapabilities(req:Request,input:unknown) {
+    requireInternal(req,this.config);
+    const data=body(twitchSourceCapabilityRequest,input);
+    if(!this.twitch.configured)return body(twitchSourceCapabilityStatus,{configured:false,linked:false,clipScopeReady:false});
+    const row=(await this.pool.query<{scope:string[]}>("SELECT scope FROM twitch_links WHERE user_id=$1",[data.userId])).rows[0];
+    return body(twitchSourceCapabilityStatus,{configured:true,linked:Boolean(row),clipScopeReady:Boolean(row&&hasTwitchClipScope(row.scope))});
+  }
   async googleChallenge(req: Request, res: Response, input: unknown) {
     requireCsrf(req,this.config);
     const data = body(z.object({purpose:z.enum(["sign_in","link"])}).strict(),input);
@@ -551,10 +774,10 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     if(!receipt||receipt.content_sha256!==sha256||((receipt.captured_at?.toISOString()??null)!==(capturedAt??null)))throw new ServiceUnavailableException();
     await client.query("UPDATE privacy_request_scopes s SET status='prepared',current_receipt_id=$4,last_error_code=NULL,attempts=attempts+1,updated_at=now() FROM privacy_requests p WHERE s.request_id=$1 AND p.id=s.request_id AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope,receipt.id]);
   }
-  private async notePrivacyScopeFailure(client:pg.PoolClient,userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'pending',errorCode:string){
-    await client.query("UPDATE privacy_request_scopes s SET status=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded') THEN $4 WHEN s.current_receipt_id IS NOT NULL THEN 'prepared' ELSE $4 END,current_receipt_id=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded') THEN NULL ELSE s.current_receipt_id END,last_error_code=$5,attempts=attempts+1,updated_at=now() FROM privacy_requests p WHERE s.request_id=$1 AND p.id=s.request_id AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope,status,errorCode]);
+  private async notePrivacyScopeFailure(client:pg.PoolClient,userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'attribution_missing'|'pending',errorCode:string){
+    await client.query("UPDATE privacy_request_scopes s SET status=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded','attribution_missing') THEN $4 WHEN s.current_receipt_id IS NOT NULL THEN 'prepared' ELSE $4 END,current_receipt_id=CASE WHEN $4 IN ('snapshot_changed','limit_exceeded','attribution_missing') THEN NULL ELSE s.current_receipt_id END,last_error_code=$5,attempts=attempts+1,updated_at=now() FROM privacy_requests p WHERE s.request_id=$1 AND p.id=s.request_id AND p.user_id=$2 AND p.kind='export' AND p.state IN ('requested','processing') AND s.scope=$3 AND s.required AND s.supported",[requestId,userId,scope,status,errorCode]);
   }
-  private async notePrivacyScopeFailureOutsideTransaction(userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'pending',errorCode:string){
+  private async notePrivacyScopeFailureOutsideTransaction(userId:string,requestId:string,scope:string,status:'owner_unavailable'|'snapshot_changed'|'limit_exceeded'|'attribution_missing'|'pending',errorCode:string){
     const client=await this.pool.connect();try{await client.query('BEGIN');await this.notePrivacyScopeFailure(client,userId,requestId,scope,status,errorCode);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   private async recordPrivacyScopeReceiptOutsideTransaction(userId:string,requestId:string,scope:string,ownerReceiptId:string,sha256:string,capturedAt:string|null){
@@ -686,6 +909,32 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
     requireInternal(req,this.config);
     return authorizeBillingCapability(this.pool,body(privacyBillingAuthorityRequest,input));
   }
+  private async privacyTaskExport(req:Request,requestId:string,input:unknown,correlationId:string,scope:TaskPrivacyScope){
+    requireCsrf(req,this.config);
+    const data=body(privacyProfileProof,input),key=body(z.uuid(),req.headers['idempotency-key']);
+    const authority=await this.sensitive(req,data.password,async(client,user)=>{
+      await this.mfa.verify(client,user.id,data.factor);
+      const capability=await issueTaskPrivacyCapability(client,user.id,requestId,cookie(req,'access'),key,correlationId,scope);
+      return{capability,userId:user.id};
+    });
+    const media=scope==='media-task-attribution-v1';
+    const url=media?process.env['MEDIA_URL']??'http://127.0.0.1:3003':process.env['ANALYSIS_URL']??'http://127.0.0.1:3005';
+    const path=media?'/v1/internal/privacy-media-export':'/v1/internal/privacy-analysis-export';
+    let raw:unknown;try{raw=await internalJson<unknown>(url,path,this.config,{capability:authority.capability,idempotencyKey:key,correlationId},true);}catch(error){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'owner_unavailable',error instanceof ServiceUnavailableException?'OWNER_UNAVAILABLE':'OWNER_REJECTED');throw error;}
+    const parsed=media?privacyMediaResult.safeParse(raw):privacyAnalysisResult.safeParse(raw);
+    if(!parsed.success||parsed.data.requestId!==requestId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
+    const result=parsed.data;
+    if(result.state==='snapshot_changed'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'snapshot_changed','SNAPSHOT_CHANGED');throw new ConflictException({code:'PRIVACY_SNAPSHOT_CHANGED'});}
+    if(result.state==='limit_exceeded'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'limit_exceeded','SCOPE_TOO_LARGE');throw new PayloadTooLargeException({code:'PRIVACY_EXPORT_SCOPE_TOO_LARGE'});}
+    if(result.state==='attribution_missing'){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'attribution_missing','ATTRIBUTION_MISSING');throw new ConflictException({code:'PRIVACY_ATTRIBUTION_MISSING'});}
+    if(result.data.subjectId!==authority.userId){await this.notePrivacyScopeFailureOutsideTransaction(authority.userId,requestId,scope,'pending','INVALID_OWNER_RECEIPT');throw new ServiceUnavailableException();}
+    await this.recordPrivacyScopeReceiptOutsideTransaction(authority.userId,requestId,scope,result.receiptId,result.sha256,result.capturedAt);
+    return result;
+  }
+  privacyMediaExport(req:Request,requestId:string,input:unknown,correlationId:string){return this.privacyTaskExport(req,requestId,input,correlationId,'media-task-attribution-v1');}
+  privacyAnalysisExport(req:Request,requestId:string,input:unknown,correlationId:string){return this.privacyTaskExport(req,requestId,input,correlationId,'analysis-attribution-v1');}
+  privacyMediaAuthority(req:Request,input:unknown){requireInternal(req,this.config);return authorizeTaskPrivacyCapability(this.pool,body(privacyMediaAuthorityRequest,input));}
+  privacyAnalysisAuthority(req:Request,input:unknown){requireInternal(req,this.config);return authorizeTaskPrivacyCapability(this.pool,body(privacyAnalysisAuthorityRequest,input));}
   async privacyRequests(req: Request) {
     const user = await this.me(req);
     return {
@@ -702,6 +951,26 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
         completedAt: row.completed_at,
       })),
     };
+  }
+  async privacyDeletionStatus(req:Request,requestId:string){
+    const user=await this.me(req);
+    return this.tx(async client=>{
+      const row=(await client.query<{id:string;state:string;created_at:Date}>(
+        "SELECT id,state,created_at FROM privacy_requests WHERE id=$1 AND user_id=$2 AND kind='deletion'",
+        [requestId,user.id],
+      )).rows[0];
+      if(!row)throw new NotFoundException();
+      await this.audit(client,user.id,"privacy.deletion_status_viewed",req);
+      return{
+        id:row.id,
+        kind:"deletion" as const,
+        requestState:row.state,
+        fulfillment:"pending" as const,
+        purgeCompleted:false as const,
+        deletionExecutor:"not_implemented" as const,
+        createdAt:row.created_at.toISOString(),
+      };
+    });
   }
   async privacyRequestManifest(req:Request,requestId:string){
     const user=await this.me(req),request=(await this.pool.query<{kind:string;state:string}>("SELECT kind,state FROM privacy_requests WHERE id=$1 AND user_id=$2",[requestId,user.id])).rows[0];
@@ -899,9 +1168,15 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
       client.release();
     }
   }
+  private async pruneExpiredPrivacyCapabilities(){
+    await this.pool.query("SELECT reap_expired_privacy_capabilities($1)",[250]);
+  }
   async onModuleDestroy() {
     if (this.timer) clearInterval(this.timer);
+    if (this.privacyCapabilityTimer) clearInterval(this.privacyCapabilityTimer);
+    if (this.twitchValidationTimer) clearInterval(this.twitchValidationTimer);
     await this.sending;
+    await this.pruningPrivacyCapabilities;
     this.transport.close();
     this.redis.disconnect();
     await this.pool.end();

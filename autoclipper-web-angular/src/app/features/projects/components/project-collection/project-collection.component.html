@@ -9,10 +9,12 @@
       <span class="permission-note" [class.permission-note--blocked]="!canEdit()">
         <ac-icon [name]="canEdit() ? 'shield' : 'users'" />{{ roleLabel() }}
       </span>
-      <button id="project-create-button" class="create-button" type="button" (click)="openCreateDialog()" [disabled]="design || busy() || !canEdit()">
-        <span class="create-button-icon"><ac-icon name="plus" /></span>
-        <span>Nuevo proyecto</span>
-      </button>
+      @if (!design) {
+        <button id="project-create-button" class="create-button" type="button" (click)="openCreateDialog()" [disabled]="busy() || !canEdit()">
+          <span class="create-button-icon"><ac-icon name="plus" /></span>
+          <span>Nuevo proyecto</span>
+        </button>
+      }
     </div>
   </header>
 
@@ -24,14 +26,18 @@
       @else if (error() && !loaded()) { <span role="status">Lista sin confirmar</span> }
       @else { <span class="results-count">{{ projects().length }}</span><span>{{ projects().length === 1 ? 'resultado recibido' : 'resultados recibidos' }} · consulta limitada a 100</span> }
     </div>
-    <form class="project-search" (ngSubmit)="load()">
-      <ac-icon name="search" />
-      <input aria-label="Buscar proyectos por nombre" name="search" [(ngModel)]="search" [disabled]="design || busy()" placeholder="Buscar por nombre" />
-      @if (search) {
-        <button class="search-clear" type="button" (click)="clearSearch()" [disabled]="busy()" aria-label="Limpiar búsqueda">Limpiar</button>
-      }
-      <button class="search-submit" type="submit" [disabled]="design || busy()">Buscar</button>
-    </form>
+    @if (!design) {
+      <form class="project-search" (ngSubmit)="load()">
+        <ac-icon name="search" />
+        <input aria-label="Buscar proyectos por nombre" name="search" [(ngModel)]="search" [disabled]="busy()" placeholder="Buscar por nombre" />
+        @if (search) {
+          <button class="search-clear" type="button" (click)="clearSearch()" [disabled]="busy()" aria-label="Limpiar búsqueda">Limpiar</button>
+        }
+        <button class="search-submit" type="submit" [disabled]="busy()">Buscar</button>
+      </form>
+    } @else {
+      <p class="preview-label">Conecta tu cuenta para buscar proyectos reales.</p>
+    }
   </section>
 
   @if (roleNotice()) {
@@ -63,7 +69,7 @@
         <div class="project-card project-card--loading"><div class="card-art skeleton"></div><div class="skeleton-line"></div><div class="skeleton-line skeleton-line--short"></div></div>
       }
     </section>
-  } @else if (!workspace.workspaceId()) {
+  } @else if (!design && !workspace.workspaceId()) {
     <section class="state-panel" role="status"><span class="state-icon"><ac-icon name="folder" /></span><div><h2>{{ workspace.loaded() ? 'Selecciona un espacio de trabajo.' : 'Consultando tus espacios…' }}</h2><p>{{ workspace.loaded() ? 'Elige un espacio activo para consultar sus proyectos.' : 'La biblioteca mostrará proyectos cuando se confirme el espacio seleccionado.' }}</p></div></section>
   } @else if (projects().length) {
     <section class="project-grid" aria-label="Tus proyectos">
@@ -119,10 +125,14 @@
       <p>{{ design ? 'Conecta tu cuenta para ver los proyectos reales de tu espacio, cargar fuentes y continuar tus ediciones.' : resultsNeedRefresh() ? 'Los resultados de la última consulta están vacíos. Pulsa «Buscar» para confirmar el nuevo texto.' : confirmedSearch() && loaded() ? 'Prueba con otro nombre o limpia la búsqueda para consultar los proyectos del espacio.' : loaded() ? 'Crea un proyecto para reunir una fuente de vídeo, generar clips y continuar con su edición.' : 'La lista aparecerá cuando el servicio confirme los proyectos de este espacio.' }}</p>
       @if (design) {
         <a class="create-button" routerLink="/login"><span>Conectar mi cuenta</span><ac-icon name="arrow" /></a>
+      } @else if (resultsNeedRefresh()) {
+        <button class="secondary-button" type="button" (click)="load()" [disabled]="busy()" [attr.aria-label]="search.trim() ? 'Buscar proyectos por ' + search.trim() : 'Consultar todos los proyectos'"><ac-icon name="search" />{{ search.trim() ? 'Buscar esta búsqueda' : 'Consultar todos los proyectos' }}</button>
       } @else if (confirmedSearch() && confirmedSearch() === search.trim() && loaded()) {
         <button class="secondary-button" type="button" (click)="clearSearch()">Limpiar búsqueda</button>
-      } @else {
+      } @else if (canEdit()) {
         <button id="project-empty-create-button" class="create-button" type="button" (click)="openCreateDialog()" [disabled]="busy() || !canEdit()"><span class="create-button-icon"><ac-icon name="plus" /></span><span>Crear primer proyecto</span></button>
+      } @else {
+        <p class="empty-permission-note" role="status">{{ roleNotice() || 'El permiso para crear proyectos aún no está confirmado.' }}</p>
       }
     </section>
   }
@@ -134,7 +144,7 @@
         <span class="dialog-mark"><ac-icon name="film" /></span>
         <span class="section-kicker">Nuevo proyecto</span>
         <h2 id="create-title">Ponle nombre a tu proyecto</h2>
-        <p>Carga un video compatible. YouTube y Kick solo ofrecen vista previa. Un clip de Twitch podría importarse si OAuth está configurado, vinculas una cuenta con permisos y el servidor confirma que el clip está disponible.</p>
+        <p>Carga un archivo o importa un video de YouTube para generar clips con IA. Los clips de Twitch requieren una cuenta vinculada con permisos; Kick conserva la vista previa de canales en directo.</p>
         <form #createForm="ngForm" (ngSubmit)="createForm.valid && create()">
           <label for="project-name">Nombre del proyecto</label>
           <input id="project-name" name="projectName" [(ngModel)]="projectName" required maxlength="150" [disabled]="busy() || !canEdit()" placeholder="Por ejemplo, Entrevista de producto" autocomplete="off" />

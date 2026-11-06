@@ -1,10 +1,10 @@
-import type {ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {LOCAL_TRANSCRIPTION_MAX_SECONDS,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {InspectionError,type MediaMetadata} from "./inspection.js";
 
 export function validateProcessingSource(spec:ValidatedProcessingSpec,metadata:MediaMetadata) {
   if(metadata.width>3840||metadata.height>3840)throw new InspectionError("RENDER_INPUT_LIMIT",false);
   if(spec.kind==="audio"&&!metadata.audioCodec)throw new InspectionError("NO_AUDIO_STREAM",false);
-  if(spec.kind==="audio"&&metadata.durationSeconds>3600)throw new InspectionError("AUDIO_DURATION_LIMIT",false);
+  if(spec.kind==="audio"&&metadata.durationSeconds>LOCAL_TRANSCRIPTION_MAX_SECONDS)throw new InspectionError("AUDIO_DURATION_LIMIT",false);
   if(spec.kind==="clip"&&spec.endSeconds>metadata.durationSeconds)throw new InspectionError("TIMESTAMP_OUT_OF_RANGE",false);
 }
 function timestamp(seconds:number,separator:string) {

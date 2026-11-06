@@ -39,6 +39,7 @@ export class EditorState {
   readonly projectEditsError = signal("");
   readonly project = signal<Schema<"ProjectResponseDto"> | null>(null);
   readonly sourceDuration = signal<number | null>(null);
+  readonly sourceResolution = signal<string | null>(null);
   readonly transcriptSegments = signal<Schema<"TranscriptSegmentDto">[]>([]);
   readonly transcriptLoading = signal(false);
   readonly transcriptError = signal("");
@@ -129,7 +130,13 @@ export class EditorState {
     const time = this.previewTime();
     return time === null ? [] : this.renderedCues().filter(cue => time >= cue.from && time < cue.to).map(cue => cue.index);
   });
-  readonly selectedCueSeekTime = computed(() => this.renderedCues().find(cue => cue.index === this.selectedCue()?.index)?.from ?? null);
+  readonly selectedCueSeekTime = computed(() => {
+    const selected = this.selectedCue();
+    if (!selected) return null;
+    if (this.previewSession())
+      return this.renderedCues().find(cue => cue.index === selected.index)?.from ?? null;
+    return this.sourcePlaybackSession() && this.clipRangeUsable() ? selected.startSeconds : null;
+  });
   readonly playbackPosition = computed(() => {
     const window = this.previewSyncReady() ? playbackWindow(this.draft()?.revision.renderSpec, this.previewDuration()) : null;
     const time = this.previewTime();
@@ -430,6 +437,7 @@ export class EditorState {
     this.projectEditsLoading.set(false);
     this.project.set(null);
     this.sourceDuration.set(null);
+    this.sourceResolution.set(null);
     this.transcriptSegments.set([]);
     this.transcriptLoading.set(false);
     this.transcriptError.set("");
@@ -712,7 +720,11 @@ export class EditorState {
         upload.value.inspection?.status !== "succeeded" || typeof measured !== "number" ||
         !Number.isFinite(measured) || measured <= 0
       );
-      if (upload.status === "fulfilled" && !sourceMetadataMismatch) this.sourceDuration.set(measured!);
+      if (upload.status === "fulfilled" && !sourceMetadataMismatch) {
+        this.sourceDuration.set(measured!);
+        const inspection = upload.value.inspection?.result;
+        this.sourceResolution.set(inspection?.width && inspection.height ? `${inspection.width} × ${inspection.height}` : null);
+      }
       const unavailable = results.flatMap((section, index) =>
         index !== 7 && (section.status === "rejected" || (index === 0 && projectMetadataMismatch) ||
         (index === 1 && sourceMetadataMismatch) ||
@@ -1116,7 +1128,7 @@ export class EditorState {
   }
   async requestSourcePlayback(): Promise<void> {
     const draft = this.draft();
-    if (this.design || !draft || !this.sourceDuration() || !this.canEditCollaboration() || this.sourcePlaybackStatus() === 'loading') return;
+    if (this.design || this.busy() || !draft || !this.sourceDuration() || !this.canEditCollaboration() || this.sourcePlaybackStatus() === 'loading') return;
     const editGeneration = this.editGeneration;
     const requestGeneration = ++this.sourcePlaybackGeneration;
     clearTimeout(this.sourcePlaybackTimer);
@@ -1135,6 +1147,14 @@ export class EditorState {
         throw new Error('El servidor devolvió una autorización de reproducción incompleta o inválida.');
       const expiresAt = Date.now() + result.expiresInSeconds * 1000;
       this.sourcePlaybackSession.set({ token: requestGeneration, uploadId: draft.uploadId, url, expiresAt });
+      this.previewSession.set(null);
+      this.previewUrl.set('');
+      this.previewVersion.set('');
+      this.previewDuration.set(null);
+      this.previewTime.set(null);
+      this.previewError.set('');
+      this.previewSeek.set(null);
+      this.message.set('');
       this.sourcePlaybackStatus.set('ready');
       this.sourcePlaybackTimer = setTimeout(() => this.expireSourcePlayback(requestGeneration), result.expiresInSeconds * 1000);
     } catch (error) {
@@ -1183,6 +1203,8 @@ export class EditorState {
       const result = await this.api.download(item.id, "video");
       if (!this.isCurrentEdit(generation)) return;
       this.safeUrl(result.url);
+      // A late source authorization must not replace the export just selected.
+      this.clearSourcePlayback();
       this.previewSession.set({ token: ++this.previewGeneration, exportId: item.id, revisionId: item.editorRevisionId, url: result.url });
       this.previewDuration.set(null);
       this.previewTime.set(null);
@@ -1213,8 +1235,12 @@ export class EditorState {
   seekSelectedCue(): void {
     const seconds = this.selectedCueSeekTime();
     const session = this.previewSession();
-    if (!session || seconds === null || this.busy()) return;
-    this.previewSeek.set({ token: session.token, sequence: ++this.seekSequence, seconds });
+    if (seconds === null || this.busy()) return;
+    if (session) {
+      this.previewSeek.set({ token: session.token, sequence: ++this.seekSequence, seconds });
+      return;
+    }
+    if (this.sourcePlaybackSession()) this.seekSourceTo(seconds);
   }
   async refreshPreview(): Promise<void> {
     const item = this.exports().find(item => item.id === this.previewSession()?.exportId);

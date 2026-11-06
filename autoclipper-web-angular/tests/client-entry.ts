@@ -1,4 +1,6 @@
 export { API_BASE_URL } from '../src/app/core/config/api-config.token';
+export { AppearancePreferenceService } from '../src/app/core/preferences/appearance-preference.service';
+export { IconComponent } from '../src/app/shared/ui/icon/icon.component';
 export { ApiTransport } from '../src/app/core/http/api-transport.service';
 export { API_AUTHENTICATED } from '../src/app/core/http/api-auth-context';
 export { apiInterceptor } from '../src/app/core/http/api.interceptor';
@@ -27,13 +29,14 @@ export { ProjectComponent } from '../src/app/features/projects/pages/project-det
 export { ProjectsApi } from '../src/app/features/projects/data-access/projects-api.service';
 export { WorkspaceStore } from '../src/app/features/workspaces/data-access/workspace.store';
 export { WorkspaceTeamApi } from '../src/app/features/workspaces/data-access/workspace-team.api';
+export { parseWorkspaceInvitations, workspaceInvitationStatus } from '../src/app/features/workspaces/models/workspace-invitations';
 export { WorkspaceTeamComponent } from '../src/app/features/workspaces/pages/workspace-team.component';
 export { canInviteAs, canManageMember, canManageWorkspace, canTransferOwnership, hasWorkspaceLevel } from '../src/app/features/workspaces/models/workspace-permissions';
 export { AdminApi } from '../src/app/features/administration/data-access/admin-api.service';
 export { AdminConsoleComponent } from '../src/app/features/administration/pages/admin-console.component';
 export { SessionStore } from '../src/app/core/auth/session.store';
 export { isValidIanaTimezone } from '../src/app/features/settings/models/timezone';
-export { consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaTotal } from '../src/app/features/consumption/models/ledger-labels';
+export { consumptionPlanLabel, consumptionQuotaProgress, consumptionQuotaSegment, consumptionQuotaTotal } from '../src/app/features/consumption/models/ledger-labels';
 export { consumptionKindLabel, consumptionLedgerEmptyStateMessage, consumptionLedgerKindCount, consumptionLedgerStageCount, consumptionStageLabel, filterLedger, filterLedgerByStage, pipelineShortId } from '../src/app/features/consumption/models/ledger-labels';
 export { sessionGuard } from '../src/app/core/guards/session.guard';
 export { workspaceGuard } from '../src/app/features/workspaces/workspace.guard';
@@ -46,14 +49,23 @@ export { PublicReviewComponent } from '../src/app/features/collaboration/pages/p
 export { ReviewPanelComponent } from '../src/app/features/editor/components/review-panel/review-panel.component';
 export { EditorInspectorComponent } from '../src/app/features/editor/components/editor-inspector/editor-inspector.component';
 export { HttpErrorResponse } from '@angular/common/http';
+export { TimeoutError } from 'rxjs';
 export { ApiSecurity } from '../src/app/core/http/api-security.service';
 
 export { changesPage, focusMain, containTab } from '../src/app/core/a11y/navigation-focus';
 
 export { DashboardState } from '../src/app/features/dashboard/state/dashboard.state';
 export { sourceLinkFeedback } from '../src/app/features/projects/models/source-link';
-export { recognizeSourceLink, officialSourcePreview } from '../src/app/features/projects/models/source-link';
+export { recognizeSourceLink, officialSourcePreview, canonicalTwitchClipImportUrl, canonicalTwitchVodImportUrl, canonicalYouTubeMetadataUrl } from '../src/app/features/projects/models/source-link';
+export { unsupportedSourceImportResolution } from '../src/app/features/projects/models/source-link';
 export { SourceLinkPreviewComponent } from '../src/app/features/projects/components/source-link-preview.component';
 export { exportFailureMessage } from '../src/app/features/editor/models/export-error';
 export { ProjectCollectionComponent } from '../src/app/features/projects/components/project-collection/project-collection.component';
+export { DashboardComponent } from '../src/app/features/dashboard/pages/dashboard.component';
+export { WorkspaceLayoutComponent } from '../src/app/layouts/workspace/workspace-layout.component';
+export { notFoundProjectsRoute } from '../src/app/shared/ui/not-found/not-found.component';
 export { pipelineProgress } from '../src/app/features/projects/models/pipeline-progress';
+
+export { SocialPublishComponent } from "../src/app/shared/ui/social-publish/social-publish.component";
+
+export { ConfirmationService } from '../src/app/shared/ui/confirmation/confirmation.service';

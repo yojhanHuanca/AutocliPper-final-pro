@@ -265,9 +265,14 @@
       </div>
       <div class="auth-visual-steps" role="group" aria-label="Pasos del recorrido ilustrativo">
         @for (scene of scenes; track $index) {
-          <button type="button" [class.active]="stepIndex() === $index" [attr.aria-label]="'Ver paso ' + ($index + 1) + ': ' + scene.label" [attr.aria-current]="stepIndex() === $index ? 'step' : null" (click)="stepIndex.set($index)"><span>0{{ $index + 1 }}</span></button>
+          <button type="button" class="auth-scene-step" [class.active]="stepIndex() === $index" [attr.aria-label]="'Ver paso ' + ($index + 1) + ': ' + scene.label" [attr.aria-current]="stepIndex() === $index ? 'step' : null" (click)="selectStoryStep($index)"><span>0{{ $index + 1 }}</span></button>
         }
         <span class="auth-step-name">{{ activeScene().label }}</span>
+        @if (!reducedMotion()) {
+          <button class="auth-motion-toggle" type="button" [attr.aria-pressed]="storyPaused()" [attr.aria-label]="storyPaused() ? 'Reanudar animación del recorrido' : 'Pausar animación del recorrido'" (click)="toggleStoryPause()">{{ storyPaused() ? 'Reanudar' : 'Pausar' }}</button>
+        } @else {
+          <span class="auth-motion-status" role="status">Pausada por movimiento reducido</span>
+        }
       </div>
     </div>
   </aside>

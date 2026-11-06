@@ -1,8 +1,10 @@
-<section class="platforms wrap" aria-labelledby="platforms-heading">
+<section class="platforms wrap" aria-labelledby="platforms-heading"
+  (mouseenter)="hovered.set(true)" (mouseleave)="hovered.set(false)"
+  (focusin)="focused.set(true)" (focusout)="focused.set(false)">
   <div class="platforms-heading">
     <div>
-      <p class="platforms-label">Conexiones en desarrollo</p>
-      <h2 id="platforms-heading">De tus directos a tus próximos clips.</h2>
+      <p class="platforms-label">Fuentes y destinos previstos</p>
+      <h2 id="platforms-heading">Tu contenido empieza con un video.</h2>
     </div>
     <div class="platforms-actions" aria-label="Controles del carrusel">
       <button type="button" aria-label="Ver plataformas anteriores" (click)="move(-1)">←</button>
@@ -15,10 +17,6 @@
     role="region"
     tabindex="0"
     aria-label="Plataformas previstas"
-    (mouseenter)="hovered.set(true)"
-    (mouseleave)="hovered.set(false)"
-    (focusin)="focused.set(true)"
-    (focusout)="focused.set(false)"
   >
     <div class="platforms-track">
       @for (copy of [0, 1]; track copy) {
@@ -42,5 +40,5 @@
       }
     </div>
   </div>
-  <p class="platforms-note">Hoy puedes subir tu archivo, editarlo y descargar el clip. Las conexiones con estas plataformas todavía no están disponibles.</p>
+  <p class="platforms-note">Sube un archivo o importa un video de YouTube para generar clips con IA. Revisa, edita y descarga el resultado. Con una aplicación OAuth configurada puedes enviarlo a YouTube o a tu bandeja de TikTok; allí confirmas la publicación final.</p>
 </section>

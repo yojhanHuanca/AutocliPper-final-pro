@@ -149,6 +149,6 @@ export async function withInspectedSource<T>(
   }
 }
 
-export async function inspectObject(s3: S3Client, config: MediaConfig, task: Parameters<typeof withInspectedSource>[2]) {
-  return withInspectedSource(s3, config, task, async (_path, _directory, metadata) => metadata);
+export async function inspectObject(s3: S3Client, config: MediaConfig, task: Parameters<typeof withInspectedSource>[2], signal?:AbortSignal) {
+  return withInspectedSource(s3, config, task, async (_path, _directory, metadata) => metadata,signal);
 }

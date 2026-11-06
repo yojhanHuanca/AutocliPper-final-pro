@@ -28,7 +28,7 @@ const media = base.extend({
   MEDIA_WORKERS: z.enum(['inspection','render','all']).default('inspection'),
   RENDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(180000),
   MAX_PROBE_BYTES: z.coerce.number().int().positive().max(1073741824).default(104857600),
-  MAX_VIDEO_SECONDS: z.coerce.number().positive().max(14400).default(3600),
+  MAX_VIDEO_SECONDS: z.coerce.number().positive().max(14400).default(7200),
   PROBE_TIMEOUT_MS: z.coerce.number().int().min(100).max(120000).default(30000),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),

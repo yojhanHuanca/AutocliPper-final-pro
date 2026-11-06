@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 
-const base = 'http://localhost:3000/v1';
+const base = process.env.FRONTEND_GATEWAY_BASE ?? 'http://localhost:3005/v1';
 const password = 'AutoClipper-frontend-QA-only-2026!'; // Public, synthetic local test credential; never use with a real account.
 const execute = promisify(execFile);
 const pause = () => new Promise(resolve => setTimeout(resolve, 1500));

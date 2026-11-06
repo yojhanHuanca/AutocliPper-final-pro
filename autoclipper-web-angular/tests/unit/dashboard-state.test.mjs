@@ -4,14 +4,14 @@ import assert from 'node:assert/strict';
 import { signal } from '@angular/core';
 import { TestBed, TestComponentRenderer } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { DashboardState, ProjectsApi, ConsumptionApi, WorkspaceStore } from '../../.local/tests/client.mjs';
+import { DashboardState, ProjectsApi, ConsumptionApi, WorkspaceStore, ApiTransport } from '../../.local/tests/client.mjs';
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const project=(id,workspaceId='alpha',day=1)=>({id,workspaceId,name:id,version:1,createdAt:`2026-10-${String(day).padStart(2,'0')}T00:00:00.000Z`});
 const usage=id=>({workspaceId:id,consumedSeconds:40,reservedSeconds:0,availableSeconds:3560});
 const deferred=()=>{let resolve,reject;const promise=new Promise((done,fail)=>{resolve=done;reject=fail;});return{resolve,reject,promise};};
-function setup(api,billing={overview:async id=>usage(id)}) {
+function setup(api,billing={overview:async id=>usage(id)},transport={get:async()=>({items:[]})}) {
  const workspace={workspaceId:signal('alpha')};
- TestBed.configureTestingModule({providers:[DashboardState,{provide:ProjectsApi,useValue:api},{provide:ConsumptionApi,useValue:billing},{provide:WorkspaceStore,useValue:workspace},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
+ TestBed.configureTestingModule({providers:[DashboardState,{provide:ProjectsApi,useValue:api},{provide:ConsumptionApi,useValue:billing},{provide:ApiTransport,useValue:transport},{provide:WorkspaceStore,useValue:workspace},{provide:TestComponentRenderer,useValue:{insertRootElement(){},removeAllRootElements(){}}}]});
  return {state:TestBed.inject(DashboardState),workspace};
 }
 
@@ -33,6 +33,30 @@ test('home bounds reads to four recent projects and three distinct draft sources
  } finally {TestBed.resetTestingModule();}
 });
 
+test('home loads only contract-backed render states for its four recent projects and prioritizes active work',async()=>{
+ const projects=Array.from({length:6},(_,i)=>project('project-'+i,'alpha',i+1));
+ const paths=[];
+ const api={list:async()=>({items:projects}),edits:async()=>({items:[]})};
+ const transport={get:async path=>{paths.push(path);const id=decodeURIComponent(path.split('/').at(-2));return {items:id==='project-5'?[{id:'done',status:'succeeded',startedAt:'2026-10-20T10:00:00.000Z',finishedAt:'2026-10-20T10:02:00.000Z',spec:{kind:'clip',startSeconds:3,endSeconds:8,aspect:'vertical'},artifacts:[]}]:id==='project-4'?[{id:'active',status:'running',startedAt:'2026-10-20T10:01:00.000Z',finishedAt:null,spec:{kind:'clip',startSeconds:5,endSeconds:12,aspect:'square'},artifacts:[]}]:[]};}};
+ const {state}=setup(api,undefined,transport);
+ try {
+  await state.load('alpha');
+  assert.deepEqual(paths,['/projects/project-5/processing','/projects/project-4/processing','/projects/project-3/processing','/projects/project-2/processing']);
+  assert.equal(state.processing()[0].id,'active','An active real render appears before completed rows so it can be resumed quickly.');
+  assert.equal(state.processing()[0].projectId,'project-4');
+  assert.equal(state.processing()[1].projectId,'project-5');
+  assert.equal(state.processingError(),'');
+ } finally {TestBed.resetTestingModule();}
+});
+
+test('a partial render-list failure keeps confirmed jobs and does not claim an empty history',async()=>{
+ const api={list:async()=>({items:[project('a'),project('b')]}),edits:async()=>({items:[]})};
+ const transport={get:async path=>path.includes('/a/')?{items:[{id:'render-a',status:'queued',startedAt:null,finishedAt:null,spec:{kind:'clip'},artifacts:[]}]}:Promise.reject({status:503})};
+ const {state}=setup(api,undefined,transport);
+ try {await state.load('alpha');assert.equal(state.processing().length,1);assert.equal(state.processing()[0].id,'render-a');assert.notEqual(state.processingError(),'');}
+ finally {TestBed.resetTestingModule();}
+});
+
 test('an unavailable consumption route preserves projects and successful draft reads without inventing totals',async()=>{
  const api={list:async()=>({items:[project('a'),project('b')]}),edits:async id=>{if(id==='b')throw {status:503};return {items:[]};}};
  const {state}=setup(api,{overview:async()=>{throw {status:404};}});
@@ -44,11 +68,12 @@ test('an unavailable consumption route preserves projects and successful draft r
  } finally {TestBed.resetTestingModule();}
 });
 
-test('denied draft or source access clears every project, draft and consumption from the home',async()=>{
- for(const phase of ['drafts','source']) {
+test('denied draft, source or processing access clears every private row from the home',async()=>{
+ for(const phase of ['drafts','source','processing']) {
   const api={list:async()=>({items:[project('a')]}),edits:async()=>{if(phase==='drafts')throw {status:403};return {items:[{id:'d',uploadId:'u',name:'d',version:1,updatedAt:'2026-10-18T00:00:00.000Z'}]};},upload:async()=>{throw {status:401};}};
-  const {state}=setup(api);
-  try {await state.load('alpha');assert.deepEqual(state.projects(),[]);assert.deepEqual(state.drafts(),[]);assert.equal(state.usage(),null);assert.notEqual(state.error(),'');assert.equal(state.denied(),true);}
+  const transport={get:async()=>{if(phase==='processing')throw {status:403};return {items:[]};}};
+  const {state}=setup(api,undefined,transport);
+  try {await state.load('alpha');assert.deepEqual(state.projects(),[]);assert.deepEqual(state.drafts(),[]);assert.deepEqual(state.processing(),[]);assert.equal(state.usage(),null);assert.notEqual(state.error(),'');assert.equal(state.denied(),true);}
   finally {TestBed.resetTestingModule();}
  }
 });

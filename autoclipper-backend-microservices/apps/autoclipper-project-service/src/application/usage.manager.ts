@@ -6,7 +6,8 @@ import {usageAdmission,usageReport,type UsageReport,type UsageStage,type UsageRe
 import {body,digest,internalJson,type ServiceConfig} from "@autoclipper/http-security";
 import {logger} from "@autoclipper/observability";
 type Row={id:string;workspace_id:string;usage_state:"legacy"|"pending"|"accepted"|"rejected";usage_spec:UsageReservation|null};
-type Children={audio?:{status:string;settled_at:Date|null;result:ProcessingStatus["result"]}|undefined;render?:{status:string;settled_at:Date|null;result:ProcessingStatus["result"]}|undefined;analysis?:{finished_at:Date|null;cached_status:AnalysisStatus|null}|undefined};
+type ChildProcessing={status:string;settled_at:Date|null;result:ProcessingStatus["result"]};
+type Children={audio?:ChildProcessing|undefined;render?:ChildProcessing|undefined;renders?:ChildProcessing[];analysis?:{finished_at:Date|null;cached_status:AnalysisStatus|null}|undefined};
 export class UsageManager {
   private admissionCursor:string|undefined;
   private eventCursor:string|undefined;
@@ -20,8 +21,17 @@ export class UsageManager {
       if(!child){if(skipMissing)outcome="skipped";}
       else if(stage==="analysis"){
         const analysis=children.analysis!;if(analysis.finished_at){const status=analysis.cached_status?.status;if(status==="succeeded"){outcome="succeeded";duration=analysis.cached_status!.transcript!.durationSeconds;}else if(status==="cancelled"||status==="failed")outcome=status;}
+      }else if(stage==="audio"){
+        const processed=children.audio;if(processed?.settled_at){if(processed.status==="succeeded"){outcome="succeeded";duration=processed.result!.durationSeconds;}else if(processed.status==="cancelled"||processed.status==="failed")outcome=processed.status;}
       }else{
-        const processed=stage==="audio"?children.audio!:children.render!;if(processed.settled_at){if(processed.status==="succeeded"){outcome="succeeded";duration=processed.result!.durationSeconds;}else if(processed.status==="cancelled"||processed.status==="failed")outcome=processed.status;}
+        const renders=children.renders??(children.render?[children.render]:[]);
+        if(!renders.length){if(skipMissing)outcome="skipped";}
+        else if(renders.every(render=>render.settled_at)){
+          const succeeded=renders.filter(render=>render.status==="succeeded");
+          if(succeeded.length){outcome="succeeded";duration=succeeded.reduce((sum,render)=>sum+(render.result?.durationSeconds??0),0);}
+          else if(renders.every(render=>render.status==="cancelled"))outcome="cancelled";
+          else outcome="failed";
+        }
       }
       if(!outcome)continue;
       const report=body(usageReport,{version:1,eventId:randomUUID(),pipelineId:row.id,workspaceId:row.workspace_id,stage,outcome,actualDurationSeconds:duration});

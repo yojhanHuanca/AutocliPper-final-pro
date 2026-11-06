@@ -17,14 +17,17 @@
 }
 @else {
   <div class="home-workspace-line"><span><i></i>{{ design ? 'Tu espacio aparecerá al conectar la cuenta' : activeWorkspace()?.name ?? 'Elige un espacio' }}</span><span>{{ design ? 'Vista de estructura' : roleLabel() }}</span></div>
-  @if (!design && vm.loading() && vm.projectsLoaded()) { <p class="home-refresh-state" role="status" aria-live="polite">Consultando actualizaciones. La última información confirmada de proyectos y borradores sigue disponible.</p> }
+  @if (!design && vm.loading() && vm.projectsLoaded()) { <p class="home-refresh-state" role="status" aria-live="polite">Consultando actualizaciones. La última información confirmada de proyectos, renders y borradores sigue disponible.</p> }
   @if (vm.error() || workspaceRefreshError()) { <div class="alert error home-error" role="group" aria-label="Problema al actualizar el inicio"><span role="alert">{{ workspaceRefreshError() || (vm.denied() ? 'El servidor no confirmó acceso a este espacio.' : vm.error()) }}</span>@if (vm.projectsLoaded() && !vm.denied()) { <span class="home-stale-copy">Se conserva la última lista confirmada mientras vuelves a consultar.</span> }<button class="button small" type="button" (click)="retry()" [disabled]="vm.loading() || workspaceRefreshBusy()">{{ workspaceRefreshBusy() ? 'Actualizando espacios…' : vm.denied() ? 'Actualizar espacios' : 'Reintentar' }}</button></div> }
   @if (!design && activeWorkspace()?.role === 'reader') { <p class="alert" role="status">Tienes acceso de lectura. Puedes retomar las consultas del proyecto y revisar sus borradores; crear material requiere rol de editor.</p> }
   <div class="home-top-grid">
     <section class="home-resume" aria-labelledby="home-resume-heading">
       <div class="home-resume-copy">
-        <span class="home-kicker">{{ resumeDraft() ? 'RETOMA TU EDICIÓN' : resumeProject() ? 'VUELVE A TU PROYECTO' : 'DEL DIRECTO AL PRÓXIMO CLIP' }}</span>
-        @if (resumeDraft(); as draft) {
+        <span class="home-kicker">{{ resumeProcessing() ? 'TRABAJO EN CURSO' : resumeDraft() ? 'RETOMA TU EDICIÓN' : resumeProject() ? 'VUELVE A TU PROYECTO' : 'DEL DIRECTO AL PRÓXIMO CLIP' }}</span>
+        @if (resumeProcessing(); as job) {
+          <h2 id="home-resume-heading">{{ job.projectName }}</h2><p>Tu render está {{ processingLabel(job.status).toLowerCase() }}. El proyecto conserva el estado confirmado por el servidor.</p><span class="home-resume-date">{{ processingSummary(job) }}</span>
+          <a class="button" [routerLink]="projectDestination(job.projectId)" [queryParams]="{ createClips: '1' }">Abrir proceso y revisar<ac-icon name="arrow" /></a>
+        } @else if (resumeDraft(); as draft) {
           <h2 id="home-resume-heading">{{ draft.name }}</h2><p>{{ draft.projectName }} · Revisión {{ draft.version }}</p><span class="home-resume-date">Guardada {{ draft.updatedAt | date:'medium' }}</span>
           <a class="button" [routerLink]="editorDestination(draft.id)">Continuar en el editor<ac-icon name="arrow" /></a>
         } @else if (resumeProject(); as project) {
@@ -48,6 +51,17 @@
       <a class="text-link" [routerLink]="design ? '/login' : '/app/consumption'">{{ design ? 'Conectar cuenta' : 'Ver consumo y movimientos' }}<ac-icon name="arrow" /></a><small>Asignación de desarrollo · Sin cobros ni precios.</small>
     </section>
   </div>
+  <section class="home-jobs" aria-labelledby="home-jobs-heading">
+    <div class="home-section-heading"><div><span class="home-section-index">02 / PROCESAMIENTO</span><h2 id="home-jobs-heading">Procesamientos recientes</h2><p>Estados de render consultados en los cuatro proyectos más recientes.</p></div><ac-icon name="clock" /></div>
+    @if (vm.processingError()) { <div class="home-section-status" role="group" aria-label="Estado de los procesamientos"><span role="status">{{ vm.processingError() }}</span><button class="button small" type="button" (click)="retry()" [disabled]="vm.loading() || workspaceRefreshBusy()">Reintentar</button></div> }
+    <div class="home-job-list">
+      @for (job of vm.processing().slice(0,4); track job.id) {
+        <a class="home-job-row" [routerLink]="projectDestination(job.projectId)" [queryParams]="{ createClips: '1' }"><span class="home-job-state" [class.active]="job.status === 'queued' || job.status === 'running'" [class.failed]="job.status === 'failed'">{{ processingLabel(job.status) }}</span><span class="home-job-copy"><strong>{{ job.projectName }}</strong><small>{{ processingSummary(job) }}</small></span><span class="home-job-date">{{ job.finishedAt || job.startedAt ? ((job.finishedAt || job.startedAt) | date:'mediumDate') : 'Pendiente de iniciar' }}</span><ac-icon name="arrow" /></a>
+      } @empty {
+        <div class="home-jobs-empty" role="status"><ac-icon name="film" /><p>{{ vm.loading() ? 'Consultando los renders guardados…' : vm.processingError() ? 'No se confirmó la lista de renders.' : vm.projectsLoaded() ? 'Todavía no hay renders registrados en los proyectos recientes.' : 'Los estados aparecerán cuando confirmemos tus proyectos.' }}</p></div>
+      }
+    </div>
+  </section>
   <section class="home-drafts" aria-labelledby="home-drafts-heading">
     <div class="home-section-heading"><div><span class="home-section-index">01 / CONTINUIDAD</span><h2 id="home-drafts-heading">Borradores recientes</h2><p>Retoma una revisión en el editor sin volver a procesar el video.</p></div><a class="text-link" [routerLink]="base + '/projects'">Ver biblioteca<ac-icon name="arrow" /></a></div>
     @if (vm.draftsError()) { <div class="home-section-status" role="group" aria-label="Estado de los borradores"><span role="status">{{ vm.draftsError() }}</span><button class="button small" type="button" (click)="retry()" [disabled]="vm.loading() || workspaceRefreshBusy()">Reintentar</button></div> }
@@ -61,13 +75,13 @@
   </section>
   <div class="home-bottom-grid">
     <section class="home-projects panel" aria-labelledby="home-projects-heading">
-      <div class="home-section-heading"><div><span class="home-section-index">02 / PROYECTOS</span><h2 id="home-projects-heading">Proyectos recientes</h2><p>Entra al espacio de trabajo de cada video.</p></div><ac-icon name="folder" /></div>
+    <div class="home-section-heading"><div><span class="home-section-index">03 / PROYECTOS</span><h2 id="home-projects-heading">Proyectos recientes</h2><p>Entra al espacio de trabajo de cada video.</p></div><ac-icon name="folder" /></div>
       @for (project of vm.projects().slice(0,4); track project.id) { <a class="home-project-row" [routerLink]="projectDestination(project.id)"><span class="home-project-symbol"><ac-icon name="film" /></span><div><h3>{{ project.name }}</h3><p>Creado {{ project.createdAt | date:'mediumDate' }}</p></div><ac-icon name="arrow" /></a> }
       @empty { <div class="home-project-empty"><ac-icon name="folder" /><p>{{ vm.loading() ? 'Consultando proyectos…' : vm.error() ? 'Lista no disponible. Reintenta desde el aviso superior.' : design ? 'Tus proyectos aparecerán al conectar la cuenta.' : vm.projectsLoaded() ? 'Aún no hay proyectos en este espacio.' : 'No se confirmó la lista de proyectos.' }}</p></div> }
       <a class="text-link" [routerLink]="base + '/projects'">Abrir biblioteca de proyectos<ac-icon name="arrow" /></a>
     </section>
     <section class="home-material panel" aria-labelledby="home-material-heading">
-      <div class="home-section-heading"><div><span class="home-section-index">03 / FUENTES</span><h2 id="home-material-heading">Material consultado</h2><p>Fuentes confirmadas de hasta tres borradores recientes.</p></div><ac-icon name="upload" /></div>
+      <div class="home-section-heading"><div><span class="home-section-index">04 / FUENTES</span><h2 id="home-material-heading">Material consultado</h2><p>Fuentes confirmadas de hasta tres borradores recientes.</p></div><ac-icon name="upload" /></div>
       @if (vm.sourcesError()) { <div class="home-section-status" role="group" aria-label="Estado de las fuentes"><span role="status">{{ vm.sourcesError() }}</span><button class="button small" type="button" (click)="retry()" [disabled]="vm.loading() || workspaceRefreshBusy()">Reintentar</button></div> }
       @for (source of vm.sources(); track source.id) {
         <a class="home-source-row" [routerLink]="projectDestination(source.projectId)"><span class="home-source-symbol"><ac-icon name="film" /></span><div><h3>{{ source.projectName }}</h3><span class="home-source-state">{{ sourceLabel(source) }}</span><p>{{ source.bytes / 1024 / 1024 | number:'1.1-1' }} MiB @if (source.inspection?.result; as metadata) { @if (source.inspection.status === 'succeeded') { · {{ metadata.durationSeconds | number:'1.1-1' }} s } }</p></div><ac-icon name="arrow" /></a>

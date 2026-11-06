@@ -10,7 +10,7 @@ export class ProcessingController {
   constructor(@Inject(ProcessingRuntime)readonly runtime:ProcessingRuntime){}
   @Post("processing")@HttpCode(200) submit(@Req()req:Request,@Body()input:unknown){
     requireInternal(req,this.runtime.config);
-    const data=body(z.object({id:z.uuid(),workspaceId:z.uuid(),inspectionId:z.uuid(),spec:z.unknown(),correlationId:z.uuid(),cancelRequested:z.boolean().default(false)}).strict(),input);
+    const data=body(z.object({id:z.uuid(),workspaceId:z.uuid(),creatorId:z.uuid(),inspectionId:z.uuid(),spec:z.unknown(),correlationId:z.uuid(),cancelRequested:z.boolean().default(false)}).strict(),input);
     return this.runtime.submit({...data,spec:data.spec});
   }
   @Post("processing-status")@HttpCode(200) status(@Req()req:Request,@Body()input:unknown){

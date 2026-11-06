@@ -27,15 +27,16 @@ test('a real saved draft opens the video-first workbench with its existing edit 
   const timelineCss = await readFile(new URL('../../src/app/features/editor/components/editor-timeline/editor-timeline.component.css', import.meta.url), 'utf8');
   const globalCss = await readFile(new URL('../../src/styles.css', import.meta.url), 'utf8');
 
-  assert.match(template, /@if \(vm\.draft\(\)\) \{[\s\S]*?class="editor-layout"[\s\S]*?<ac-editor-preview \/>[\s\S]*?<ac-editor-inspector \/>[\s\S]*?<ac-editor-timeline \/>/);
+  assert.match(template, /@if \(vm\.draft\(\)\) \{[\s\S]*?class="editor-layout"[\s\S]*?<ac-editor-rail \/>[\s\S]*?<ac-editor-preview \/>[\s\S]*?<ac-editor-inspector \/>[\s\S]*?<ac-editor-timeline \/>/);
   assert.match(template, /Guardar y exportar/);
-  assert.match(template, /vm\.saveAndRender\(\)/);
+  assert.match(template, /exportRevision\(\)/);
   assert.match(css, /\.editor-layout \.editor-timeline \{[^}]*border-radius:12px;/);
-  assert.match(css, /grid-template-columns:minmax\(170px,205px\) minmax\(300px,1fr\) minmax\(245px,290px\)/,
-    'The real editor allocates its grid to the clip list, preview and inspector without reserving a missing rail.');
-  assert.match(css, /\.editor-layout > ac-editor-preview \{ grid-column:2; grid-row:1;/);
-  assert.match(css, /\.editor-layout > ac-editor-inspector \{ grid-column:3; grid-row:1;/);
-  assert.match(css, /\.editor-layout \{[^}]*grid-template-rows:auto auto; align-content:start; \}/);
+  assert.match(css, /grid-template-columns:58px minmax\(170px,205px\) minmax\(300px,1fr\) minmax\(245px,290px\)/,
+    'The desktop editor grid reserves space for the icon rail, clip list, preview and inspector.');
+  assert.match(css, /\.editor-layout > ac-editor-rail \{ grid-column:1; grid-row:1; \}/);
+  assert.match(css, /\.editor-layout > ac-editor-preview \{ grid-column:3; grid-row:1;/);
+  assert.match(css, /\.editor-layout > ac-editor-inspector \{ grid-column:4; grid-row:1;/);
+  assert.match(css, /\.editor-layout \{[^}]*grid-template-rows:auto auto; align-content:start;[^}]*\}/);
   assert.match(previewCss, /\.editor-stage\s*\{[^}]*height:\s*auto;\s*min-height:\s*640px;\s*overflow:\s*visible;/);
   assert.match(previewCss, /ac-editor-preview\s*\{[^}]*height:\s*auto;/);
   assert.doesNotMatch(timelineCss, /\.editor-timeline\s*\{\s*height:\s*100%;\s*overflow:\s*auto;/,

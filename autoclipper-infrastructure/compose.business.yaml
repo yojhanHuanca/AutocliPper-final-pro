@@ -82,6 +82,9 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
       AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID:-}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET:-}
+      TWITCH_REDIRECT_URI: ${TWITCH_REDIRECT_URI:-}
       PROJECT_URL: http://project:3004
       BILLING_URL: http://billing:3007
       SMTP_HOST: mailpit
@@ -116,6 +119,7 @@ services:
       retries: 6
   project:
     <<: *application
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=512m,uid=1000,gid=1000']
     command: ['node','apps/autoclipper-project-service/dist/main.js']
     environment:
       <<: *environment
@@ -125,6 +129,14 @@ services:
       ANALYSIS_URL: http://analysis:3006
       BILLING_URL: http://billing:3007
       PROCESSING_ADMISSION_MODE: ${PROCESSING_ADMISSION_MODE:-development}
+      YOUTUBE_DATA_API_KEY: ${YOUTUBE_DATA_API_KEY:-}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY}
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID:-}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET:-}
+      YOUTUBE_REDIRECT_URI: ${YOUTUBE_REDIRECT_URI:-http://localhost:3005/v1/social/youtube/callback}
+      TIKTOK_CLIENT_ID: ${TIKTOK_CLIENT_ID:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      TIKTOK_REDIRECT_URI: ${TIKTOK_REDIRECT_URI:-http://localhost:3005/v1/social/tiktok/callback}
       S3_ENDPOINT: http://storage:9000
       S3_PUBLIC_ENDPOINT: http://127.0.0.1:19000
       S3_REGION: us-east-1
@@ -191,7 +203,19 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       TEMP_DIR: /tmp/analysis
-      PAID_AI_ENABLED: 'false'
+      AI_ANALYSIS_PROVIDER: ${AI_ANALYSIS_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-luna}
+      OPENAI_INPUT_USD_PER_MILLION_TOKENS: ${OPENAI_INPUT_USD_PER_MILLION_TOKENS:-0.10}
+      OPENAI_OUTPUT_USD_PER_MILLION_TOKENS: ${OPENAI_OUTPUT_USD_PER_MILLION_TOKENS:-0.50}
+      OPENAI_MAX_API_INVOCATIONS_PER_RUN: ${OPENAI_MAX_API_INVOCATIONS_PER_RUN:-0}
+      OPENAI_INVOCATION_BUDGET_ID: ${OPENAI_INVOCATION_BUDGET_ID:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GEMINI_INPUT_USD_PER_MILLION_TOKENS: ${GEMINI_INPUT_USD_PER_MILLION_TOKENS:-}
+      GEMINI_OUTPUT_USD_PER_MILLION_TOKENS: ${GEMINI_OUTPUT_USD_PER_MILLION_TOKENS:-}
+      PAID_AI_ENABLED: ${PAID_AI_ENABLED:-false}
+      AI_MAX_ESTIMATED_USD_PER_JOB: ${AI_MAX_ESTIMATED_USD_PER_JOB:-0}
     tmpfs: ['/tmp:rw,noexec,nosuid,size=160m,uid=1000,gid=1000']
     depends_on:
       migrate-analysis: {condition: service_completed_successfully}

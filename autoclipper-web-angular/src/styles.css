@@ -1288,9 +1288,10 @@
     html {
       scroll-behavior: auto;
     }
-    *,
-    *:before,
-    *:after {
+    /* A landing visitor can explicitly opt into motion without changing the OS preference. */
+    *:not(:where(ac-landing.motion-enabled, ac-landing.motion-enabled *)),
+    *:not(:where(ac-landing.motion-enabled, ac-landing.motion-enabled *))::before,
+    *:not(:where(ac-landing.motion-enabled, ac-landing.motion-enabled *))::after {
       animation: none !important;
       transition: none !important;
     }
@@ -1308,22 +1309,17 @@
     }
   }
   @media (min-width: 1051px) and (min-height: 650px) {
-    .app-body:has(ac-editor) .app-main { height: calc(100dvh - 76px); flex: none; padding: 20px 28px; overflow: hidden; }
-    .app-body:has(.design-banner):has(ac-editor) .app-main { height: calc(100dvh - 116px); }
-    .app-body:has(ac-editor) .app-footer { display: none; }
-    ac-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-    .editor-heading { flex: 0 0 auto; margin-bottom: 18px; }
-    .editor-layout { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) minmax(180px, 40%); }
-    ac-editor-preview, ac-editor-inspector { min-height: 0; height: 100%; }
-    .editor-rail { height: 100%; min-height: 0; overflow-y: auto; }
-    .editor-stage { height: 100%; min-height: 0; }
-    .video-stage { min-height: 0; }
-    .video-placeholder { padding: 18px; }
-    .video-placeholder .frame-corners { width: 60px; height: 75px; margin-bottom: 16px; }
-    .video-placeholder p, .video-placeholder > span { display: none; }
-    .editor-inspector { height: 100%; max-height: none; overflow-y: auto; }
-    .editor-timeline { height: 100%; padding: 12px; }
-    .timeline-ruler { margin-top: 14px; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .app-main { height: auto; min-height: calc(100dvh - 76px); flex: 1 0 auto; padding: 20px 28px; overflow: visible; }
+    .app-body:has(.design-banner):has(ac-editor):not(:has(.demo-editor)) .app-main { min-height: calc(100dvh - 116px); }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) ac-editor { display: block; height: auto; min-height: 0; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .editor-layout { flex: none; min-height: 0; grid-template-rows: auto auto; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) ac-editor-preview,
+    .app-body:has(ac-editor):not(:has(.demo-editor)) ac-editor-inspector { min-height: 0; height: auto; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .editor-stage { height: auto; min-height: 640px; overflow: visible; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .video-stage { min-height: 405px; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .editor-inspector { height: auto; max-height: none; overflow: visible; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .editor-timeline { height: auto; padding: 12px; }
+    .app-body:has(ac-editor):not(:has(.demo-editor)) .timeline-ruler { margin-top: 14px; }
   }
   @media (max-width: 560px) { ac-editor-timeline { grid-row: 3; } }
 }
@@ -1432,3 +1428,9 @@
 }
 
 @layer utilities { #main { scroll-margin-top: 112px; } :focus-visible { scroll-margin-block: 100px 24px; } }
+/* La vista de muestra del editor necesita desplazamiento de página para llegar a la línea de tiempo. */
+@media (min-width: 1051px) and (min-height: 650px) {
+  .app-body:has(.demo-editor) .app-main { height: auto; min-height: 0; flex: 1 0 auto; overflow: visible; }
+  .app-body:has(.demo-editor) ac-editor { height: auto; min-height: 0; }
+  .app-body:has(.demo-editor) .app-footer { display: flex; }
+}

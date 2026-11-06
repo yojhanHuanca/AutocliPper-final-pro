@@ -1,9 +1,11 @@
 import { afterNextRender, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { TimeoutError } from 'rxjs';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { errorMessage } from '../../../core/http/api-error';
 import { ProjectsApi } from '../data-access/projects-api.service';
+import type { Schema } from '../../../core/contracts/api-types';
 import { canonicalTwitchClipImportUrl, canonicalYouTubeMetadataUrl, officialSourcePreview, recognizeSourceLink, unsupportedSourceImportResolution, type SourceImportResolution, type SourceLinkResult, type YoutubeVideoMetadata } from '../models/source-link';
 
 @Component({
@@ -22,7 +24,7 @@ export class SourceLinkPreviewComponent implements OnInit {
   readonly canImport = input(false);
   readonly initialUrl = input('');
   readonly previewOnly = input(false);
-  readonly imported = output<{ uploadId: string; title?: string }>();
+  readonly imported = output<{ uploadId: string; title?: string; provider?: 'youtube' | 'twitch' }>();
   readonly previewAvailable = output<boolean>();
   readonly linkChanged = output<string>();
   readonly value = signal('');
@@ -30,7 +32,9 @@ export class SourceLinkPreviewComponent implements OnInit {
   readonly previewState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   readonly previewError = signal('');
   readonly twitchStatus = signal<{ configured: boolean; linked: boolean; account: { id?: string; login?: string } | null } | null>(null);
+  readonly sourceCapabilities = signal<Schema<'SourceLinkCapabilitiesDto'> | null>(null);
   readonly sourceBusy = signal(false);
+  readonly importing = signal(false);
   readonly sourceNotice = signal('');
   readonly sourceError = signal('');
   readonly resolved = signal<{ title?: string; durationSeconds?: number } | null>(null);
@@ -38,6 +42,7 @@ export class SourceLinkPreviewComponent implements OnInit {
   private importKey = '';
   private lastProjectId: string | null = null;
   private sourceOperationGeneration = 0;
+  private youtubeMetadataAbortController: AbortController | null = null;
   private twitchStatusGeneration = 0;
   private lastCanImport: boolean | null = null;
   private readonly requestedFrame = signal<SafeResourceUrl | null>(null);
@@ -65,6 +70,7 @@ export class SourceLinkPreviewComponent implements OnInit {
         this.resolved.set(null);
         this.importKey = '';
       }
+      if (this.lastCanImport === false && allowed) void this.refreshTwitchStatus();
       this.lastCanImport = allowed;
     });
     effect(() => this.onVisibilityChange(this.active()));
@@ -83,6 +89,8 @@ export class SourceLinkPreviewComponent implements OnInit {
         observer.disconnect();
         document.removeEventListener('securitypolicyviolation', onPolicyViolation);
         clearTimeout(this.frameTimer);
+        this.youtubeMetadataAbortController?.abort();
+        this.youtubeMetadataAbortController = null;
       });
     });
   }
@@ -103,11 +111,13 @@ export class SourceLinkPreviewComponent implements OnInit {
     this.previewAvailable.emit(false);
     this.resolved.set(null);
     this.importResolution?.set(null);
+    this.sourceCapabilities?.set(null);
     this.sourceNotice.set('');
     this.sourceError.set('');
     this.importKey = '';
     this.closePreview();
     if (initialUrl) this.validate();
+    if (this.canImport?.()) void this.refreshTwitchStatus();
   }
   update(event: Event): void { const value = (event.target as HTMLInputElement).value; this.invalidateSourceOperation(); this.value.set(value); this.linkChanged.emit(value); this.result.set(null); this.previewAvailable.emit(false); this.resolved.set(null); this.importResolution?.set(null); this.sourceNotice.set(''); this.sourceError.set(''); this.importKey = ''; this.closePreview(); }
   validate(): void {
@@ -116,7 +126,16 @@ export class SourceLinkPreviewComponent implements OnInit {
     this.result.set(result);
     this.previewAvailable.emit(result.state === 'preview');
     if (result.target) this.importResolution?.set(unsupportedSourceImportResolution(result.target));
+    this.applyTwitchCapabilityGuidance();
     if (result.target?.platform === 'Twitch' && result.target.kind === 'clip' && this.canImport?.()) void this.resolveTwitch();
+    if (result.target?.platform === 'Twitch' && result.target.kind === 'video') {
+      this.importResolution.set({
+        provider: 'twitch', state: 'input_required', importable: false,
+        reasonCode: 'TWITCH_VOD_INTERVAL_REQUIRED', nextAction: 'upload_authorized_file',
+        message: 'VOD de Twitch reconocido. La API disponible solo permite importar un fragmento cuando se indica un intervalo manual; este flujo no solicita segundos y no iniciará ese recorte.',
+        nextStep: 'Pega el enlace de un clip de Twitch ya publicado o sube el MP4 autorizado del VOD para generar clips automáticamente.',
+      });
+    }
     if (result.target?.platform === 'YouTube' && this.canImport?.() && this.projectId?.()) void this.resolveYouTubeMetadata();
   }
   async resolveYouTubeMetadata(): Promise<void> {
@@ -127,32 +146,30 @@ export class SourceLinkPreviewComponent implements OnInit {
     const url = canonicalYouTubeMetadataUrl(this.result());
     if (!projectId || !url) return;
     const operationGeneration = this.sourceOperationGeneration;
+    const controller = new AbortController();
+    this.youtubeMetadataAbortController = controller;
     this.sourceBusy.set(true);
     this.sourceError.set('');
     this.sourceNotice.set('');
     try {
-      const answer = await this.api.resolveSourceLink(projectId, url);
+      const answer = await this.api.resolveSourceLink(projectId, url, { signal: controller.signal, timeoutMs: 7_000 });
       if (operationGeneration !== this.sourceOperationGeneration || !this.canImport() || this.projectId() !== projectId || this.value().trim() !== inputUrl) return;
       if (answer.provider !== 'youtube') throw new Error('El servidor devolvió metadatos para otro proveedor.');
-      // Metadata never enables import: the server and UI keep this link preview-only.
-      this.importResolution.set({
-        ...answer,
-        provider: 'youtube',
-        state: 'unsupported',
-        importable: false,
-        reasonCode: 'YOUTUBE_DOWNLOAD_APPROVAL_REQUIRED',
-        nextAction: 'upload_authorized_file',
-      });
-      if (this.hasAvailableYoutubeMetadata(answer.youtubeMetadata)) {
-        this.sourceNotice.set('Datos del video consultados. El enlace sirve solo como referencia; para procesar clips, usa un MP4 inspeccionado.');
-      } else {
-        this.sourceNotice.set(this.youtubeMetadataUnavailableMessage(answer.youtubeMetadata?.reasonCode));
-      }
+      this.importResolution.set(answer);
+      if (answer.state === 'available' && answer.importable) {
+        this.resolved.set({ title: answer.youtubeMetadata?.title || 'Video de YouTube', durationSeconds: answer.youtubeMetadata?.durationSeconds });
+        this.sourceNotice.set('Video reconocido. Al importar se descargará y verificará antes de generar los clips.');
+      } else this.sourceNotice.set(answer.message || 'Este video no está disponible para importar.');
     } catch (error) {
       if (operationGeneration !== this.sourceOperationGeneration || !this.canImport() || this.projectId() !== projectId || this.value().trim() !== inputUrl) return;
-      this.sourceError.set(this.sourceErrorMessage(error));
+      this.sourceError.set(error instanceof TimeoutError
+        ? 'La consulta de YouTube tardó demasiado. El enlace sigue siendo solo una vista previa; puedes reintentar o usar un MP4 autorizado.'
+        : this.sourceErrorMessage(error));
     } finally {
-      if (operationGeneration === this.sourceOperationGeneration) this.sourceBusy.set(false);
+      if (operationGeneration === this.sourceOperationGeneration) {
+        this.sourceBusy.set(false);
+        this.youtubeMetadataAbortController = null;
+      }
     }
   }
   hasAvailableYoutubeMetadata(metadata: YoutubeVideoMetadata | null | undefined): metadata is YoutubeVideoMetadata & { state: 'available'; title: string; channelTitle: string; durationSeconds: number } {
@@ -179,6 +196,12 @@ export class SourceLinkPreviewComponent implements OnInit {
   }
   youtubeMetadataUnavailableMessage(reasonCode?: string): string {
     const messages: Record<string, string> = {
+      YOUTUBE_VIDEO_UNAVAILABLE: 'YouTube no permite acceder a este video. Revisa si es privado, está restringido o requiere iniciar sesión.',
+      YOUTUBE_DOWNLOAD_TIMEOUT: 'La descarga tardó demasiado. Puedes volver a intentarlo.',
+      YOUTUBE_DOWNLOAD_TOO_LARGE: 'El video supera los 100 MiB admitidos. Usa un archivo más pequeño.',
+      YOUTUBE_DOWNLOAD_FAILED: 'No se pudo descargar este video. Revisa su disponibilidad o sube el archivo original.',
+      YOUTUBE_DOWNLOADER_NOT_CONFIGURED: 'El servidor necesita actualizar su imagen para instalar el descargador.',
+      YOUTUBE_IMPORT_BUSY: 'Ya hay otras descargas en curso. Espera unos segundos.',
       YOUTUBE_METADATA_NOT_CONFIGURED: 'Los datos de YouTube no están configurados en el servidor. Puedes continuar con un MP4 autorizado.',
       YOUTUBE_METADATA_NOT_FOUND: 'YouTube no encontró este video. Revisa el enlace o usa un MP4 autorizado.',
       YOUTUBE_METADATA_RATE_LIMITED: 'YouTube limitó temporalmente la consulta. Vuelve a intentarlo más tarde.',
@@ -189,26 +212,33 @@ export class SourceLinkPreviewComponent implements OnInit {
   async refreshTwitchStatus(): Promise<void> {
     if (!this.canImport() || !this.projectId()) return;
     const generation = ++this.twitchStatusGeneration;
+    const projectId = this.projectId();
     this.sourceError.set('');
     try {
-      const status = await this.api.twitchLinkStatus();
-      if (generation !== this.twitchStatusGeneration || !this.canImport()) return;
+      const capabilityRequest = this.api.sourceLinkCapabilities?.(projectId).catch(() => null) ?? Promise.resolve(null);
+      const [status, capabilities] = await Promise.all([this.api.twitchLinkStatus(), capabilityRequest]);
+      if (generation !== this.twitchStatusGeneration || !this.canImport() || this.projectId() !== projectId) return;
       this.twitchStatus.set(status);
-      if (!status.configured || !status.linked) { this.resolved.set(null); this.importKey = ''; }
-      this.sourceNotice.set('');
-      const currentTarget = this.result?.()?.target;
-      if (currentTarget?.platform === 'Twitch' && currentTarget.kind === 'clip') {
-        if (!status.configured) this.importResolution?.set({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_OAUTH_NOT_CONFIGURED',nextAction:'configure_twitch_oauth',message:'La importación de clips de Twitch no está configurada en este servidor.',nextStep:'Pide al responsable del entorno que configure la app OAuth de Twitch en Identity.'});
-        else if (!status.linked) this.importResolution?.set({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_ACCOUNT_NOT_LINKED',nextAction:'link_twitch_account',message:'No hay una cuenta de Twitch vinculada.',nextStep:'Vincula tu cuenta desde Configuración y vuelve a validar el clip.'});
-        else if (!this.resolved()) this.importResolution?.set(null);
-      }
+      this.sourceCapabilities?.set(capabilities);
+      if (this.result()?.target?.platform === 'Twitch' && (!status.configured || !status.linked)) { this.resolved.set(null); this.importKey = ''; }
+      if (this.result()?.target?.platform === 'Twitch') this.sourceNotice.set('');
+      this.applyTwitchCapabilityGuidance();
     } catch (error) {
       if (generation !== this.twitchStatusGeneration || !this.canImport()) return;
       this.twitchStatus.set(null);
-      this.resolved.set(null);
-      this.importKey = '';
-      this.sourceError.set(this.sourceErrorMessage(error));
+      this.sourceCapabilities?.set(null);
+      if (this.result()?.target?.platform === 'Twitch') { this.resolved.set(null); this.importKey = ''; this.sourceError.set(this.sourceErrorMessage(error)); }
     }
+  }
+  private applyTwitchCapabilityGuidance(): void {
+    const target = this.result?.()?.target;
+    const status = this.twitchStatus?.();
+    if (!this.canImport?.() || target?.platform !== 'Twitch' || !status) return;
+    const capability = this.sourceCapabilities?.()?.providers.find(provider => provider.provider === 'twitch');
+    if (!status.configured) this.importResolution?.set({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_OAUTH_NOT_CONFIGURED',nextAction:'configure_twitch_oauth',message:'La importación de Twitch no está configurada en este servidor.',nextStep:'Pide al responsable del entorno que configure la app OAuth de Twitch en Identity.'});
+    else if (!status.linked) this.importResolution?.set({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_ACCOUNT_NOT_LINKED',nextAction:'link_twitch_account',message:'No hay una cuenta de Twitch vinculada.',nextStep:'Vincula tu cuenta desde Configuración y vuelve a validar el enlace.'});
+    else if (capability?.configurationState === 'clip_scope_missing') this.importResolution?.set({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_CLIP_SCOPE_REQUIRED',nextAction:'link_twitch_account',message:'La cuenta de Twitch vinculada no tiene el permiso requerido para administrar clips.',nextStep:'Vuelve a conectar Twitch y acepta el permiso de administración de clips.'});
+    else if (!this.resolved()) this.importResolution?.set(null);
   }
   async connectTwitch(): Promise<void> {
     if (!this.canImport() || !this.twitchStatus()?.configured || this.sourceBusy()) return;
@@ -230,7 +260,8 @@ export class SourceLinkPreviewComponent implements OnInit {
   }
   async resolveTwitch(): Promise<void> {
     const target = this.result()?.target;
-    if (!this.canImport() || !target || target.platform !== 'Twitch' || target.kind !== 'clip' || !this.twitchStatus()?.configured || !this.twitchStatus()?.linked || this.sourceBusy()) return;
+    if (!this.canImport() || !target || target.platform !== 'Twitch' || !this.twitchStatus()?.configured || !this.twitchStatus()?.linked || this.sourceBusy()) return;
+    if (target.kind !== 'clip') return;
     const projectId = this.projectId(), inputUrl = this.value().trim(), url = canonicalTwitchClipImportUrl(this.result());
     if (!url) return;
     const operationGeneration = this.sourceOperationGeneration;
@@ -241,7 +272,7 @@ export class SourceLinkPreviewComponent implements OnInit {
       this.importResolution?.set(answer);
       if (answer.provider === 'twitch' && answer.state === 'available' && answer.importable === true) {
         this.resolved.set({ title: answer.title, durationSeconds: answer.durationSeconds });
-        this.sourceNotice.set('La disponibilidad está confirmada. La importación y la inspección deben finalizar antes de configurar el clip.');
+        this.sourceNotice.set('Clip confirmado por Twitch. Al importarlo, el servidor lo guardará e inspeccionará; después podrás elegir cantidad y duración para la generación automática.');
         this.importKey = '';
       } else if (answer.state === 'unavailable' || answer.state === 'unsupported') {
         this.sourceError.set('');
@@ -252,17 +283,21 @@ export class SourceLinkPreviewComponent implements OnInit {
     } catch (error) {
       if (operationGeneration !== this.sourceOperationGeneration || !this.canImport() || this.projectId() !== projectId || this.value().trim() !== inputUrl) return;
       this.importResolution?.set(null);
+      this.sourceNotice.set('');
       this.clearTwitchAuthorizationIfLost(error);
       this.sourceError.set(this.sourceErrorMessage(error));
     }
     finally { if (operationGeneration === this.sourceOperationGeneration) this.sourceBusy.set(false); }
   }
   async importTwitch(): Promise<void> {
-    if (!this.canImport() || !this.twitchStatus()?.configured || !this.twitchStatus()?.linked || !this.resolved() || this.sourceBusy()) return;
-    const projectId = this.projectId(), inputUrl = this.value().trim(), url = canonicalTwitchClipImportUrl(this.result());
+    const available = this.resolved();
+    const isYoutube = this.result()?.target?.platform === 'YouTube';
+    if (!this.canImport() || (!isYoutube && (!this.twitchStatus()?.configured || !this.twitchStatus()?.linked)) || !available || this.sourceBusy()) return;
+    const projectId = this.projectId(), inputUrl = this.value().trim();
+    const url = isYoutube ? canonicalYouTubeMetadataUrl(this.result()) : canonicalTwitchClipImportUrl(this.result());
     if (!url) return;
     const operationGeneration = this.sourceOperationGeneration;
-    this.sourceBusy.set(true); this.sourceError.set(''); this.sourceNotice.set('Solicitando la transferencia del clip y su inspección…');
+    this.importing.set(true); this.sourceBusy.set(true); this.sourceError.set(''); this.sourceNotice.set('Descargando el video e iniciando su inspección…');
     this.importKey ||= crypto.randomUUID();
     try {
       const answer = await this.api.importSourceLink(projectId, url, this.importKey);
@@ -270,7 +305,7 @@ export class SourceLinkPreviewComponent implements OnInit {
       if (answer.state === 'succeeded' && answer.uploadId) {
         this.sourceNotice.set('Clip importado. Preparando la inspección…');
         this.resolved.set(null);
-        this.imported.emit({ uploadId: answer.uploadId, title: answer.title });
+        this.imported.emit({ uploadId: answer.uploadId, title: available.title || answer.title, provider: isYoutube ? 'youtube' : 'twitch' });
       } else if (answer.state === 'importing') {
         this.sourceNotice.set('La importación sigue en curso. Vuelve a intentarlo en unos segundos para consultar el mismo proceso.');
       } else {
@@ -278,14 +313,23 @@ export class SourceLinkPreviewComponent implements OnInit {
       }
     } catch (error) {
       if (operationGeneration !== this.sourceOperationGeneration || !this.canImport() || this.projectId() !== projectId || this.value().trim() !== inputUrl) return;
+      this.sourceNotice.set('');
       this.clearTwitchAuthorizationIfLost(error);
       this.sourceError.set(this.sourceErrorMessage(error));
     }
-    finally { if (operationGeneration === this.sourceOperationGeneration) this.sourceBusy.set(false); }
+    finally { if (operationGeneration === this.sourceOperationGeneration) { this.sourceBusy.set(false); this.importing.set(false); } }
   }
   private invalidateSourceOperation(): void {
+    this.importing.set(false);
     this.sourceOperationGeneration++;
+    this.youtubeMetadataAbortController?.abort();
+    this.youtubeMetadataAbortController = null;
     this.sourceBusy.set(false);
+  }
+  cancelYouTubeMetadata(): void {
+    if (!this.youtubeMetadataAbortController) return;
+    this.invalidateSourceOperation();
+    this.sourceError.set('Consulta cancelada. Puedes volver a intentarlo o continuar con un MP4 autorizado.');
   }
   private clearTwitchAuthorizationIfLost(error: unknown): void {
     const code = error instanceof HttpErrorResponse ? String(error.error?.code ?? '') : '';
@@ -307,6 +351,10 @@ export class SourceLinkPreviewComponent implements OnInit {
       TWITCH_ACCOUNT_NOT_LINKED: 'Vincula una cuenta Twitch para revisar e importar clips.',
       TWITCH_CHANNEL_EDITOR_REQUIRED: 'La cuenta vinculada debe ser editor del canal que publicó este clip.',
       TWITCH_CLIP_SCOPE_REQUIRED: 'Twitch no concedió el permiso necesario para administrar clips.',
+      TWITCH_VOD_INTERVAL_REQUIRED: 'Este flujo solo ofrece vista previa para VOD de Twitch. Pega el enlace de un clip publicado o sube el MP4 autorizado.',
+      TWITCH_VOD_OFFSET_OUT_OF_RANGE: 'El intervalo termina fuera de la duración disponible del VOD. Revisa el segundo final.',
+      TWITCH_VOD_NOT_FOUND: 'Twitch no encontró este VOD o no está disponible para esta cuenta.',
+      TWITCH_VOD_CLIP_OUTCOME_UNKNOWN: 'Twitch no confirmó si creó el clip. Comprueba el canal antes de intentar otra vez.',
       TWITCH_CONSENT_DENIED: 'Se canceló la autorización de Twitch. Puedes volver a intentarlo.',
       TWITCH_RATE_LIMITED: 'Twitch limitó temporalmente las solicitudes. Espera y vuelve a intentarlo.',
       TWITCH_CLIP_UNAVAILABLE: 'Twitch no confirmó que este clip esté disponible para importar.',
@@ -322,8 +370,12 @@ export class SourceLinkPreviewComponent implements OnInit {
       YOUTUBE_METADATA_NOT_FOUND: 'YouTube no encontró este video. Revisa el enlace.',
       YOUTUBE_METADATA_RATE_LIMITED: 'YouTube limitó temporalmente la consulta de datos. Vuelve a intentarlo más tarde.',
       YOUTUBE_METADATA_UNAVAILABLE: 'No pudimos consultar los datos de YouTube ahora. Vuelve a intentarlo.',
+      YOUTUBE_VIDEO_UNAVAILABLE: 'YouTube no permite descargar este video. Comprueba que sea público o carga el MP4 original.',
+      LOCAL_TRANSCRIPTION_DURATION_LIMIT: 'Este video supera las dos horas admitidas por la transcripción local. Usa un video más corto.',
     };
-    return known[code] ?? `Twitch no pudo completar la operación (${code}).`;
+    if (code === 'YOUTUBE_DOWNLOAD_TIMEOUT') return 'La descarga de YouTube superó el tiempo permitido. Puedes reintentar o cargar un MP4.';
+    if (code === 'YOUTUBE_DOWNLOAD_TOO_LARGE') return 'El video de YouTube supera el tamaño permitido. Puedes cargar una versión más pequeña.';
+    return known[code] ?? `No se pudo completar la operación (${code}).`;
   }
   loadPreview(): void {
     const target = this.result()?.target;

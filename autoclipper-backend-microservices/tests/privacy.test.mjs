@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport,privacyBillingOwnerRequest,privacyBillingAuthorityRequest,privacyBillingData,privacyBillingExport,privacyRequestManifest } from '@autoclipper/api-contracts';
+import { privacyProfileProof, privacyIdentityProfile, privacyProfileExport,privacyWorkspaceOwnerRequest,privacyWorkspaceAuthorityRequest,privacyWorkspaceData,privacyProjectOwnerRequest,privacyProjectAuthorityRequest,privacyProjectData,privacyProjectExport,privacyBillingOwnerRequest,privacyBillingAuthorityRequest,privacyBillingData,privacyBillingExport,privacyOwnerRequest,privacyMediaAuthorityRequest,privacyAnalysisAuthorityRequest,privacyMediaData,privacyAnalysisData,privacyMediaExport,privacyAnalysisExport,privacyRequestManifest } from '@autoclipper/api-contracts';
 
 test('privacy contribution proof cannot select a different user, scope, state or stored artifact',()=>{
   assert.equal(privacyProfileProof.safeParse({password:'proof',factor:'123456'}).success,true);
@@ -67,4 +67,23 @@ test('privacy request manifest cannot advance while a required owner has no supp
   assert.equal(privacyRequestManifest.safeParse({...manifest,globalFulfillment:'ready_for_assembly'}).success,false);
   assert.equal(privacyRequestManifest.safeParse({...manifest,preparedScopes:2}).success,false);
   assert.equal(privacyRequestManifest.safeParse({...manifest,scopes:[...manifest.scopes,{...scope('analysis-attribution-v1'),payload:'must not be retained'}]}).success,false);
+});
+test('Media and Analysis privacy contracts bind narrow authority and exclude content',()=>{
+  const request={capability:'a'.repeat(43),idempotencyKey:randomUUID(),correlationId:randomUUID()},subjectId=randomUUID(),workspaceId=randomUUID(),now=new Date().toISOString();
+  assert.equal(privacyOwnerRequest.safeParse(request).success,true);
+  for(const extra of[{userId:subjectId},{requestId:randomUUID()},{scope:'all'}])assert.equal(privacyOwnerRequest.safeParse({...request,...extra}).success,false);
+  assert.equal(privacyMediaAuthorityRequest.safeParse({...request,scope:'media-task-attribution-v1'}).success,true);
+  assert.equal(privacyMediaAuthorityRequest.safeParse({...request,scope:'analysis-attribution-v1'}).success,false);
+  assert.equal(privacyAnalysisAuthorityRequest.safeParse({...request,scope:'analysis-attribution-v1'}).success,true);
+  const task={id:randomUUID(),workspaceId,status:'failed',createdAt:now,finishedAt:now,errorCode:'FIXTURE'};
+  const media={schemaVersion:1,subjectId,inspections:[task],processing:[{...task,id:randomUUID(),inspectionId:task.id}]};
+  assert.equal(privacyMediaData.safeParse(media).success,true);
+  for(const secret of[{objectKey:'private'},{spec:{private:true}},{result:{private:true}},{creatorId:subjectId}])assert.equal(privacyMediaData.safeParse({...media,inspections:[{...task,...secret}]}).success,false);
+  const analysis={schemaVersion:1,subjectId,jobs:[{...task,transcriptPresent:true,selectionPresent:false,providerAttempts:1}]};
+  assert.equal(privacyAnalysisData.safeParse(analysis).success,true);
+  for(const secret of[{transcript:'private'},{source:{private:true}},{selection:{private:true}},{providerRequestId:'private'}])assert.equal(privacyAnalysisData.safeParse({...analysis,jobs:[{...analysis.jobs[0],...secret}]}).success,false);
+  const receipt={requestId:randomUUID(),receiptId:randomUUID(),state:'prepared',fulfillment:'partial',globalFulfillment:'pending',createdAt:now,capturedAt:now,sha256:'a'.repeat(64)};
+  assert.equal(privacyMediaExport.safeParse({...receipt,scope:'media-task-attribution-v1',data:media}).success,true);
+  assert.equal(privacyAnalysisExport.safeParse({...receipt,scope:'analysis-attribution-v1',data:analysis}).success,true);
+  assert.equal(privacyMediaExport.safeParse({...receipt,scope:'media-task-attribution-v1',data:media,globalFulfillment:'completed'}).success,false);
 });

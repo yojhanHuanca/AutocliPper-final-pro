@@ -22,7 +22,10 @@
         </div>
         <span class="badge">{{ statusLabel(item.status) }}</span>
       </div>
-      <p>Clip de {{ item.spec.startSeconds }} a {{ item.spec.endSeconds }} s · {{ item.spec.aspect }} · Enlace válido hasta {{ item.expiresAt | date: "medium" }}</p>
+      <p>Clip de {{ item.spec.startSeconds }} a {{ item.spec.endSeconds }} s · {{ item.spec.aspect }}
+        @if (isExpired()) { · Enlace vencido o con vigencia no confirmada }
+        @else { · Enlace válido hasta {{ item.expiresAt | date: "medium" }} }
+      </p>
       @if (item.spec.subtitles?.cues?.length) {
         <section class="public-review-captions" aria-labelledby="public-captions-title">
           <h2 id="public-captions-title">Subtítulos del clip</h2>
@@ -35,11 +38,11 @@
         </section>
       }
       @if (isExpired()) {
-        <div class="alert error" role="alert">Este enlace de revisión venció.</div>
+        <div class="alert error" role="alert">Este enlace de revisión venció o su vigencia no se pudo confirmar.</div>
       } @else if (item.videoEnabled) {
         @if (videoUrl()) {
           <div class="review-video-frame">
-            <video controls playsinline [src]="videoUrl()" [attr.crossorigin]="'anonymous'">
+            <video controls playsinline preload="metadata" [src]="videoUrl()">
               Tu navegador no puede reproducir este video.
             </video>
           </div>

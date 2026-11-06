@@ -99,3 +99,14 @@ export function consumptionQuotaProgress(usage: {
   const accounted = usage.consumedSeconds + usage.reservedSeconds;
   return Math.max(0, Math.min(100, (accounted / total) * 100));
 }
+
+export function consumptionQuotaSegment(value: number, usage: {
+  consumedSeconds: number;
+  reservedSeconds: number;
+  availableSeconds: number;
+  plan?: { kind: string; processingSecondsPerMonth: number } | null;
+}): number {
+  const total = consumptionQuotaTotal(usage);
+  if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, (value / total) * 100));
+}

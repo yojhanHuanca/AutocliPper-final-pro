@@ -1,4 +1,4 @@
-import {BadRequestException,ConflictException,NotFoundException} from "@nestjs/common";
+import {BadRequestException,ConflictException,NotFoundException,ServiceUnavailableException} from "@nestjs/common";
 import type {Request} from "express";
 import type pg from "pg";
 import {randomUUID} from "node:crypto";
@@ -6,12 +6,15 @@ import {z} from "zod";
 import {GetObjectCommand,HeadObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import {body,digest,uuid,authenticatedUser,requireCsrf,requireManualProcessingAdmission,internalJson,type ServiceConfig} from "@autoclipper/http-security";
-import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,LOCAL_TRANSCRIPTION_MAX_SECONDS,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
 
-type Upload={id:string;project_id:string;workspace_id:string;state:string;expected_bytes:number};
+type Upload={id:string;project_id:string;workspace_id:string;state:string;expected_bytes:number;object_key:string;etag:string|null;sha256:string;content_type:string};
 type Row={editor_revision_id:string|null;id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
 const terminal=(status:string)=>["succeeded","failed","cancelled"].includes(status);
+const inspectionStatusSchema=z.object({id:z.uuid(),status:z.enum(["queued","running","succeeded","failed"]),result:z.unknown().optional()});
+const inspectedMediaSchema=z.object({durationSeconds:z.number().finite().positive().max(14400),width:z.number().int().positive().max(7680),height:z.number().int().positive().max(7680),audioCodec:z.string().min(1).max(128).nullable()});
+type InspectedMedia=z.infer<typeof inspectedMediaSchema>;
 export class DerivativesManager {
   private cursor:string|undefined;
   constructor(private readonly pool:pg.Pool,private readonly config:ServiceConfig,private readonly mediaUrl:string,private readonly bucket:string,private readonly s3:S3Client,private readonly signer:S3Client,private readonly authorize:(req:Request,id:string,minimum:"reader"|"editor")=>Promise<Upload>){}
@@ -35,10 +38,19 @@ export class DerivativesManager {
   }
   async sourceForEditor(req:Request,uploadId:string){
     const upload=await this.authorize(req,uploadId,"editor");if(upload.state!=="confirmed")throw new ConflictException();
-    const source=await internalJson<{status:string;result?:{durationSeconds:number;width:number;height:number;audioCodec:string|null}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
-    if(source.status!=="succeeded"||!source.result)throw new ConflictException();
-    if(source.result.width>3840||source.result.height>3840)throw new BadRequestException();
-    return{upload,metadata:source.result};
+    const metadata=await this.inspectedMedia(upload);
+    if(metadata.width>3840||metadata.height>3840)throw new BadRequestException();
+    return{upload,metadata};
+  }
+  private async inspectedMedia(upload:Upload):Promise<InspectedMedia>{
+    const response=await internalJson<unknown>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
+    const status=inspectionStatusSchema.safeParse(response);
+    if(!status.success||status.data.id!==upload.id)throw new ServiceUnavailableException({code:"INSPECTION_METADATA_INVALID"});
+    if(status.data.status!=="succeeded")throw new ConflictException();
+    if(status.data.result===undefined||status.data.result===null)throw new ServiceUnavailableException({code:"INSPECTION_METADATA_INVALID"});
+    const metadata=inspectedMediaSchema.safeParse(status.data.result);
+    if(!metadata.success)throw new ServiceUnavailableException({code:"INSPECTION_METADATA_INVALID"});
+    return metadata.data;
   }
   async validateEditorSplit(req:Request,primary:Awaited<ReturnType<DerivativesManager["sourceForEditor"]>>,spec:Extract<ValidatedProcessingSpec,{kind:"clip"}>){
     if(!spec.splitScreen)return;
@@ -46,14 +58,20 @@ export class DerivativesManager {
     if(primary.upload.workspace_id!==secondary.upload.workspace_id||splitSourceError(spec,primary.metadata,secondary.metadata,primary.upload.expected_bytes,secondary.upload.expected_bytes))throw new BadRequestException();
   }
   private async beginValidated(req:Request,uploadId:string,spec:ValidatedProcessingSpec,correlationId:string,editorRevisionId?:string){
+    const user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({uploadId,spec,...(editorRevisionId?{editorRevisionId}:{})}));
+    const prior=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE creator_id=$1 AND idempotency_key=$2",[user.id,key])).rows[0];
+    if(prior){
+      const primary=await this.authorize(req,prior.upload_id,"editor");
+      if(prior.spec.kind==="clip"&&prior.spec.splitScreen){const secondary=await this.authorize(req,prior.spec.splitScreen.secondaryUploadId,"editor");if(primary.workspace_id!==secondary.workspace_id)throw new NotFoundException();}
+      if(prior.request_hash!==hash)throw new ConflictException();
+      return{id:prior.id,status:prior.status};
+    }
     const upload=await this.authorize(req,uploadId,"editor");
     requireManualProcessingAdmission(this.config);
     if(upload.state!=="confirmed")throw new ConflictException();
-    const source=await internalJson<{status:string;result?:{durationSeconds:number;audioCodec:string|null;width:number;height:number}}>(this.mediaUrl,"/v1/internal/inspection-status",this.config,{id:upload.id,workspaceId:upload.workspace_id});
-    if(source.status!=="succeeded"||!source.result)throw new ConflictException();
-    if(source.result.width>3840||source.result.height>3840||(spec.kind==="clip"&&spec.endSeconds>source.result.durationSeconds)||(spec.kind==="audio"&&(!source.result.audioCodec||source.result.durationSeconds>3600)))throw new BadRequestException();
-    if(spec.kind==="clip")await this.validateEditorSplit(req,{upload,metadata:source.result},spec);
-    const user=await authenticatedUser(req,this.config),key=uuid(String(req.headers["idempotency-key"]??"")),hash=digest(JSON.stringify({uploadId,spec,...(editorRevisionId?{editorRevisionId}:{})}));
+    const metadata=await this.inspectedMedia(upload);
+    if(metadata.width>3840||metadata.height>3840||(spec.kind==="clip"&&spec.endSeconds>metadata.durationSeconds)||(spec.kind==="audio"&&(!metadata.audioCodec||metadata.durationSeconds>LOCAL_TRANSCRIPTION_MAX_SECONDS)))throw new BadRequestException();
+    if(spec.kind==="clip")await this.validateEditorSplit(req,{upload,metadata},spec);
     const reservation=spec.kind==="audio"?134217728:68157440;
     return this.tx(async client=>{
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${user.id}:${key}`]);
@@ -115,6 +133,18 @@ export class DerivativesManager {
     const selected=body(z.enum(["video","audio","srt","vtt"]),kind),row=await this.synchronize(await this.resource(req,id));
     return this.signedArtifact(row,selected);
   }
+  async sourcePlayback(req:Request,id:string){
+    const upload=await this.authorize(req,id,"editor");
+    if(upload.state!=="confirmed"||!upload.etag||!upload.sha256)throw new ConflictException();
+    const contentType=body(z.enum(["video/mp4","video/webm","video/quicktime","video/x-matroska"]),upload.content_type);
+    if(upload.object_key!==`workspaces/${upload.workspace_id}/media/${upload.id}/source.media`)throw new ConflictException();
+    const actual=await this.s3.send(new HeadObjectCommand({Bucket:this.bucket,Key:upload.object_key}));
+    if(actual.ContentLength!==upload.expected_bytes||actual.ETag!==upload.etag||actual.ContentType!==contentType)throw new ConflictException();
+    const filename=contentType==="video/webm"?"source.webm":contentType==="video/quicktime"?"source.mov":contentType==="video/x-matroska"?"source.mkv":"source.mp4";
+    const expiresInSeconds=120;
+    const url=await getSignedUrl(this.signer,new GetObjectCommand({Bucket:this.bucket,Key:upload.object_key,ResponseContentDisposition:`inline; filename="${filename}"`,ResponseContentType:contentType,ResponseCacheControl:"private, no-store, max-age=0"}),{expiresIn:expiresInSeconds});
+    return{url,expiresInSeconds,contentType,bytes:upload.expected_bytes,sha256:upload.sha256};
+  }
   async assertReviewExport(revisionId:string,id:string){
     const stored=(await this.pool.query<Row>("SELECT p.* FROM processing_requests p JOIN uploads u ON u.id=p.upload_id JOIN projects pr ON pr.id=u.project_id LEFT JOIN uploads su ON su.id=p.secondary_upload_id LEFT JOIN projects sp ON sp.id=su.project_id WHERE p.id=$1 AND p.editor_revision_id=$2 AND pr.deleted_at IS NULL AND u.state='confirmed' AND (p.secondary_upload_id IS NULL OR (su.state='confirmed' AND sp.deleted_at IS NULL AND su.workspace_id=p.workspace_id))",[id,revisionId])).rows[0];if(!stored)throw new NotFoundException();const row=await this.synchronize(stored);
     if(row.status!=="succeeded"||row.spec.kind!=="clip"||!row.result?.artifacts.some(artifact=>artifact.kind==="video"))throw new ConflictException();return row;
@@ -133,7 +163,7 @@ export class DerivativesManager {
   async dispatch() {
     const pending=(await this.pool.query<Row&{correlation_id:string}>("SELECT * FROM processing_requests WHERE delivered_at IS NULL ORDER BY created_at LIMIT 25")).rows;
     for(const row of pending)try {
-      await internalJson(this.mediaUrl,"/v1/internal/processing",this.config,{id:row.id,workspaceId:row.workspace_id,inspectionId:row.upload_id,spec:row.spec,correlationId:row.correlation_id,cancelRequested:row.cancel_requested});
+      await internalJson(this.mediaUrl,"/v1/internal/processing",this.config,{id:row.id,workspaceId:row.workspace_id,creatorId:row.creator_id,inspectionId:row.upload_id,spec:row.spec,correlationId:row.correlation_id,cancelRequested:row.cancel_requested});
       await this.pool.query("UPDATE processing_requests SET delivered_at=now() WHERE id=$1",[row.id]);
     }catch{logger.warn({code:"DERIVATIVE_ADMISSION_RETRY",taskId:row.id});}
     const rows=(await this.pool.query<Row>("SELECT * FROM processing_requests WHERE settled_at IS NULL AND delivered_at IS NOT NULL AND ($1::uuid IS NULL OR id>$1) ORDER BY id LIMIT 25",[this.cursor??null])).rows;

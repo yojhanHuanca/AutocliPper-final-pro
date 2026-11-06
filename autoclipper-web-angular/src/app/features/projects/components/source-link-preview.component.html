@@ -8,7 +8,13 @@
     <span class="link-import-status"><ac-icon name="play" /> Vista previa</span>
   </header>
 
-  <div class="link-source-layout">
+  @if (sourceBusy()) {
+    <div class="studio-transfer" role="status" aria-live="polite">
+      <span class="studio-loader" aria-hidden="true"></span><div><strong>{{ importing() ? 'Importando tu video' : 'Comprobando el enlace' }}</strong><p>{{ importing() ? 'Descargando y verificando la fuente. El tiempo depende de la duración y de la conexión.' : 'Consultando los datos disponibles del video.' }}</p></div>
+      <div class="studio-indeterminate" aria-hidden="true"><span></span></div>
+    </div>
+  }
+  <div class="link-source-layout" [attr.aria-busy]="sourceBusy()">
     <div class="link-source-controls" [hidden]="previewOnly()">
       <form (submit)="$event.preventDefault(); validate()" novalidate>
         <label for="source-video-link">Enlace del video</label>
@@ -17,9 +23,10 @@
           <input id="source-video-link" type="url" autocomplete="off" spellcheck="false" placeholder="https://youtube.com/watch?v=…" maxlength="2048"
             [value]="value()" (input)="update($event)" [disabled]="sourceBusy()" aria-describedby="source-link-help source-link-feedback"
             [attr.aria-invalid]="result()?.state === 'invalid' ? 'true' : null" />
-          <button class="button" type="submit" [disabled]="sourceBusy() || !value().trim()"><ac-icon name="check" />{{ sourceBusy() ? result()?.target?.platform === 'YouTube' ? 'Consultando YouTube…' : 'Comprobando…' : 'Validar enlace' }}</button>
+          <button class="button" type="submit" [disabled]="sourceBusy() || !value().trim()"><ac-icon name="check" />{{ sourceBusy() ? importing() ? 'Descargando video…' : result()?.target?.platform === 'YouTube' ? 'Consultando YouTube…' : 'Comprobando…' : 'Validar enlace' }}</button>
+          @if (sourceBusy() && !importing() && result()?.target?.platform === 'YouTube') { <button class="text-link" type="button" (click)="cancelYouTubeMetadata()">Cancelar consulta</button> }
         </div>
-        <p id="source-link-help" class="link-help">YouTube: video de vista previa · Kick: canal en directo · Twitch: vista previa de clips/VOD; solo los clips pueden solicitar importación.</p>
+        <p id="source-link-help" class="link-help">YouTube: importa videos para crear clips con IA. Kick: vista previa de canales en directo. Twitch: puedes importar clips publicados; un VOD requiere un MP4 porque su importación pide elegir segundos manualmente.</p>
       </form>
 
       <div id="source-link-feedback" class="link-feedback" aria-live="polite" aria-atomic="true">
@@ -35,24 +42,24 @@
         }
       </div>
 
-      @if (sourceError()) { <p class="source-operation-error" role="alert">{{ sourceError() }}</p> }
+      @if (sourceError()) { <p class="source-operation-error" role="alert">{{ sourceError() }}</p>@if (result()?.target?.platform === 'YouTube' && canImport()) { <button class="text-link" type="button" (click)="resolveYouTubeMetadata()" [disabled]="sourceBusy()">Consultar de nuevo</button> } }
       @if (sourceNotice()) { <p class="source-operation-notice" role="status">{{ sourceNotice() }}</p> }
 
-      @if (canImport() && result()?.platform === 'Twitch') {
+      @if (canImport() && result()?.target?.platform === 'Twitch' && result()?.target?.kind === 'clip') {
         <div class="twitch-connection" aria-live="polite">
           @if (twitchStatus(); as twitch) {
             @if (!twitch.configured) { <p class="link-help">Twitch no está configurado por el administrador. Puedes continuar con un archivo de video.</p> }
             @else if (twitch.linked) { <p><ac-icon name="check" /> Cuenta vinculada{{ twitch.account?.login ? ' · @' + twitch.account.login : '' }}</p><button class="text-link" type="button" (click)="disconnectTwitch()" [disabled]="sourceBusy()">Desvincular</button> }
-            @else { <p>Los clips de Twitch requieren autorización de tu cuenta.</p><button class="button" type="button" (click)="connectTwitch()" [disabled]="sourceBusy() || !twitch.configured">{{ sourceBusy() ? 'Conectando…' : 'Vincular Twitch' }}</button> }
+            @else { <p>Para importar este clip publicado, autoriza tu cuenta de Twitch.</p><button class="button" type="button" (click)="connectTwitch()" [disabled]="sourceBusy() || !twitch.configured">{{ sourceBusy() ? 'Conectando…' : 'Vincular Twitch' }}</button> }
           } @else { <button class="text-link" type="button" (click)="refreshTwitchStatus()">Consultar conexión Twitch</button> }
         </div>
       }
 
-      @if (resolved() && twitchStatus()?.configured && twitchStatus()?.linked) {
+      @if (resolved() && (result()?.target?.platform === 'YouTube' || (twitchStatus()?.configured && twitchStatus()?.linked))) {
         @if (resolved(); as available) {
           <div class="source-import-confirm">
-            <div><span class="link-overline">FUENTE LISTA</span><strong>{{ available.title || 'Clip de Twitch disponible' }}</strong><p>{{ available.durationSeconds ? 'Duración: ' + available.durationSeconds + ' s. ' : '' }}Se guardará una copia privada y se inspeccionará antes de abrir Configuración.</p></div>
-            <button class="button primary" type="button" (click)="importTwitch()" [disabled]="sourceBusy() || !canImport() || !twitchStatus()?.configured || !twitchStatus()?.linked || !resolved()"><ac-icon name="upload" />{{ sourceBusy() ? 'Importando clip…' : 'Importar clip de Twitch' }}</button>
+            <div><span class="link-overline">VIDEO DISPONIBLE</span><strong>{{ available.title || 'Clip de Twitch disponible' }}</strong><p>{{ available.durationSeconds ? 'Duración: ' + available.durationSeconds + ' s. ' : '' }}Se guardará e inspeccionará en tu proyecto. Después configura cuántos clips generar y su duración máxima.</p></div>
+            <button class="button primary" type="button" (click)="importTwitch()" [disabled]="sourceBusy() || !canImport() || (result()?.target?.platform !== 'YouTube' && (!twitchStatus()?.configured || !twitchStatus()?.linked)) || !resolved()"><ac-icon name="upload" />{{ sourceBusy() ? 'Importando video…' : 'Importar y continuar' }}</button>
           </div>
         }
       }
@@ -65,7 +72,7 @@
           <div class="link-preview-meta">
             <span class="link-platform-mark" aria-hidden="true"><ac-icon name="film" /></span>
             <div><span class="link-overline">{{ target.platform }} · {{ target.kind === 'live' ? 'DIRECTO' : target.kind === 'clip' ? 'CLIP' : 'VIDEO' }}</span><h4 id="link-preview-title">Vista previa oficial</h4></div>
-            <span class="link-unverified">Sin importar</span>
+            <span class="link-unverified">{{ target.platform === 'YouTube' ? 'Importar para generar clips' : target.platform === 'Kick' ? 'Preview en vivo' : target.kind === 'video' ? 'Solo vista previa' : !canImport() ? 'Solo referencia' : 'Clip importable tras comprobar' }}</span>
           </div>
           @if (target.platform === 'YouTube' && importResolution()?.youtubeMetadata; as metadata) {
             @if (hasAvailableYoutubeMetadata(metadata)) {
@@ -90,13 +97,13 @@
           }
           @if (target.platform === 'YouTube' || target.platform === 'Kick' || (target.platform === 'Twitch' && (target.kind === 'video' || !canImport()))) {
             <aside class="source-capability-note" role="note">
-              <strong>{{ target.platform === 'Twitch' ? (target.kind === 'video' ? 'VOD de Twitch: solo vista previa.' : 'Twitch: importación aún sin confirmar.') : target.platform + ': importación no admitida.' }}</strong>
-              <p>{{ target.platform === 'YouTube' ? 'AutoClipper no importa videos de YouTube desde una URL. Para crear clips, sube el archivo original solo si tienes autorización para usarlo.' : target.platform === 'Kick' ? 'La importación desde Kick no está disponible. Descarga el clip desde Kick con tu cuenta y sube el archivo MP4.' : target.kind === 'video' ? 'El importador de Twitch solo evalúa clips, no VOD. Si el clip está publicado en Twitch, pega su enlace directo; la disponibilidad dependerá de OAuth y de los permisos del canal.' : 'La vista previa no confirma que se pueda importar. Se requiere OAuth configurado, una cuenta con permisos y una respuesta positiva del servidor antes de descargar e inspeccionar el clip.' }}</p>
+              <strong>{{ target.platform === 'Twitch' ? (target.kind === 'video' ? 'VOD de Twitch: vista previa; sin recorte automático.' : 'La disponibilidad del clip depende de Twitch y de tu cuenta.') : target.platform === 'YouTube' ? 'YouTube: importa el video para generar clips.' : target.platform + ': importación desde URL no disponible.' }}</strong>
+              <p>{{ target.platform === 'YouTube' ? 'Después de confirmar, el servidor descarga el video, verifica el archivo y habilita la selección de momentos con IA. La plataforma puede restringir videos privados o no disponibles.' : target.platform === 'Kick' ? 'Este enlace solo permite previsualizar un canal en directo. Kick VOD/clips no se importan desde URL; descarga el archivo con tu cuenta y súbelo como MP4.' : target.kind === 'video' ? 'La API permite crear un clip desde un VOD solo si indicas un intervalo exacto. Este asistente no pide esos segundos; usa un clip publicado o sube el MP4 del VOD.' : 'Twitch comprobará OAuth, permisos y disponibilidad. Si confirma el clip, se importará y se inspeccionará antes de habilitar la generación.' }}</p>
             </aside>
           }
           @if (importResolution(); as resolution) {
             <aside class="source-resolution-state" [class.is-unsupported]="resolution.state === 'unsupported'" [class.is-unavailable]="resolution.state === 'unavailable'" [class.is-available]="resolution.state === 'available'" role="status" aria-live="polite">
-              <strong>{{ resolution.state === 'available' ? 'Disponible para solicitar importación' : resolution.state === 'unsupported' ? 'Importación no admitida' : 'Importación no disponible' }}</strong>
+              <strong>{{ resolution.state === 'available' ? 'Disponible para solicitar importación' : resolution.state === 'unsupported' ? 'Importación no admitida' : resolution.state === 'input_required' ? 'Vista previa únicamente en este flujo' : 'Importación no disponible' }}</strong>
               @if (resolution.message) { <p>{{ resolution.message }}</p> }
               @if (resolution.nextStep) { <p>{{ resolution.nextStep }}</p> }
             </aside>
@@ -115,11 +122,11 @@
 
         </article>
       } @else {
-        <div class="link-preview-empty">
+        <div class="link-preview-empty" [class.link-preview-unsupported]="result()?.platform === 'Kick' && result()?.state === 'unverifiable'">
           <div class="preview-frame-art" aria-hidden="true"><span></span><span></span><span></span><i></i></div>
           <span class="link-overline">ESCENARIO DE VIDEO</span>
-          <strong>Tu video aparecerá aquí.</strong>
-          <p>Valida un enlace compatible para preparar la vista previa. El reproductor externo solo se cargará cuando pulses «Abrir vista previa».</p>
+          <strong>{{ result()?.platform === 'Kick' ? 'Este VOD de Kick no tiene vista previa aquí.' : 'Tu video aparecerá aquí.' }}</strong>
+          <p>{{ result()?.platform === 'Kick' ? 'Descárgalo desde Kick con tu cuenta y sube el MP4 para inspeccionarlo.' : 'Valida un enlace compatible para preparar la vista previa. El reproductor externo solo se cargará cuando pulses «Abrir vista previa».' }}</p>
         </div>
       }
     </section>

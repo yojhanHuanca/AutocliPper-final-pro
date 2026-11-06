@@ -36,6 +36,7 @@ export class EditorManager {
     if(spec.subtitles.source==="transcript"){
       const prepared=await this.analyses.prepareRender(req,spec.subtitles.analysisId,{version:1,startSeconds:spec.startSeconds,endSeconds:spec.endSeconds,aspect:spec.aspect});
       if(prepared.uploadId!==uploadId)throw new BadRequestException();
+      if(!prepared.spec.subtitles||prepared.spec.subtitles.provenance!=="transcript")throw new BadRequestException();
       subtitles={...prepared.spec.subtitles,...(spec.subtitles.style?{style:spec.subtitles.style}:{})};
     }
     const renderSpec=body(internalProcessingSpec,{version:1,kind:"clip",startSeconds:spec.startSeconds,endSeconds:spec.endSeconds,aspect:spec.aspect,...(spec.framing?{framing:spec.framing}:{}),...(spec.splitScreen?{splitScreen:spec.splitScreen}:{}),...(subtitles?{subtitles}:{})});

@@ -22,8 +22,13 @@ function subject(access) {
   component.localSearch = signal('');
   component.jobKindFilter = signal('');
   component.jobStatusFilter = signal('');
+  component.serverJobKindFilter = signal('');
+  component.serverJobStatusFilter = signal('');
+  component.serverUserVerifiedFilter = signal('');
+  component.serverUserMfaFilter = signal('');
   component.loadingPage = signal(false);
   component.pageFailed = signal(false);
+  component.failedCursor = signal(null);
   component.message = signal('');
   component.error = signal('');
   component.pageVersion = 0;
@@ -32,6 +37,8 @@ function subject(access) {
   component.workspaces = signal([]);
   component.jobs = signal([]);
   component.consumption = signal([]);
+  component.audit = signal([]);
+  component.grants = signal([]);
   component.nextBeforeId = signal(null);
   component.summaryRows = signal({});
   component.loadingAccess = signal(false);
@@ -134,6 +141,18 @@ test('an authorized, elevated read calls only its permitted data endpoint', asyn
   assert.equal(component.loadingPage(), false);
 });
 
+test('a denied administrative page clears prior summary counts and closes the elevated view', async () => {
+  const component = subject(access());
+  component.summaryRows.set({ users: { count: 8, hasMore: true, loading: false, failed: false } });
+  component.api.users = async () => { throw { status: 403 }; };
+  await component.loadSection();
+  assert.deepEqual(component.summaryRows(), {});
+  assert.equal(component.section(), null);
+  assert.equal(component.activeView(), 'summary');
+  assert.equal(component.access(), null);
+  assert.equal(component.elevatedUntil(), '');
+});
+
 test('overview links open only permissioned sections and return to summary without querying audit', async () => {
   const component = subject(access());
   await component.selectSection('jobs');
@@ -184,6 +203,30 @@ test('overview page counts come from the returned cursor pages and never claim a
   assert.equal(component.summaryLine('users'), '1 fila consultada · hay más páginas. No es un total global.');
   await component.loadNextPage();
   assert.equal(component.summaryLine('users'), '2 filas consultadas · sin cursor siguiente. No es un total global.');
+});
+
+test('a failed later page preserves confirmed rows and retries the same cursor once', async () => {
+  const component = subject(access());
+  const calls = [];
+  component.api.users = async beforeId => {
+    calls.push(beforeId ?? null);
+    if (!beforeId) return { items: [{ id: 'confirmed-user' }], nextBeforeId: 'next-cursor' };
+    if (calls.length === 2) throw { status: 503 };
+    return { items: [{ id: 'later-user' }], nextBeforeId: null };
+  };
+  await component.loadSection();
+  await component.loadNextPage();
+  assert.deepEqual(component.users().map(item => item.id), ['confirmed-user']);
+  assert.equal(component.nextBeforeId(), 'next-cursor');
+  assert.equal(component.failedCursor(), 'next-cursor');
+  assert.equal(component.pageFailed(), true);
+  await component.loadNextPage();
+  assert.equal(calls.length, 2, 'normal pagination is paused until retry');
+  await component.retryPage();
+  assert.deepEqual(calls, [null, 'next-cursor', 'next-cursor']);
+  assert.deepEqual(component.users().map(item => item.id), ['confirmed-user', 'later-user']);
+  assert.equal(component.pageFailed(), false);
+  assert.equal(component.failedCursor(), null);
 });
 
 test('a late page cannot repopulate rows after a capability refresh starts', async () => {

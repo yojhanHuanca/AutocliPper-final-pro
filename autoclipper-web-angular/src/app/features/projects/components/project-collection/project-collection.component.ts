@@ -85,7 +85,7 @@ export class ProjectCollectionComponent {
     );
   }
   roleLabel(): string {
-    if (this.design) return "Tu rol aparecerá aquí";
+    if (this.design) return "Sin acceso conectado";
     if (!this.workspace.loaded()) return "Comprobando acceso…";
     const role = this.workspace.workspaces().find((w) => w.id === this.workspace.workspaceId())?.role;
     return role ? workspaceRoleLabel(role) : "Sin acceso confirmado";

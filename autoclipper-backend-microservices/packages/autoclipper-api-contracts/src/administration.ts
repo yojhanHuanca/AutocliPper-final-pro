@@ -1,26 +1,32 @@
 import {z} from "zod";
 import {ApiProperty,ApiPropertyOptional} from "@nestjs/swagger";
 
-export const adminPermission=z.enum(["users.read","workspaces.read","jobs.read","consumption.read"]);
+export const adminPermission=z.enum(["users.read","workspaces.read","jobs.read","consumption.read","audit.read","grants.read"]);
 export type AdminPermission=z.infer<typeof adminPermission>;
-export const adminPage=z.object({beforeId:z.uuid().optional(),workspaceId:z.uuid().optional(),limit:z.coerce.number().int().min(1).max(50).default(25)}).strict();
+export const adminPage=z.object({beforeId:z.uuid().optional(),workspaceId:z.uuid().optional(),limit:z.coerce.number().int().min(1).max(50).default(25),verified:z.boolean().optional(),mfaEnabled:z.boolean().optional(),kind:z.enum(["audio","render","analysis","pipeline"]).optional(),status:z.enum(["queued","running","transcribing","selecting","audio","analysis","render","stopping","succeeded","failed","cancelled"]).optional()}).strict();
 export const adminSessionToken=z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
 export const adminOwnerRequest=z.object({token:adminSessionToken,query:adminPage,correlationId:z.uuid()}).strict();
 export const adminAuthority=z.object({actorId:z.uuid(),grantRevision:z.number().int().positive(),workspaceIds:z.array(z.uuid()).min(1).max(50).nullable()}).strict();
 export const adminReauth=z.object({password:z.string().min(1).max(128),factor:z.string().regex(/^(\d{6}|[a-f0-9]{24})$/u)}).strict();
 export const adminScope=z.array(z.uuid()).min(1).max(50).nullable();
-export const adminGrant=z.object({userId:z.uuid(),permissions:z.array(adminPermission).min(1).max(4),workspaceIds:adminScope,operatorReference:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/u)}).strict().refine(value=>value.workspaceIds===null||!value.permissions.includes("users.read"),"User enumeration requires an explicit global grant");
+export const adminGrant=z.object({userId:z.uuid(),permissions:z.array(adminPermission).min(1).max(6),workspaceIds:adminScope,operatorReference:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/u)}).strict().refine(value=>value.workspaceIds===null||!value.permissions.includes("users.read"),"User enumeration requires an explicit global grant");
 const date=z.iso.datetime();
 const user=z.object({id:z.uuid(),verified:z.boolean(),mfaEnabled:z.boolean(),createdAt:date}).strict();
 const workspace=z.object({id:z.uuid(),kind:z.enum(["personal","team"]),memberCount:z.number().int().nonnegative(),createdAt:date}).strict();
 const job=z.object({id:z.uuid(),workspaceId:z.uuid(),kind:z.enum(["audio","render","analysis","pipeline"]),status:z.enum(["queued","running","transcribing","selecting","audio","analysis","render","stopping","succeeded","failed","cancelled"]),createdAt:date,finishedAt:date.nullable(),errorCode:z.string().regex(/^[A-Z_]{1,100}$/u).nullable()}).strict();
 const consumption=z.object({id:z.uuid(),unit:z.literal("material_seconds_per_stage"),planKind:z.literal("development"),planVersion:z.string().regex(/^[a-f0-9]{64}$/u),periodStart:date,periodEnd:date,budgetSeconds:z.number().int().nonnegative(),consumedSeconds:z.number().int().nonnegative(),reservedSeconds:z.number().int().nonnegative()}).strict();
+const audit=z.object({id:z.uuid(),actorUserId:z.uuid().nullable(),subjectUserId:z.uuid().nullable(),permission:adminPermission.nullable(),workspaceId:z.uuid().nullable(),outcome:z.enum(["allowed","denied","reauthenticated","reauth_denied","grant","revoke"]),correlationId:z.uuid(),operatorReference:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/u).nullable(),createdAt:date}).strict();
+const grant=z.object({userId:z.uuid(),permissions:z.array(adminPermission).min(1).max(6),workspaceIds:adminScope,revision:z.number().int().positive(),revokedAt:date.nullable(),updatedAt:date}).strict();
 const page=<T extends z.ZodType>(item:T)=>z.object({items:z.array(item).max(50),nextBeforeId:z.uuid().nullable()}).strict();
-export const adminUsersPage=page(user),adminWorkspacesPage=page(workspace),adminJobsPage=page(job),adminConsumptionPage=page(consumption);
+export const adminUsersPage=page(user),adminWorkspacesPage=page(workspace),adminJobsPage=page(job),adminConsumptionPage=page(consumption),adminAuditPage=page(audit),adminGrantsPage=page(grant);
 export class AdminQueryDto {
   @ApiPropertyOptional({format:"uuid",description:"Exclusive UUID keyset cursor, in descending ID order."}) beforeId?:string;
   @ApiPropertyOptional({format:"uuid",description:"Optional exact workspace filter; the server enforces the operator grant scope."}) workspaceId?:string;
   @ApiPropertyOptional({type:"integer",minimum:1,maximum:50,default:25}) limit?:number;
+  @ApiPropertyOptional({description:"Filter users by verified status (true/false). Only applies to users endpoint."}) verified?:boolean;
+  @ApiPropertyOptional({description:"Filter users by MFA enabled status (true/false). Only applies to users endpoint."}) mfaEnabled?:boolean;
+  @ApiPropertyOptional({description:"Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint."}) kind?:string;
+  @ApiPropertyOptional({description:"Filter jobs by status. Only applies to jobs endpoint."}) status?:string;
 }
 export class AdminUserDto {
   @ApiProperty({format:"uuid"}) id!:string;
@@ -54,10 +60,31 @@ export class AdminConsumptionDto {
   @ApiProperty({minimum:0}) consumedSeconds!:number;
   @ApiProperty({minimum:0}) reservedSeconds!:number;
 }
+export class AdminAuditDto {
+  @ApiProperty({format:"uuid",type:"string"}) id!:string;
+  @ApiProperty({format:"uuid",nullable:true,type:"string"}) actorUserId!:string|null;
+  @ApiProperty({format:"uuid",nullable:true,type:"string"}) subjectUserId!:string|null;
+  @ApiProperty({enum:adminPermission.options,nullable:true}) permission!:string|null;
+  @ApiProperty({format:"uuid",nullable:true,type:"string"}) workspaceId!:string|null;
+  @ApiProperty({enum:["allowed","denied","reauthenticated","reauth_denied","grant","revoke"]}) outcome!:string;
+  @ApiProperty({format:"uuid",type:"string"}) correlationId!:string;
+  @ApiProperty({nullable:true,type:"string"}) operatorReference!:string|null;
+  @ApiProperty({format:"date-time"}) createdAt!:string;
+}
 export class AdminUsersPageDto {@ApiProperty({type:[AdminUserDto],maxItems:50}) items!:AdminUserDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
 export class AdminWorkspacesPageDto {@ApiProperty({type:[AdminWorkspaceDto],maxItems:50}) items!:AdminWorkspaceDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
 export class AdminJobsPageDto {@ApiProperty({type:[AdminJobDto],maxItems:50}) items!:AdminJobDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
 export class AdminConsumptionPageDto {@ApiProperty({type:[AdminConsumptionDto],maxItems:50}) items!:AdminConsumptionDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
+export class AdminAuditPageDto {@ApiProperty({type:[AdminAuditDto],maxItems:50}) items!:AdminAuditDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
+export class AdminGrantDto {
+  @ApiProperty({format:"uuid",type:"string"}) userId!:string;
+  @ApiProperty({type:[String],enum:adminPermission.options}) permissions!:string[];
+  @ApiProperty({type:[String],nullable:true,description:"Null means explicitly global."}) workspaceIds!:string[]|null;
+  @ApiProperty({minimum:1}) revision!:number;
+  @ApiProperty({format:"date-time",nullable:true}) revokedAt!:string|null;
+  @ApiProperty({format:"date-time"}) updatedAt!:string;
+}
+export class AdminGrantsPageDto {@ApiProperty({type:[AdminGrantDto],maxItems:50}) items!:AdminGrantDto[];@ApiProperty({type:String,format:"uuid",nullable:true}) nextBeforeId!:string|null;}
 export class AdminAccessDto {
   @ApiProperty() granted!:boolean;
   @ApiProperty() mfaEnabled!:boolean;

@@ -404,17 +404,19 @@
 }
 
 /* Shared authenticated palette. The editor keeps the same tokens while its navigation stays icon-only. */
+@layer components {
+
 .app-shell {
-  --bg: #f4f0e8;
-  --surface: #fffdf8;
-  --surface-2: #e9e3da;
-  --text: #11111a;
-  --muted: #625e64;
-  --border: #d8d2c9;
-  --accent: #315eff;
-  --accent-hover: #2347d0;
+  --bg: #fff;
+  --surface: #fff;
+  --surface-2: #f3f6fc;
+  --text: #202220;
+  --muted: #565f70;
+  --border: #dce3ef;
+  --accent: #2354bb;
+  --accent-hover: #183e90;
   --accent-rose: #c72670;
-  --tint: #e5eaff;
+  --tint: #edf2fc;
   --on-accent: #fff;
   color: var(--text);
   background: var(--bg);
@@ -474,3 +476,6 @@ html[data-theme="dark"] .app-shell :is(a, button:not(.danger)) { color: var(--ac
 html[data-theme="dark"] .app-shell :is(.button.primary, .account-content .button.primary, .design-banner > a) { color: var(--on-accent); }
 html[data-theme="dark"] .app-shell :is(.account-nav-item.active, .sidebar nav > a.active) { color: var(--accent); }
 html[data-theme="dark"] .app-shell :is(.account-nav-item.active > ac-icon:first-child, .workspace-access-icon, .account-card-icon) { background: var(--tint); color: var(--accent); border-color: var(--border); }
+html:not([data-theme="dark"]) .sidebar nav small,html:not([data-theme="dark"]) .app-footer,html:not([data-theme="dark"]) .workspace-context { color:#596579; }
+
+}

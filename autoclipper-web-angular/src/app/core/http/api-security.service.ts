@@ -9,31 +9,42 @@ export class ApiSecurity {
   private readonly base = inject(API_BASE_URL);
   private csrfToken = "";
   private csrfExpiresAt = 0;
-  private csrfFlight?: Promise<string>;
-  private refreshFlight?: Promise<void>;
+  private generation = 0;
+  private csrfFlight?: { generation: number; promise: Promise<string> };
+  private refreshFlight?: { generation: number; promise: Promise<void> };
 
   csrf(): Promise<string> {
     if (this.csrfToken && Date.now() < this.csrfExpiresAt)
       return Promise.resolve(this.csrfToken);
-    return (this.csrfFlight ??= firstValueFrom(
+    if (this.csrfFlight?.generation === this.generation) return this.csrfFlight.promise;
+    const generation = this.generation;
+    let promise: Promise<string>;
+    promise = firstValueFrom(
       this.raw.get<Schema<"CsrfResponseDto">>(`${this.base}/auth/csrf`, {
         withCredentials: true,
       }),
     )
       .then((result) => {
+        if (generation !== this.generation) throw new Error("La sesión cambió durante la validación de seguridad.");
         this.csrfToken = result.csrfToken;
         this.csrfExpiresAt = Date.now() + 25 * 60_000;
         return result.csrfToken;
       })
       .finally(() => {
-        this.csrfFlight = undefined;
-      }));
+        if (this.csrfFlight?.promise === promise) this.csrfFlight = undefined;
+      });
+    this.csrfFlight = { generation, promise };
+    return promise;
   }
 
   refresh(): Promise<void> {
-    return (this.refreshFlight ??= this.csrf()
-      .then((token) =>
-        firstValueFrom(
+    if (this.refreshFlight?.generation === this.generation) return this.refreshFlight.promise;
+    const generation = this.generation;
+    let promise: Promise<void>;
+    promise = this.csrf()
+      .then((token) => {
+        if (generation !== this.generation) throw new Error("La sesión cambió antes de renovar las credenciales.");
+        return firstValueFrom(
           this.raw.post(
             `${this.base}/auth/refresh`,
             {},
@@ -42,16 +53,23 @@ export class ApiSecurity {
               headers: { "X-CSRF-Token": token },
             },
           ),
-        ),
-      )
-      .then(() => undefined)
+        );
+      })
+      .then(() => {
+        if (generation !== this.generation) throw new Error("La sesión cambió durante la renovación de credenciales.");
+      })
       .finally(() => {
-        this.refreshFlight = undefined;
-      }));
+        if (this.refreshFlight?.promise === promise) this.refreshFlight = undefined;
+      });
+    this.refreshFlight = { generation, promise };
+    return promise;
   }
 
   clear(): void {
+    this.generation += 1;
     this.csrfToken = "";
     this.csrfExpiresAt = 0;
+    this.csrfFlight = undefined;
+    this.refreshFlight = undefined;
   }
 }

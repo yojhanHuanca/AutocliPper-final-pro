@@ -23,7 +23,7 @@ export function client(baseUrl = api, defaultHeaders = {}) {
         method,
         headers,
         ...(input === undefined ? {} : { body: JSON.stringify(input) }),
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(path.includes("/source-links/import") ? 330000 : 25000),
       });
       for (const raw of response.headers.getSetCookie()) {
         const pair = raw.split(";")[0];

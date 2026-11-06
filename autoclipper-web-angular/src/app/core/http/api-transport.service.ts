@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
-import { firstValueFrom } from "rxjs";
+import { firstValueFrom, fromEvent, takeUntil, timeout } from "rxjs";
 import { API_BASE_URL } from "../config/api-config.token";
 import { API_AUTHENTICATED } from "./api-auth-context";
 @Injectable({ providedIn: "root" })
@@ -23,6 +23,15 @@ export class ApiTransport {
       this.http.post<T>(`${this.base}${path}`, body, {
         headers: key ? { "Idempotency-Key": key } : {},
       }),
+    );
+  }
+  postCancelable<T>(path: string, body: unknown, signal: AbortSignal, timeoutMs: number): Promise<T> {
+    if (signal.aborted) return Promise.reject(new DOMException("Request aborted", "AbortError"));
+    return firstValueFrom(
+      this.http.post<T>(`${this.base}${path}`, body).pipe(
+        timeout({ first: timeoutMs }),
+        takeUntil(fromEvent(signal, "abort")),
+      ),
     );
   }
   postResponse<T>(path: string, body: unknown, etag?: string, key?: string) {

@@ -1,10 +1,11 @@
+<div class="project-home" [hidden]="creatorWizardOpen()" [attr.inert]="creatorWizardOpen() ? '' : null" [attr.aria-hidden]="creatorWizardOpen() ? 'true' : null">
 <a class="text-link back-link" [routerLink]="design ? '/design/projects' : '/app/projects'"
   >← Volver a proyectos</a
 >
 <section class="project-hero" aria-labelledby="project-heading">
   <div class="project-hero-copy">
     <span class="eyebrow">TU MESA DE TRABAJO</span>
-    <h1 id="project-heading">{{ project()?.name ?? (design ? 'Detalle del proyecto' : error() ? 'Proyecto no disponible' : 'Cargando proyecto…') }}</h1>
+    <h1 id="project-heading">{{ project()?.name ?? (design ? 'Detalle del proyecto' : projectLoadError() ? 'Proyecto no disponible' : 'Cargando proyecto…') }}</h1>
     <p>Un lugar para tu video, tus cortes y lo que viene después.</p>
     <div class="project-hero-meta">
       <span><ac-icon name="shield" />{{ design ? 'Vista de estructura' : canEdit() ? 'Puedes crear y editar' : 'Acceso según tu rol' }}</span>
@@ -12,19 +13,117 @@
     </div>
   </div>
   <div class="project-hero-actions">
-    <button class="button primary" type="button" (click)="continueProject()" [disabled]="design || !project() || busy()">{{ continueLabel() }}<ac-icon name="arrow" /></button>
-    <button class="project-refresh" type="button" (click)="reload()" [disabled]="design || busy()"><ac-icon name="refresh" />Actualizar proyecto</button>
+    <button id="project-create-clips-button" class="button primary" type="button" (click)="openCreatorWizard()" [disabled]="(!design && !project()) || busy()">Crear clips<ac-icon name="arrow" /></button>
+    @if (createdDraft() || edits().length) { <button class="button" type="button" (click)="continueProject()" [disabled]="(!design && !project()) || busy()">{{ continueLabel() }}</button> }
+    <button id="project-refresh-button" class="project-refresh" type="button" (click)="reload()" [disabled]="design || busy()" [attr.aria-busy]="busy()"><ac-icon name="refresh" />{{ busy() && !project() ? 'Consultando proyecto…' : 'Actualizar proyecto' }}</button>
   </div>
 </section>
-<nav class="project-workbench-tabs" role="tablist" aria-label="Herramientas del proyecto">
-  @for (item of workbenchTabs; track item.id; let index = $index) {
-    <button type="button" role="tab" [id]="'project-tab-' + item.id" [attr.aria-selected]="workbench() === item.id" [attr.aria-controls]="'project-' + item.id + '-panel'" [attr.tabindex]="workbench() === item.id ? 0 : -1" [class.active]="workbench() === item.id" (click)="showWorkbench(item.id)" (keydown)="onWorkbenchKey($event, index)">
-      <span class="project-tab-icon"><ac-icon [name]="item.icon" /></span>
-      <span><strong>{{ item.label }}</strong><small>{{ workflowStatus(item.step) }}</small></span>
-      @if (item.id === 'drafts' && editsLoaded()) { <span class="project-tab-count">{{ edits().length }}</span> }
-    </button>
+@if (!creatorWizardOpen()) {
+  @if (projectLoadError() && project()) {
+    <div class="alert error" role="alert"><strong>No pudimos actualizar el proyecto.</strong> {{ projectLoadError() }} Los datos visibles corresponden a la última consulta correcta.</div>
+  } @else if (error() && project()) {
+    <p class="alert error" role="alert">{{ error() }}</p>
   }
-</nav>
+  @if (loadNotice()) { <p class="alert" role="status">{{ loadNotice() }}</p> }
+}
+@if (project() || design) {
+<section class="project-launchpad" aria-labelledby="project-launchpad-title">
+  <article class="launchpad-feature">
+    <div class="launchpad-art" aria-hidden="true">
+      <div class="launchpad-film-frame"><div class="launchpad-frame-sheen"></div><div class="launchpad-film-play"><span></span></div><div class="launchpad-film-strip launchpad-film-strip-top"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="launchpad-film-strip launchpad-film-strip-bottom"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="launchpad-cut-line"></div></div>
+      <span class="launchpad-art-caption"><ac-icon name="scissors" /> TU MATERIAL, EN FORMATO CLIP</span>
+    </div>
+    <div class="launchpad-feature-copy">
+      <span class="eyebrow">EMPIEZA EN ESTE PROYECTO</span>
+      <h2 id="project-launchpad-title">De tu video a un clip listo para editar.</h2>
+      <p>Carga un MP4 privado o importa un video de YouTube. Los clips de Twitch requieren una cuenta vinculada con permisos. Kick conserva la vista previa de canales en directo.</p>
+      <div class="launchpad-actions" aria-label="Elegir fuente de video">
+        <button type="button" class="button primary" (click)="openCreatorWizard('file')" [disabled]="(!design && !project()) || busy()"><ac-icon name="upload" /> Cargar video</button>
+        <button type="button" class="platforms-pending-chip" (click)="openCreatorWizard('link')" [disabled]="(!design && !project()) || busy()"><ac-icon name="link" /> Pegar enlace</button>
+      </div>
+      <p class="launchpad-source-note"><ac-icon name="shield" /> Solo los archivos cargados e inspeccionados por el servidor pueden iniciar un procesamiento.</p>
+    </div>
+  </article>
+  <aside class="launchpad-rail" aria-label="Etapas del proceso">
+    <div class="launchpad-rail-heading"><span class="eyebrow">TU RUTA DE TRABAJO</span><strong>Del video a la revisión</strong></div>
+    <ol class="launchpad-route">
+      <li><span class="launchpad-route-number">01</span><div><strong>Prepara la fuente</strong><small>Archivo cargado e inspeccionado</small></div></li>
+      <li><span class="launchpad-route-number">02</span><div><strong>Elige cómo cortar</strong><small>Marca un intervalo o pide selección automática disponible</small></div></li>
+      <li><span class="launchpad-route-number">03</span><div><strong>Procesa el video</strong><small>Consulta el estado real del servidor</small></div></li>
+      <li><span class="launchpad-route-number">04</span><div><strong>Revisa y edita</strong><small>Abre el editor cuando estén listos</small></div></li>
+    </ol>
+    <button type="button" class="launchpad-route-action" (click)="openCreatorWizard()" [disabled]="(!design && !project()) || busy()">Ver el proceso completo <ac-icon name="arrow" /></button>
+  </aside>
+  <div class="launchpad-project-status" aria-label="Estado actual del proyecto">
+    <div><span>FUENTE ACTIVA</span><strong>{{ sourceFileName() || (uploadStatus()?.state === 'pending' ? 'Carga pendiente' : 'Aún no hay una fuente') }}</strong></div>
+    <div><span>BORRADORES</span><strong>{{ editsLoaded() ? edits().length : 'Consultando…' }}</strong></div>
+    <div><span>ACCESO</span><strong>{{ canEdit() ? 'Puedes editar' : 'Solo lectura' }}</strong></div>
+    @if (uploadStatus()?.state === 'pending') { <button type="button" class="status-recovery" (click)="openCreatorWizard('file')">Consultar carga pendiente <ac-icon name="arrow" /></button> }
+  </div>
+</section>
+<section class="project-recent-work" aria-labelledby="project-recent-heading">
+  <header class="project-recent-heading">
+    <div><span class="eyebrow">CONTINUIDAD DEL PROYECTO</span><h2 id="project-recent-heading">Tus borradores</h2><p>Las ediciones que guardes aparecerán aquí para que puedas retomarlas sin volver a procesar el video.</p></div>
+    <button type="button" class="button project-reload-drafts" (click)="reloadEdits()" [disabled]="design || busy() || editsLoading() || !project()" [attr.aria-busy]="editsLoading()"><ac-icon name="refresh" /> {{ editsLoading() ? 'Actualizando…' : 'Actualizar lista' }}</button>
+  </header>
+  @if (editsError()) { <p class="alert error" role="alert">{{ editsError() }} Se conservan los borradores de la última consulta correcta, si había alguno.</p> }
+  @if (edits().length) {
+    <div class="project-recent-grid">
+      @for (edit of edits().slice(0, 3); track edit.id) {
+        <a [routerLink]="['/app/edits', edit.id]" class="project-recent-card">
+          <div class="project-recent-art" aria-hidden="true"><span class="recent-art-corner"></span><ac-icon name="film" /><span class="recent-art-label">CLIP</span></div>
+          <div class="project-recent-card-copy"><span class="eyebrow">BORRADOR · REVISIÓN {{ edit.version }}</span><h3>{{ edit.name }}</h3><span class="project-recent-card-bottom"><time>{{ edit.updatedAt | date: 'mediumDate' }}</time><span>Abrir editor <ac-icon name="arrow" /></span></span></div>
+        </a>
+      }
+    </div>
+  } @else if (editsLoading()) {
+    <div class="project-recent-empty" role="status"><span class="project-recent-empty-icon"><ac-icon name="film" /></span><div><strong>Consultando tus ediciones</strong><p>Estamos comprobando los borradores guardados en este proyecto.</p></div></div>
+  } @else if (editsError()) {
+    <div class="project-recent-empty"><span class="project-recent-empty-icon"><ac-icon name="refresh" /></span><div><strong>No pudimos cargar la lista</strong><p>Revisa tu conexión y vuelve a actualizar. No mostramos datos de ejemplo.</p></div><button type="button" class="button" (click)="reloadEdits()" [disabled]="design || busy() || !project()">Reintentar</button></div>
+  } @else {
+    <div class="project-recent-empty"><span class="project-recent-empty-icon"><ac-icon name="scissors" /></span><div><strong>Aún no hay borradores en este proyecto</strong><p>Carga e inspecciona un MP4 para preparar el primer corte. Cuando guardes una edición, podrás retomarla desde aquí.</p></div><button type="button" class="button primary" (click)="openCreatorWizard('file')" [disabled]="(!design && !project()) || busy()">Preparar primer clip <ac-icon name="arrow" /></button></div>
+  }
+</section>
+} @else {
+  <section class="project-load-state" [attr.aria-busy]="busy()" aria-labelledby="project-load-heading">
+    <span class="project-load-icon" aria-hidden="true"><ac-icon [name]="projectLoadError() ? 'shield' : 'film'" /></span>
+    <div>
+      <h2 id="project-load-heading">{{ projectLoadError() ? 'No pudimos abrir este proyecto' : 'Consultando tu proyecto' }}</h2>
+      @if (projectLoadError()) {
+        <p class="project-load-error" role="alert">{{ projectLoadError() }}</p>
+        <p>Comprueba que estás en el espacio de trabajo correcto o vuelve a consultar el proyecto.</p>
+      } @else {
+        <p role="status">Estamos comprobando el acceso y los borradores guardados.</p>
+      }
+    </div>
+  </section>
+}
+</div>
+<div class="creator-wizard-backdrop" [hidden]="!creatorWizardOpen()" (click)="requestCloseCreatorWizard()">
+<section class="creator-wizard-dialog clip-creator-panel" role="dialog" aria-modal="true" aria-labelledby="creator-wizard-title" (click)="$event.stopPropagation()" (keydown)="creatorWizardKeydown($event)">
+<header class="creator-wizard-header">
+  <div class="creator-wizard-heading"><img class="creator-wizard-logo" src="/images/autoclipper-logo-v4.webp" alt="" /><div><span class="eyebrow">AUTOCLIPPER STUDIO <span aria-hidden="true">/</span> {{ creatorStepLabel() }}</span><h2 id="creator-wizard-title">{{ creatorStepTitle() }}</h2><p>{{ design ? 'Vista de diseño · El archivo se mantiene en tu equipo.' : project()?.name + ' · Fuentes y resultados privados.' }}</p></div></div>
+  <div class="creator-wizard-header-actions"><span class="wizard-private-label"><ac-icon name="shield" /> {{ design ? 'Vista de diseño' : 'Espacio privado' }}</span><button id="creator-wizard-close" class="wizard-close-button" type="button" aria-label="Cerrar asistente" title="Cerrar asistente" (click)="requestCloseCreatorWizard()">×</button></div>
+</header>
+<div class="creator-wizard-layout">
+<aside class="creator-wizard-sidebar" aria-label="Etapas del proceso">
+<div class="creator-navigation">
+  <nav class="creator-stepper" aria-label="Pasos para crear clips">
+    @for (step of creatorSteps; track step.id; let index = $index) {
+      <button type="button" class="creator-step" [id]="'creator-step-' + step.id" [attr.aria-label]="'Paso ' + (index + 1) + ': ' + step.label" [class.active]="creatorStep() === step.id && workbench() !== 'drafts'" [class.complete]="index < creatorStepIndex() && creatorStepAvailable(step.id)" [disabled]="!creatorStepAvailable(step.id)" [attr.aria-current]="creatorStep() === step.id ? 'step' : null" (click)="goToCreatorStep(step.id)">
+        <span class="creator-step-number">{{ index < creatorStepIndex() && creatorStepAvailable(step.id) ? '✓' : index + 1 }}</span><span class="creator-step-copy"><span>{{ step.label }}</span><small>{{ step.id === 'source' ? 'Sube o elige tu video' : step.id === 'configuration' ? 'Método, intervalo y formato' : step.id === 'generation' ? 'Estado real del servidor' : 'Resultados y borradores' }}</small></span>
+      </button>
+    }
+  </nav>
+  <button id="creator-drafts-button" type="button" class="creator-drafts-link" (click)="showWorkbench('drafts', true)"><ac-icon name="film" /> Borradores @if (editsLoaded()) { <span>{{ edits().length }}</span> }</button>
+</div>
+<section class="wizard-source-card" aria-label="Estado de la fuente">
+  <span class="eyebrow">FUENTE DE VIDEO</span><strong>{{ sourceMode() === 'link' ? (linkPreviewAvailable() ? 'Vista previa del enlace' : 'Enlace de plataforma') : file?.name || sourceFileName() || 'Sin video confirmado' }}</strong>
+  <p>{{ sourceMode() === 'link' ? 'La vista previa no cambia el MP4 que se enviará a procesar.' : hasUnuploadedSelection() ? 'Selección local. Falta cargar e inspeccionar este archivo.' : intervalReady() ? (sourceDurationSeconds() | number:'1.0-1') + ' s · inspeccionado' : 'Carga el video y espera a que termine su inspección.' }}</p>
+  @if (creatorStep() !== 'source') { <button type="button" class="text-link" (click)="goToCreatorStep('source', true)"><ac-icon name="upload" /> Cambiar fuente</button> }
+</section>
+</aside>
+<main class="creator-wizard-main">
 @if (!project() && busy()) {
   <div class="loading-state" role="status"><span class="spinner"></span>Consultando el proyecto y sus permisos…</div>
 }
@@ -40,25 +139,34 @@
 @if (message()) {
   <div class="alert" role="status">{{ message() }}</div>
 }
-<div class="project-workbench"><div class="project-workbench-main"><div class="project-workflow">
-  <section id="project-source-panel" class="panel project-source-panel" role="tabpanel" tabindex="0" aria-labelledby="project-tab-source" [hidden]="workbench() !== 'source'">
-    <span class="eyebrow">PASO 1 · VIDEO DE ORIGEN</span>
-    <h2>Elige tu video.</h2>
-    <p>Desde tu equipo o, cuando esté disponible, desde un enlace.</p>
+<div class="project-workbench"><div class="project-workbench-main">
+  <div class="project-workflow">
+  <section id="project-source-panel" class="panel project-source-panel" role="tabpanel" tabindex="0" aria-labelledby="creator-step-source" [hidden]="workbench() !== 'source'">
+    <span class="eyebrow flow-step-kicker">PASO 1 · FUENTE</span>
+    <h2>Elige el video que quieres convertir.</h2>
+      <p>Sube un MP4, importa un video de YouTube o un clip de Twitch autorizado. Después eliges cuántos clips preparar y su duración máxima; la selección automática usa la capacidad real disponible en el servidor.</p>
     <div class="source-mode-picker" role="group" aria-label="Cómo añadir tu video">
-      <button id="source-mode-file" type="button" [attr.aria-pressed]="sourceMode() === 'file'" aria-controls="source-file-content" (click)="showSource('file')"><ac-icon name="upload" /><span><strong>Subir archivo</strong><small>Disponible ahora</small></span></button>
-      <button type="button" [attr.aria-pressed]="sourceMode() === 'link'" aria-controls="source-link-content" (click)="showSource('link')"><ac-icon name="play" /><span><strong>Pegar enlace</strong><small>YouTube, Kick y Twitch</small></span></button>
+      <button id="source-mode-file" type="button" [attr.aria-pressed]="sourceMode() === 'file'" aria-controls="source-file-content" [disabled]="busy()" (click)="showSource('file')"><ac-icon name="upload" /><span><strong>Archivo de video</strong><small>MP4, WebM, MOV o MKV · hasta 100 MiB</small></span></button>
+        <button id="source-mode-link" type="button" [attr.aria-pressed]="sourceMode() === 'link'" aria-controls="source-link-content" [disabled]="busy() || (!design && !canEdit())" (click)="showSource('link')"><ac-icon name="link" /><span><strong>Pegar enlace</strong><small>YouTube: importar video · Twitch: clips autorizados · Kick: vista previa</small></span></button>
     </div>
     <div id="source-link-content" [hidden]="sourceMode() !== 'link'">
-      @if (sourceMode() === 'link' && workbench() === 'source') { <ac-source-link-preview (useFile)="showSource('file', true)" /> }
+      <ac-source-link-preview
+        [active]="sourceMode() === 'link' && workbench() === 'source'"
+        [projectId]="id"
+        [canImport]="!design && canEdit()"
+        [initialUrl]="sourceLinkDraft()"
+        (linkChanged)="onSourceLinkChanged($event)"
+        (previewAvailable)="onLinkPreviewAvailable($event)"
+        (imported)="onSourceImported($event)" />
     </div>
     <div id="source-file-content" [hidden]="sourceMode() !== 'file'">
     <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
-    <label class="upload-drop"
+    <label class="upload-drop" [hidden]="!!file || processingSourceReady()" [class.dragging]="draggingFile()"
+      (dragover)="onFileDragOver($event)" (dragleave)="onFileDragLeave($event)" (drop)="onFileDrop($event, sourceFileInput)"
       ><ac-icon name="upload" /><strong>{{
-        file?.name ?? "Selecciona tu archivo de video"
+        draggingFile() ? 'Suelta el video aquí' : file?.name ?? 'Selecciona o arrastra tu video'
       }}</strong
-      ><span>MP4, WebM, MOV o MKV</span
+      ><span>Un archivo MP4, WebM, MOV o MKV · máximo 100 MiB</span
       ><input #sourceFileInput
         type="file"
         aria-label="Seleccionar video de origen" aria-describedby="upload-file-help selected-video-feedback" [attr.aria-invalid]="selectionError() ? 'true' : null"
@@ -80,27 +188,18 @@
     <p id="selected-video-feedback" class="selection-feedback" [class.invalid]="selectionError()" [attr.role]="selectionError() ? 'alert' : 'status'">
       @if (selectionError()) { {{ selectionError() }} }
       @else if (hasUnuploadedSelection() && uploadRecoveryLabel()) { {{ uploadRecoveryLabel() }} }
-      @else if (hasUnuploadedSelection()) { La vista previa permanece en tu equipo. {{ design ? 'Abre un proyecto de tu cuenta para enviar el archivo.' : 'Pulsa «Cargar archivo privado» para enviarlo.' }} @if (uploadStatus()) { Esta selección todavía no sustituye el origen consultado. } }
+      @else if (hasUnuploadedSelection()) { La vista previa permanece en tu equipo. {{ design ? 'Abre un proyecto de tu cuenta para enviar el archivo.' : 'Pulsa «Cargar e inspeccionar video» para enviarlo.' }} @if (uploadStatus()) { Esta selección todavía no sustituye el origen consultado. } }
       @else if (file) { La selección está vinculada a la carga iniciada. Consulta su estado abajo. }
     </p>
-    <button
-      class="button primary"
-      type="button"
-      (click)="upload()"
-      [disabled]="!file || !!selectionError() || busy() || !canEdit() || uploadBlocked()"
-    >
-      {{ uploading() ? "Cargando…" : hasUnuploadedSelection() ? "Cargar archivo privado" : "Archivo ya cargado"
-      }}<ac-icon name="upload" />
-    </button>
-    @if (file && uploadBlocked() && uploadId && !uploadStatus() && !uploadError()) { <button class="button small" type="button" (click)="inspect()" [disabled]="inspecting()">{{ inspecting() ? 'Consultando carga…' : 'Consultar carga seleccionada' }}</button> }
-    </div>
+    @if (uploadFailure()) { <div class="upload-failure" role="alert"><strong>No se completó la carga.</strong><p>{{ uploadFailure() }}</p></div> }
+    @if (processingSourceReady()) { <button class="text-link source-replace" type="button" (click)="sourceFileInput.click()" [disabled]="busy()">Elegir otro archivo</button> }
     @if (uploading() || uploadStatus()) {
       <ol class="source-milestones" aria-label="Etapas de la carga">
         @for (stage of sourceMilestones; track stage; let index = $index) { <li [class.complete]="index < sourceStageIndex()" [class.current]="index === sourceStageIndex()" [attr.aria-current]="index === sourceStageIndex() ? 'step' : null"><span>{{ index < sourceStageIndex() ? '✓' : index + 1 }}</span>{{ stage }}</li> }
       </ol>
     }
     @if (uploading()) {
-      <div class="source-operation" role="status"><span class="spinner" aria-hidden="true"></span><div><strong>{{ message() || "Preparando la transferencia…" }}</strong><p>{{ hasActiveUpload() ? 'Puedes detener la transferencia desde aquí.' : 'La preparación debe terminar antes de habilitar la cancelación.' }}</p></div></div>
+      <div class="source-operation" role="status"><span class="spinner" aria-hidden="true"></span><div><strong>{{ message() || "Preparando la transferencia…" }}</strong><p>Etapa {{ sourceStageIndex() + 1 }} de 4. {{ uploadPhase() === 'transferring' ? 'La transferencia está en curso; el servidor no comunica un porcentaje de bytes.' : hasActiveUpload() ? 'Puedes detener la transferencia desde aquí.' : 'La preparación debe terminar antes de habilitar la cancelación.' }}</p></div></div>
     }
     @if (uploading() && hasActiveUpload()) {
       <button class="button small" type="button" (click)="cancelActiveUpload()" [disabled]="cancellingUpload() || !canEdit()">
@@ -110,7 +209,8 @@
     @if (uploadError()) {
       <div class="alert error" role="alert">No se pudo consultar esta carga: {{ uploadError() }} <button type="button" (click)="inspect()" [disabled]="inspecting()">Reintentar</button></div>
     }
-    @if (inspected()) { <div class="project-next-step"><ac-icon name="check" /><div><strong>Tu video está listo.</strong><p>Ya puedes elegir el intervalo de tu próximo clip.</p></div><button class="button" type="button" (click)="showWorkbench('processing', true)">Elegir intervalo<ac-icon name="arrow" /></button></div> }
+    @if (processingSourceReady()) { <div class="project-next-step"><ac-icon name="check" /><div><strong>Tu video está listo para procesar.</strong><p>Continúa para elegir cantidad, duración, formato y subtítulos.</p></div></div> }
+    @else if (inspected()) { <p class="alert" role="status">La inspección terminó, pero no confirmó una duración medible. No se habilitan cortes ni borradores para evitar salir del medio.</p> }
     <details class="resume-details">
       <summary>Consultar una carga existente</summary>
       <p>
@@ -141,13 +241,10 @@
           Inspección: <span class="badge">{{ inspectionLabel(status.inspection?.status) }}</span>
         </p>
         @if (status.inspection?.result; as metadata) {
-          <p>
-            {{ metadata.width }} × {{ metadata.height }} ·
-            {{ metadata.durationSeconds }} s
-          </p>
+          <dl class="source-metadata"><div><dt>Duración medida</dt><dd>{{ metadata.durationSeconds | number: '1.1-1' }} s</dd></div><div><dt>Imagen</dt><dd>{{ metadata.width }} × {{ metadata.height }}</dd></div><div><dt>Formato</dt><dd>{{ metadata.format }}</dd></div><div><dt>Video</dt><dd>{{ metadata.videoCodec }}</dd></div><div><dt>Audio</dt><dd>{{ metadata.audioCodec || 'Sin pista de audio' }}</dd></div></dl>
         }
-        @if (status.inspection?.errorCode) {
-          <p class="alert error" role="alert">El servidor no pudo inspeccionar este archivo. Prueba con un video compatible de hasta 300 segundos y vuelve a consultar el estado.</p>
+        @if (status.inspection?.status === "failed") {
+          <div class="inspection-failed" role="alert"><p>La inspección terminó con error. Esta carga no ofrece un botón de reintento; puedes crear otra carga con este archivo o con uno distinto.</p><button class="button small" type="button" (click)="prepareInspectionRetry(sourceFileInput)" [disabled]="busy() || !canEdit()">Volver a elegir video</button></div>
         }
         @if (status.state === "pending") {
           <p class="muted">La transferencia todavía no se confirmó. Si el enlace temporal venció, vuelve a seleccionar el archivo o cancela esta carga pendiente.</p>
@@ -168,74 +265,108 @@
         }
       </div>
     }
+    </div>
   </section>
-  <section id="project-processing-panel" class="panel" role="tabpanel" tabindex="0" aria-labelledby="project-tab-processing" [hidden]="workbench() !== 'processing'">
-    <span class="eyebrow">PASO 2 · PROCESAMIENTO</span>
-    <h2>Elige el intervalo.</h2>
-    <p>Selecciona a mano el fragmento que quieres convertir en un MP4. El servicio genera subtítulos cuando termina la transcripción local; no elige momentos por ti.</p>
-    <div class="pipeline-source-note" role="note"><strong>Origen del procesamiento</strong><span>{{ sourceOriginLabel() }}</span>@if (sourceMode() === 'link') { <small>El enlace seleccionado es solo una vista previa. Este paso procesa el archivo cargado; AutoClipper todavía no importa videos desde enlaces.</small> } @else { <small>Se procesará el archivo privado seleccionado para este proyecto.</small> }</div>
+  <section id="project-processing-panel" class="panel" role="tabpanel" tabindex="0" aria-labelledby="creator-step-configuration" [hidden]="workbench() !== 'processing'">
+    @if (creatorStep() === 'configuration') {
+    <span class="eyebrow">PASO 2 · CONFIGURACIÓN</span>
+    <h2>Decide cómo crear el clip.</h2>
+    <p>{{ processingSourceReady() ? 'Primero elige cómo encontrar el momento. Después ajusta solo las opciones de ese recorrido.' : 'Antes de ajustar tus clips, selecciona una fuente que AutoClipper pueda procesar.' }}</p>
+    @if (processingSourceReady()) {
+    <div class="pipeline-source-note" role="note"><strong>Video listo para procesar</strong><span>{{ sourceOriginLabel() }}</span><small>{{ sourceOriginProvider() === 'twitch' ? 'Importado con autorización y verificado en tu espacio privado.' : 'Archivo privado inspeccionado · ' + (sourceDurationSeconds() | number:'1.0-1') + ' s' }}</small></div>
     <form
-      #pipelineForm="ngForm"
-      (ngSubmit)="pipelineForm.valid && startPipeline()"
+      id="clip-configuration-form" #pipelineForm="ngForm" (input)="rememberConfiguration()" (change)="rememberConfiguration()"
+      (ngSubmit)="pipelineForm.valid && generateConfiguredClips()"
     >
-      <div class="form-grid">
-        <label
-          >Inicio (segundos)<input
-            type="number"
-            name="start"
-            [ngModel]="inspected() ? startSeconds : null" (ngModelChange)="setIntervalField('startSeconds', $event)"
-            min="0"
-            [max]="sourceSelectionLimitSeconds()"
-            step="0.1"
-            required [disabled]="busy() || !canEdit() || !inspected()" /></label
-        ><label
-          >Fin (segundos)<input
-            type="number"
-            name="end"
-            [ngModel]="inspected() ? endSeconds : null" (ngModelChange)="setIntervalField('endSeconds', $event)"
-            min="0.1"
-            [max]="sourceSelectionLimitSeconds()"
-            step="0.1"
-            required [disabled]="busy() || !canEdit() || !inspected()" /></label
-        ><label
-          >Formato<select name="aspect" [(ngModel)]="aspect" [disabled]="busy() || !canEdit() || !inspected()">
-            <option value="vertical">Vertical · 9:16</option>
-            <option value="square">Cuadrado · 1:1</option>
-            <option value="horizontal">Horizontal · 16:9</option>
-            <option value="source">Original</option>
-          </select></label
-        ><label
-          >Idioma<select name="language" [(ngModel)]="language" [disabled]="busy() || !canEdit() || !inspected()">
-            <option value="auto">Detectar</option>
-            <option value="es">Español</option>
-            <option value="en">Inglés</option>
-          </select></label
-        >
-      </div>
-      @if (sourceDurationSeconds(); as duration) {
-        <p class="muted">Duración medida: {{ duration }} s. Puedes elegir hasta {{ sourceSelectionLimitSeconds() }} s en este recorrido; el intervalo admite de 0,1 a 120 s.</p>
-      } @else if (inspected()) {
-        <p class="muted">La inspección no devolvió una duración medible. Puedes indicar hasta 300 segundos; el servidor validará el límite exacto al procesar.</p>
+      @if (sourceOriginProvider() === 'twitch') {
+        <div class="pipeline-source-note" role="note"><strong>Clip publicado listo para selección automática</strong><small>El enlace importó una fuente privada y el servidor confirmó su inspección. Ahora eliges cuántos clips crear; después podrás revisar y ajustar cada resultado en el editor.</small></div>
       } @else {
-        <p class="muted">El intervalo se habilita cuando el archivo termine de inspeccionarse y conozcamos su duración.</p>
+      <fieldset class="generation-route-picker"><legend>¿Cómo quieres elegir el momento?</legend><div class="generation-route-options">
+        <label [class.selected]="generationMode === 'manual'"><input type="radio" name="generationMode" value="manual" [(ngModel)]="generationMode" [disabled]="busy() || !canConfigureGeneration()"><span><strong>Elegir el momento yo mismo</strong><small>Un clip con el inicio y final que marques. No necesita selección automática.</small></span></label>
+        <label [class.selected]="generationMode === 'automatic'"><input type="radio" name="generationMode" value="automatic" [(ngModel)]="generationMode" [disabled]="busy() || !canConfigureGeneration()"><span><strong>Buscar momentos con IA</strong><small>Whisper transcribe y la IA selecciona los fragmentos para recortar.</small></span></label>
+      </div><p class="generation-route-hint" aria-live="polite">{{ generationModeHint() }}</p></fieldset>
       }
-      <button
-        class="button primary"
-        type="submit"
-        [disabled]="
-          busy() || pipelineForm.invalid || !inspected() || !canEdit() || pollingPipeline() || pipelineBlocksSelectedUpload()
-        "
-      >
-        {{ pipelineActionLabel() }}<ac-icon name="scissors" />
-      </button>
+      <label class="clip-title-field">Nombre del borrador en el editor<input name="clipTitle" type="text" [(ngModel)]="clipTitle" maxlength="120" required [disabled]="busy() || !canConfigureGeneration()" placeholder="Ej. Episodio 45 · Ideas clave"><small>Este nombre se usa al guardar la edición. La generación automática puede dar un título distinto a cada clip.</small></label>
+      @if (generationMode === 'automatic') {
+        <section class="generation-availability" aria-label="Disponibilidad de selección con IA" aria-live="polite" [class.unavailable]="automaticProviderMismatch() || !localAutomaticSelectionReady()">
+          <div><strong>Selección de momentos con IA</strong><p>{{ providerLoading() ? 'Consultando las capacidades del servidor…' : generationReadinessMessage() }}</p></div>
+          <button type="button" class="text-link" (click)="refreshGenerationReadiness()" [disabled]="providerLoading()">{{ providerLoading() ? 'Consultando…' : 'Actualizar' }}</button>
+        </section>
+        <div class="form-grid">
+          <label>Cantidad de clips<select name="clipCount" [(ngModel)]="clipCount" [disabled]="busy() || !canConfigureGeneration()">
+            <option [ngValue]="1">1 clip</option><option [ngValue]="2">2 clips</option><option [ngValue]="3">3 clips</option>
+          </select></label>
+          <fieldset class="duration-limit-control"><legend>Duración por clip</legend><label class="inline-toggle"><input type="checkbox" name="limitClipDuration" [(ngModel)]="limitClipDuration" [disabled]="busy() || !canConfigureGeneration()"><span>Limitar duración</span></label><select name="maxDurationSeconds" [(ngModel)]="maxDurationSeconds" [disabled]="busy() || !canConfigureGeneration() || !limitClipDuration" aria-label="Duración máxima por clip">
+            <option [ngValue]="15">15 segundos</option><option [ngValue]="30">30 segundos</option><option [ngValue]="60">60 segundos</option><option [ngValue]="120">120 segundos</option>
+          </select><small>{{ limitClipDuration ? 'Máximo ' + maxDurationSeconds + ' s por clip.' : 'Sin límite adicional · máximo del servidor: 120 s por clip.' }}</small></fieldset>
+        </div>
+        <details class="configuration-advanced"><summary>Idioma y subtítulos</summary><div class="configuration-advanced-content"><div class="form-grid"><label>Idioma de transcripción<select name="language" [(ngModel)]="language" [disabled]="busy() || !canConfigureGeneration()"><option value="auto">Detectar</option><option value="es">Español</option><option value="en">Inglés</option></select></label><label>Tipo de contenido<select name="contentType" [(ngModel)]="contentType"><option value="general">General</option><option value="tutorial">Tutorial</option><option value="interview">Entrevista</option><option value="gameplay">Gameplay</option><option value="commentary">Comentario</option><option value="reaction">Reacción</option></select></label><label>¿Qué momentos buscas?<textarea name="selectionInstructions" [(ngModel)]="selectionInstructions" maxlength="2000" rows="3" placeholder="Ej. Ideas útiles y explicaciones completas"></textarea></label></div><label class="subtitle-toggle"><input type="checkbox" name="includeSubtitles" [(ngModel)]="includeSubtitles" [disabled]="busy() || !canConfigureGeneration()"><span><strong>Incluir subtítulos de la transcripción</strong><small>Se aplican a los clips y a los archivos SRT/VTT. Puedes ajustarlos después en el editor.</small></span></label>@if (includeSubtitles) { <div class="subtitle-style-control"><label>Estilo de subtítulos<select name="subtitleTemplate" [(ngModel)]="subtitleStyle.template" [disabled]="busy() || !canConfigureGeneration()"><option value="clean">Limpio</option><option value="boxed">Con fondo</option><option value="bold">Énfasis</option></select></label><label>Tamaño<select name="subtitleFontSize" [(ngModel)]="subtitleStyle.fontSize" [disabled]="busy() || !canConfigureGeneration()"><option [ngValue]="16">Pequeño</option><option [ngValue]="24">Mediano</option><option [ngValue]="32">Grande</option></select></label><label>Posición<select name="subtitlePosition" [(ngModel)]="subtitleStyle.position" [disabled]="busy() || !canConfigureGeneration()"><option value="bottom">Abajo</option><option value="top">Arriba</option></select></label><div class="subtitle-preview" [class.boxed]="subtitleStyle.template === 'boxed'" [class.bold]="subtitleStyle.template === 'bold'" [class.top]="subtitleStyle.position === 'top'" [style.fontSize.px]="subtitleStyle.fontSize / 2">Una idea clara, en el momento justo.</div></div> }</div></details>
+      } @else {
+        <div class="form-grid">
+          <label>Inicio (segundos)<input type="number" name="start" [ngModel]="processingSourceReady() ? startSeconds : null" (ngModelChange)="setIntervalField('startSeconds', $event)" min="0" [max]="sourceSelectionLimitSeconds()" step="0.1" required [disabled]="busy() || !canEdit() || !processingSourceReady()"></label>
+          <label>Fin (segundos)<input type="number" name="end" [ngModel]="processingSourceReady() ? endSeconds : null" (ngModelChange)="setIntervalField('endSeconds', $event)" min="0.1" [max]="sourceSelectionLimitSeconds()" step="0.1" required [disabled]="busy() || !canEdit() || !processingSourceReady()"></label>
+        </div>
+        <p class="muted manual-mode-note">Este recorrido crea un clip sin subtítulos automáticos. Puedes añadir subtítulos manualmente en el editor.</p>
+      }
+      <fieldset class="aspect-picker"><legend>Formato de salida</legend><div class="aspect-choice-list"><label class="aspect-choice" [class.selected]="aspect === 'vertical'" [class.disabled]="!canConfigureGeneration()"><input type="radio" name="aspect" value="vertical" [(ngModel)]="aspect" [disabled]="busy() || !canConfigureGeneration()"><span class="aspect-choice-indicator" aria-hidden="true"></span><span class="aspect-shape vertical" aria-hidden="true"></span><strong>Vertical</strong><small>9:16 · Reels y Shorts</small><span class="aspect-choice-status">{{ !canConfigureGeneration() ? 'Fuente requerida' : aspect === 'vertical' ? 'Seleccionado' : 'Elegir formato' }}</span></label><label class="aspect-choice" [class.selected]="aspect === 'square'" [class.disabled]="!canConfigureGeneration()"><input type="radio" name="aspect" value="square" [(ngModel)]="aspect" [disabled]="busy() || !canConfigureGeneration()"><span class="aspect-choice-indicator" aria-hidden="true"></span><span class="aspect-shape square" aria-hidden="true"></span><strong>Cuadrado</strong><small>1:1 · Feed</small><span class="aspect-choice-status">{{ !canConfigureGeneration() ? 'Fuente requerida' : aspect === 'square' ? 'Seleccionado' : 'Elegir formato' }}</span></label><label class="aspect-choice" [class.selected]="aspect === 'horizontal'" [class.disabled]="!canConfigureGeneration()"><input type="radio" name="aspect" value="horizontal" [(ngModel)]="aspect" [disabled]="busy() || !canConfigureGeneration()"><span class="aspect-choice-indicator" aria-hidden="true"></span><span class="aspect-shape horizontal" aria-hidden="true"></span><strong>Horizontal</strong><small>16:9 · YouTube</small><span class="aspect-choice-status">{{ !canConfigureGeneration() ? 'Fuente requerida' : aspect === 'horizontal' ? 'Seleccionado' : 'Elegir formato' }}</span></label></div>@if (!canConfigureGeneration()) { <small class="aspect-availability-note">Carga e inspecciona una fuente para elegir el formato que se aplicará.</small> }</fieldset>
+      @if (generationMode === 'manual') { <div class="manual-clip-config"><div><span class="eyebrow">RECORTE MANUAL</span><strong>1 clip · {{ startSeconds }}–{{ endSeconds }} s</strong><small>Un intervalo por solicitud · máximo 120 s.</small></div><div><strong>Salida sin subtítulos</strong><small>MP4/H.264 · formato fijo según el aspecto seleccionado.</small></div></div> }
+      @if (generationMode === 'manual') { <p class="muted">Duración de la fuente: {{ sourceDurationSeconds() | number:'1.1-1' }} s. Selecciona un intervalo de 0,1 a 120 s dentro del video.</p> }
+      @if (generationMode === 'automatic' && !localAutomaticSelectionReady()) { <p class="configuration-blocker" role="status">La selección con IA no está configurada o disponible. El flujo no iniciará el trabajo hasta recibir una respuesta compatible del servidor.</p> }
     </form>
-    <p class="pipeline-explainer">Esta acción genera el video final del intervalo. Crear un borrador para editarlo es un paso separado.</p>
+    } @else {
+      <section class="configuration-source-empty" role="status">
+        <span class="configuration-source-empty-icon"><ac-icon name="upload" /></span>
+        <div><span class="eyebrow">FUENTE PENDIENTE</span><h3>Confirma un video antes de configurar.</h3><p>{{ sourceMode() === 'link' ? 'Los conectores externos no están disponibles. Vuelve a Fuente y elige un MP4 cargado e inspeccionado.' : uploadStatus() ? 'El archivo está cargado, pero su inspección todavía no confirma una duración. Vuelve a Fuente para consultar el estado.' : 'Sube un MP4 y espera la inspección para habilitar cantidad, duración, formato y subtítulos.' }}</p></div>
+      </section>
+    }
+    }
+    @if (pipelineError() && creatorStep() === 'configuration') { <div class="alert error" role="alert">No se pudo iniciar el procesamiento: {{ pipelineError() }} @if (manualIntervalAvailable() && pipelineManualFallbackAvailable() && intervalReady()) { <button type="button" (click)="useManualFallback()" [disabled]="busy() || !canEdit()">Elegir un intervalo manual</button> } @else { <button type="button" (click)="startAutomaticPipeline()" [disabled]="busy()">Volver a intentar</button> }</div> }
+    @if (creatorStep() === 'generation' || creatorStep() === 'review') {
+    <span class="eyebrow">PASO {{ creatorStep() === 'generation' ? '3 · GENERACIÓN' : '4 · REVISIÓN' }}</span>
+    <h2>{{ resultHeading() }}</h2>
+    <p class="pipeline-explainer">Aquí verás las etapas y los resultados confirmados por el servidor. Puedes cerrar el asistente mientras el trabajo continúa; hacerlo no cancela el procesamiento.</p>
+    @if (pipelineId && manualProcessingId) { <div class="result-selector" role="group" aria-label="Trabajo que quieres consultar"><button type="button" [attr.aria-pressed]="resultKind() === 'pipeline'" (click)="showResult('pipeline')">Selección de momentos</button><button type="button" [attr.aria-pressed]="resultKind() === 'manual'" (click)="showResult('manual')">Recorte manual</button></div> }
+    @if (reviewReady()) { <div class="result-count" role="status"><strong>{{ resultReadyCount() }}</strong><span>{{ resultReadyCount() === 1 ? 'clip listo para revisar' : 'clips listos para revisar' }}. {{ resultReadyCount() ? 'Abre el editor para ajustar una revisión de ese resultado.' : 'No hay un archivo terminado para abrir. Puedes revisar los ajustes antes de generar otra vez.' }}</span></div> }
+    @if (resultKind() === 'manual') {
+    @if (manualProcessingError()) { <div class="alert error" role="alert">No se pudo consultar el procesamiento: {{ manualProcessingError() }} <button type="button" (click)="pollManualProcessing()" [disabled]="manualProcessingBusy()">Reintentar consulta</button></div> }
+    @if (manualProcessing(); as manual) {
+      <div class="pipeline-card manual-processing-card" aria-live="polite">
+        <div class="panel-heading"><h3>Clip manual: {{ manual.status === 'queued' ? 'En cola' : manual.status === 'running' ? 'Generando MP4' : manual.status === 'succeeded' ? 'Completado' : manual.status === 'failed' ? 'Falló' : 'Cancelado' }}</h3><small>Procesamiento {{ manual.id }}</small></div>
+        <ol class="pipeline-progress manual-progress" aria-label="Etapas del recorte manual">
+          @for (stage of manualProcessingProgress(manual); track stage.id) {
+            <li [class.complete]="stage.state === 'complete'" [class.current]="stage.state === 'current'" [class.failed]="stage.state === 'failed'" [class.cancelled]="stage.state === 'cancelled'" [attr.aria-current]="stage.state === 'current' ? 'step' : null">
+              <span class="pipeline-progress-marker" aria-hidden="true">{{ stage.state === 'complete' ? '✓' : stage.state === 'failed' ? '!' : stage.state === 'cancelled' ? '–' : '' }}</span>
+              <span>{{ stage.label }}<small>{{ stage.status }}</small></span>
+            </li>
+          }
+        </ol>
+        @if (manual.status === 'queued' || manual.status === 'running') {
+          <p class="pipeline-working" role="status"><span class="spinner" aria-hidden="true"></span>El servidor está generando el MP4. El estado se consulta automáticamente.</p>
+          <button class="button small" type="button" (click)="cancelManualProcessing()" [disabled]="busy() || !canEdit()">Cancelar procesamiento</button>
+        } @else if (manual.status === 'succeeded') {
+          <section class="pipeline-result"><span class="pipeline-result-icon"><ac-icon name="check" /></span><div><h3>{{ manual.spec.subtitles ? 'Tu MP4 está listo con los subtítulos guardados.' : 'Tu MP4 está listo, sin subtítulos.' }}</h3><p>{{ manual.spec.startSeconds }}–{{ manual.spec.endSeconds }} s · {{ manual.spec.aspect }}. El editor abrirá un borrador del archivo original con este intervalo.</p>
+            <div class="button-row"><button class="button" type="button" (click)="previewManualProcessing()" [disabled]="clipPreviewLoading()">{{ clipPreviewLoading() ? 'Preparando…' : 'Revisar clip' }}</button><button class="button" type="button" (click)="downloadManualProcessing()" [disabled]="busy()">Descargar MP4</button>@if (manualProcessingUploadId === uploadId.trim()) { <button class="button editor-action" type="button" (click)="editManualProcessingResult()" [disabled]="busy() || !canEdit()">Abrir borrador en el editor<ac-icon name="scissors" /></button> }</div>
+          </div></section>
+        } @else if (manual.status === 'failed') {
+          <p class="alert error" role="alert">El servidor no pudo crear este MP4. Puedes volver a intentar el mismo intervalo o cambiar sus ajustes.</p><details><summary>Detalle del servidor</summary><code>{{ manual.errorCode || 'Sin código de error' }}</code></details><button class="button" type="button" (click)="retryManualProcessingResult()" [disabled]="busy() || manualProcessingBusy() || !canEdit()">Reintentar este intervalo</button>
+        } @else { <p class="muted">El procesamiento se canceló. Puedes volver a generar el intervalo cuando quieras.</p><button class="button" type="button" (click)="retryManualProcessingResult()" [disabled]="busy() || manualProcessingBusy() || !canEdit()">Volver a generar este intervalo</button> }
+      </div>
+    }
+    @if (clipPreviewError()) { <p class="alert error" role="alert">No se pudo abrir el clip: {{ clipPreviewError() }}</p> }
+    @if (clipPreviewUrl()) { <section class="clip-review" aria-label="Vista previa del recorte manual"><video [src]="clipPreviewUrl()" controls playsinline preload="metadata" aria-label="Recorte manual procesado" (error)="clipPreviewPlaybackFailed()"></video><button type="button" class="text-link" (click)="closeClipPreview()">Cerrar vista previa</button></section> }
+    @if (manualProcessingId && !manualProcessing() && !manualProcessingBusy() && !manualProcessingError()) { <p role="status">Todavía no se obtuvo el estado de este trabajo.</p><button class="button" type="button" (click)="pollManualProcessing()">Consultar estado</button> }
+    @if (manualProcessingBusy() && !manualProcessing()) { <p class="pipeline-working" role="status">Enviando el intervalo manual al servidor…</p> }
+    @if (manualProcessing()?.status === 'queued' || manualProcessing()?.status === 'running') { <p class="muted">La transcripción automática es una etapa independiente; el render manual no genera subtítulos.</p> }
+
+    }
+    @if (resultKind() === 'pipeline') {
     @if (pipelineError()) {
-      <div class="alert error" role="alert">No se pudo consultar el pipeline: {{ pipelineError() }} <button type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">Reintentar</button></div>
+      <div class="alert error" role="alert">No se pudo iniciar o consultar el pipeline: {{ pipelineError() }} @if (manualIntervalAvailable() && pipelineManualFallbackAvailable() && intervalReady()) { <button type="button" (click)="useManualFallback()" [disabled]="busy() || !canEdit()">Elegir un intervalo manual</button> } @else if (pipelineId) { <button type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">Reintentar consulta</button> } @else { <button type="button" (click)="startAutomaticPipeline()" [disabled]="busy()">Volver a intentar</button> }</div>
     }
     @if (pollingPipeline() && !pipeline()) {
       <p class="muted" role="status">Consultando el pipeline guardado…</p>
     }
+    @if (pipelineId && !pipeline() && !pollingPipeline() && !pipelineError()) { <p role="status">Todavía no se obtuvo el estado de este trabajo.</p><button class="button" type="button" (click)="pollPipeline()">Consultar estado</button> }
     @if (pipeline(); as task) {
       <div class="pipeline-card">
         <div class="panel-heading" aria-live="polite">
@@ -255,10 +386,44 @@
         } @else if (!hasKnownPipelineUpload()) {
           <p class="alert">Este pipeline se consultó por ID y no está vinculado a la carga seleccionada; su transcripción no se asociará al borrador.</p>
         }
-        @if (task.status === 'succeeded') {
-          <section class="pipeline-result" aria-labelledby="pipeline-result-title"><span class="pipeline-result-icon"><ac-icon name="check" /></span><div><h3 id="pipeline-result-title">Tu clip está listo.</h3><p>Intervalo procesado: {{ task.spec.startSeconds }}–{{ task.spec.endSeconds }} s. Descarga el video o crea un borrador de este mismo intervalo.</p>
-            @if (pipelineMatchesSelectedUpload() && inspected()) { <button class="button primary" type="button" (click)="editPipelineResult()" [disabled]="busy() || !canEdit()">Editar este intervalo<ac-icon name="scissors" /></button> }
+        @if (automaticPipeline(task) && task.clips?.length) {
+          <section class="pipeline-gallery" aria-label="Resultados individuales de clips">
+            <div class="pipeline-gallery-heading"><div><span class="eyebrow">REVISIÓN DEL PROCESAMIENTO</span><h3>{{ task.status === 'partial_failed' ? 'Revisa los clips que sí se completaron.' : task.status === 'succeeded' ? 'Tus clips están listos.' : 'Clips solicitados' }}</h3><p class="muted">{{ task.completedClips ?? 0 }} de {{ task.requestedClips ?? task.clips.length }} listos · actualizado desde el servidor</p></div><span class="pipeline-gallery-status" [class.pipeline-gallery-status-warning]="task.status === 'partial_failed'">{{ pipelineStateLabel(task.status) }}</span></div>
+            @if (clipPreviewError()) { <p class="alert error" role="alert">No se pudo abrir la vista previa: {{ clipPreviewError() }}</p> }
+            <section class="clip-review clip-review-stage" aria-label="Escenario de vista previa del clip">
+              @if (clipPreviewUrl()) { <video [src]="clipPreviewUrl()" controls playsinline preload="metadata" aria-label="Clip procesado" (error)="clipPreviewPlaybackFailed()"></video><div class="clip-stage-caption"><div><span>{{ selectedPipelineClip(task)?.title || 'Clip seleccionado' }}</span><small>{{ selectedPipelineClip(task)?.startSeconds | number:'1.1-1' }}–{{ selectedPipelineClip(task)?.endSeconds | number:'1.1-1' }} s · archivo privado</small></div><button class="text-link" type="button" (click)="closeClipPreview()">Cerrar vista previa</button></div> }
+              @else if (clipPreviewLoading()) { <div class="clip-stage-empty" role="status"><span class="link-spinner" aria-hidden="true"></span><strong>Preparando vista previa</strong><p>Solicitando el video privado al servidor.</p></div> }
+              @else if (clipPreviewError()) { <div class="clip-stage-empty clip-stage-error" role="alert"><ac-icon name="shield" /><strong>No pudimos abrir el clip.</strong><p>{{ clipPreviewError() }}</p>@if (firstReadyPipelineClip(); as first) { <button class="button" type="button" (click)="previewPipelineClip(first.index)">Volver a intentar</button> }</div> }
+              @else if (firstReadyPipelineClip(); as first) { <div class="clip-stage-empty"><span class="clip-stage-symbol"><ac-icon name="play" /></span><span class="eyebrow">ESCENARIO DE VIDEO</span><strong>{{ selectedPipelineClip(task)?.title || first.title || 'Elige un clip para revisar' }}</strong><p>La vista previa privada se carga cuando eliges un resultado.</p><button class="button primary" type="button" (click)="previewPipelineClip(selectedPipelineClip(task)?.index ?? first.index)"><ac-icon name="play" />{{ selectedPipelineClip(task) ? 'Volver a cargar este clip' : 'Revisar el primer clip listo' }}</button></div> }
+              @else { <div class="clip-stage-empty"><span class="clip-stage-symbol"><ac-icon name="film" /></span><strong>Todavía no hay videos para revisar.</strong><p>Los clips aparecerán aquí cuando el servidor confirme archivos listos.</p></div> }
+            </section>
+            <div class="pipeline-clip-list">
+              <div class="pipeline-clip-list-heading"><div><strong>Resultados</strong><span>{{ filteredPipelineClips(task).length }} de {{ pipelineClips(task).length }}</span></div><div class="pipeline-clip-filters" role="group" aria-label="Filtrar clips por estado"><button type="button" [attr.aria-pressed]="reviewFilter() === 'all'" (click)="reviewFilter.set('all')">Todos <span>{{ pipelineClipCount('all',task) }}</span></button><button type="button" [attr.aria-pressed]="reviewFilter() === 'ready'" (click)="reviewFilter.set('ready')">Listos <span>{{ pipelineClipCount('ready',task) }}</span></button><button type="button" [attr.aria-pressed]="reviewFilter() === 'attention'" (click)="reviewFilter.set('attention')">Con problemas <span>{{ pipelineClipCount('attention',task) }}</span></button><button type="button" [attr.aria-pressed]="reviewFilter() === 'working'" (click)="reviewFilter.set('working')">En curso <span>{{ pipelineClipCount('working',task) }}</span></button></div></div>
+              <p class="pipeline-editor-guidance">Cada clip listo puede abrirse como borrador en el editor. Allí ajustas el corte, el encuadre y los subtítulos antes de exportar.</p>
+              @for (clip of filteredPipelineClips(task); track clip.index) {
+                <article class="pipeline-clip-card" [class.clip-failed]="clip.status === 'failed'" [class.clip-ready]="clip.status === 'succeeded'" [class.clip-selected]="clipPreviewIndex() === clip.index">
+                  <div class="pipeline-clip-title"><span class="clip-index">{{ clip.index + 1 }}</span><div><h4>{{ clip.title || ('Clip ' + (clip.index + 1)) }}</h4><p>{{ clip.startSeconds | number:'1.1-1' }}–{{ clip.endSeconds | number:'1.1-1' }} s · {{ clipStateLabel(clip.status) }}</p></div></div>
+                  @if (clip.status === 'failed') { <p class="clip-error-code" role="alert">No se pudo crear este clip · {{ clip.errorCode || 'error sin código' }}</p> }
+                  @if (clip.status === 'succeeded') {
+                    @if (clip.processingId && canEdit()) { <ac-social-publish [processingId]="clip.processingId" [clipTitle]="clip.title || 'Mi clip'" /> }
+                    <div class="button-row"><button class="button small" type="button" (click)="previewPipelineClip(clip.index)" [disabled]="clipPreviewLoading()">{{ clipPreviewLoading() && clipPreviewIndex() === clip.index ? 'Preparando…' : clipPreviewIndex() === clip.index && clipPreviewUrl() ? 'En vista previa' : 'Revisar' }}</button><button class="button small" type="button" (click)="downloadPipelineClip(clip.index,'video')" [disabled]="busy()">Descargar MP4</button>@if (automaticPipeline(task) && task.spec.subtitles.source === 'transcript') { <button class="button small" type="button" (click)="downloadPipelineClip(clip.index,'srt')" [disabled]="busy()">SRT</button><button class="button small" type="button" (click)="downloadPipelineClip(clip.index,'vtt')" [disabled]="busy()">VTT</button> }@if (pipelineMatchesSelectedUpload() && intervalReady()) { <button class="button small editor-action" type="button" (click)="editPipelineClip(clip.index)" [disabled]="busy() || !canEdit()">Editar este clip</button>@if (!canEdit()) { <span class="clip-editor-unavailable" role="status">Tu acceso actual permite revisar, pero no crear un borrador editable.</span> } } @else { <p class="clip-editor-unavailable" role="status">{{ !pipelineMatchesSelectedUpload() ? 'Editor no disponible: este resultado no está vinculado al video seleccionado.' : 'Editor no disponible: vuelve a Fuente y confirma que el MP4 esté inspeccionado.' }}</p> }</div>
+                  }
+                </article>
+              }
+              @if (!filteredPipelineClips(task).length) { <p class="clip-filter-empty" role="status">No hay resultados en este filtro.</p> }
+            </div>
+            @if (task.status === 'partial_failed') { <p class="alert" role="status">{{ pipelineFailureMessage(task.errorCode) }} Los clips listos siguen disponibles; los que muestran error no tienen archivo para descargar.</p> }
+            @if (!pipelineMatchesSelectedUpload()) { <p class="alert">La carga de origen no está vinculada a la sesión actual; puedes descargar resultados, pero no abrirlos desde el editor de esta carga.</p> }
+          </section>
+        } @else if (task.status === 'succeeded' && !automaticPipeline(task)) {
+          <section class="pipeline-result" aria-labelledby="pipeline-result-title"><span class="pipeline-result-icon"><ac-icon name="check" /></span><div><h3>Tu clip está listo.</h3><p>{{ pipelineIntervalLabel(task) }}. Descarga el video o crea un borrador de este mismo intervalo.</p>
+            @if (pipelineMatchesSelectedUpload() && intervalReady()) { <button class="button editor-action" type="button" (click)="editPipelineResult()" [disabled]="busy() || !canEdit()">Abrir editor para editar y exportar<ac-icon name="scissors" /></button> }
           </div></section>
+          <section class="clip-review" aria-label="Revisión del clip procesado">
+            @if (clipPreviewUrl()) { <video [src]="clipPreviewUrl()" controls playsinline preload="metadata" aria-label="Clip procesado" (error)="clipPreviewPlaybackFailed()"></video><button class="text-link" type="button" (click)="closeClipPreview()">Cerrar vista previa</button> }
+            @else { <div><strong>Revisa el resultado</strong><p>Solicita el MP4 privado solo cuando quieras verlo. El enlace de descarga no se muestra en la página.</p></div><button class="button" type="button" (click)="previewPipeline()" [disabled]="clipPreviewLoading()">{{ clipPreviewLoading() ? 'Preparando vista previa…' : 'Revisar clip' }}<ac-icon name="play" /></button> }
+            @if (clipPreviewError()) { <p class="clip-review-error" role="alert">No se pudo abrir el clip: {{ clipPreviewError() }} Puedes solicitar otra vista previa.</p> }
+          </section>
         } @else if (pipelineInProgress()) {
           <p class="pipeline-working" role="status"><span class="spinner" aria-hidden="true"></span>{{ pipelineStateLabel(task.status) }}. Puedes cambiar de panel mientras continúa.</p>
         }
@@ -272,32 +437,35 @@
             </li>
           }
         </ol></details>
-        @if (task.errorCode) {
-          <p class="alert error" role="alert">El procesamiento no se completó. Consulta el estado, revisa el intervalo y vuelve a intentarlo con el archivo seleccionado.</p>
+        @if (task.status === 'failed' || task.status === 'cancelled') {
+          <div class="pipeline-retry" role="alert"><p>{{ task.status === 'failed' ? pipelineFailureMessage(task.errorCode) : 'El procesamiento se canceló. Puedes iniciar una solicitud nueva cuando quieras.' }} Código del servidor: {{ task.errorCode || 'sin código' }}.</p>@if (canOfferManualFallback(task)) { <button class="button small" type="button" (click)="useManualAfterPipelineFailure()" [disabled]="busy() || !canEdit()">Elegir un intervalo manual</button> } @else if (automaticPipeline(task) && task.status === 'failed' && pipelineMatchesSelectedUpload() && processingSourceReady()) { <button class="button small" type="button" (click)="startAutomaticPipeline()" [disabled]="busy() || pollingPipeline() || !canEdit()">Reintentar selección automática</button> } @else if (!automaticPipeline(task) && task.status === 'failed' && pipelineMatchesSelectedUpload() && intervalReady()) { <button class="button small" type="button" (click)="retryPipelineResult()" [disabled]="busy() || pollingPipeline() || !canEdit()">Reintentar este intervalo</button> }</div>
         }
-        @if (task.status === "succeeded") {
+        @if (!automaticPipeline(task) && task.status === "succeeded") {
           <div class="button-row">
             <button
               class="button"
               type="button"
               (click)="downloadPipeline('video')"
+              [disabled]="busy()"
             >
               Descargar MP4<ac-icon name="download" /></button
-            ><button
+            >@if (task.analysisId) { <button
               class="button"
               type="button"
               (click)="downloadPipeline('srt')"
+              [disabled]="busy()"
             >
               SRT</button
             ><button
               class="button"
               type="button"
               (click)="downloadPipeline('vtt')"
+              [disabled]="busy()"
             >
               VTT
-            </button>
+            </button> }
           </div>
-        } @else if (!["failed", "cancelled", "stopping"].includes(task.status)) {
+        } @else if (!["succeeded", "partial_failed", "failed", "cancelled", "stopping"].includes(task.status)) {
           <button
             class="button small"
             type="button"
@@ -311,6 +479,7 @@
         <small class="resource-id">Pipeline: {{ task.id }}</small>
         <button class="button small" type="button" (click)="pollPipeline()" [disabled]="pollingPipeline()">{{ pollingPipeline() ? "Consultando…" : "Actualizar estado" }}</button>
       </div>
+    }
     }
     <details>
       <summary>Retomar un procesamiento existente</summary>
@@ -327,32 +496,44 @@
         Consultar estado
       </button>
     </details>
+    }
   </section>
 </div>
-<section id="project-drafts-panel" class="panel project-drafts" role="tabpanel" tabindex="0" aria-labelledby="project-tab-drafts" [hidden]="workbench() !== 'drafts'">
+  <section id="project-drafts-panel" class="panel project-drafts" role="tabpanel" tabindex="0" aria-labelledby="creator-drafts-button" [hidden]="workbench() !== 'drafts'">
   <div class="panel-heading">
     <div>
-      <span class="eyebrow">PASO 3 · EDITOR</span>
+      <span class="eyebrow">BORRADORES Y EDICIÓN</span>
       <h2>Abre tu borrador.</h2>
     </div>
     <button
       class="button"
       type="button"
-      (click)="createEdit()"
-      [disabled]="busy() || !inspected() || !canEdit()"
+      (click)="continueToEditor()"
+      [disabled]="busy() || !canCreateDraft() || !canEdit()"
     >
-      {{ hasReusableDraft() ? 'Abrir borrador creado' : 'Crear borrador y abrir editor' }}<ac-icon name="scissors" />
+      {{ pipelineDraftWaiting() ? 'Esperando procesamiento…' : pipelineMatchesSelectedUpload() && ['succeeded','partial_failed'].includes(pipeline()?.status ?? '') ? automaticPipeline() ? 'Abrir editor del primer clip listo' : 'Abrir editor del intervalo procesado' : hasReusableDraft() ? 'Abrir borrador creado' : 'Crear borrador y abrir editor' }}<ac-icon name="scissors" />
     </button>
   </div>
   <p>
-    @if (hasLinkedTranscript()) {
+    @if (pipelineDraftWaiting() && pipelineMatchesSelectedUpload()) {
+      Espera a que termine este procesamiento para que el borrador conserve los tiempos de la transcripción real vinculada.
+    } @else if (pipelineDraftWaiting()) {
+      Hay un procesamiento en curso sin vínculo confirmado con esta carga. Espera a que termine; no se usará como transcripción de este borrador.
+    } @else if (hasLinkedTranscript()) {
       El borrador usará el intervalo, formato y transcripción de esta carga.
+    } @else if (pipelineMatchesSelectedUpload() && pipeline()?.status === 'succeeded') {
+      El pipeline terminó sin devolver una transcripción vinculada. Se abrirá el intervalo procesado sin subtítulos automáticos.
+    } @else if (!hasKnownPipelineUpload() && pipeline()?.status === 'succeeded') {
+      El pipeline se consultó por ID y no se pudo confirmar su carga de origen. Su intervalo y transcripción no se vincularán a este borrador.
+    } @else if (hasKnownPipelineUpload() && !pipelineMatchesSelectedUpload() && pipeline()?.status === 'succeeded') {
+      El resultado pertenece a otra carga; no se usará en este borrador.
     } @else if (pipelineInProgress()) {
-      Puedes abrir el borrador ahora sin subtítulos mientras termina el procesamiento.
+      Hay otro procesamiento en curso sin vínculo confirmado con esta carga; no se usará para este borrador.
     } @else {
       El borrador usará el intervalo y formato anteriores. Sin una transcripción completada para esta carga, se abrirá sin subtítulos.
     }
   </p>
+  @if (intervalNotice()) { <p class="muted" role="status" aria-live="polite">{{ intervalNotice() }}</p> }
   @if (createdDraft(); as draft) {
     <section class="draft-handoff" aria-labelledby="draft-handoff-title">
       <div><h3 id="draft-handoff-title">Borrador guardado: {{ draft.name }}</h3>
@@ -385,7 +566,7 @@
           @if (design) { <h3>Los borradores aparecerán aquí.</h3><p>Abre un proyecto autorizado para consultar sus revisiones y continuar en el editor.</p> }
           @else if (editsLoading()) { <p role="status">Consultando los borradores de este proyecto…</p> }
           @else if (editsError()) { <h3>Lista de borradores no disponible.</h3><p>Reintenta la consulta para ver los borradores existentes.</p> }
-          @else if (editsLoaded()) { <h3>Tu próximo corte tiene un lugar aquí.</h3><p>{{ createdDraft() ? 'La última consulta no incluía el borrador recién guardado. Puedes abrirlo desde su resultado o actualizar la lista.' : inspected() ? 'Aún no hay borradores. Crea el primero con el intervalo de arriba y continúa en el editor.' : 'Carga e inspecciona un video para crear tu primer borrador.' }}</p> }
+          @else if (editsLoaded()) { <h3>Tu próximo corte tiene un lugar aquí.</h3><p>{{ createdDraft() ? 'La última consulta no incluía el borrador recién guardado. Puedes abrirlo desde su resultado o actualizar la lista.' : intervalReady() ? 'Aún no hay borradores. Crea el primero con el intervalo de arriba y continúa en el editor.' : 'Carga e inspecciona un video para crear tu primer borrador.' }}</p> }
           @else { <p>Los borradores aún no se consultaron.</p> }
         </div>
       </div>
@@ -396,14 +577,19 @@
 </div>
 <aside class="project-context" aria-label="Resumen del proyecto">
   <section class="project-source-summary">
-    <div class="project-source-symbol"><ac-icon name="film" /><span>{{ uploadStatus() ? 'ORIGEN DEL PROYECTO' : 'AQUÍ EMPIEZA TU CLIP' }}</span></div>
+    <span class="eyebrow">RESUMEN DE LA FUENTE</span>
+    @if (localPreview() && !previewUnavailable() && file) { <video class="source-summary-video" [src]="localPreview()" muted playsinline preload="metadata" aria-label="Vista previa local de la fuente" (error)="previewUnavailable.set(true)"></video> }
+    @else { <div class="project-source-symbol"><ac-icon name="film" /><span>{{ uploadStatus() ? sourceOriginProvider() === 'twitch' ? 'CLIP DE TWITCH' : 'VIDEO CARGADO' : 'SIN VIDEO CONFIRMADO' }}</span></div> }
     <h2>{{ sourceFileName() || 'Tu video de origen' }}</h2>
-    <p>{{ inspected() ? 'Inspección completada. Conservamos el material original como referencia.' : uploading() ? 'Tu archivo se está transfiriendo. Puedes consultar el progreso en Video de origen.' : 'Carga un archivo propio y comprueba sus datos antes de crear el corte.' }}</p>
+    @if (sourceMode() === 'link') { <p class="source-preview-separation">La vista previa es independiente del MP4 inspeccionado que se procesará.</p> }
+    @else { <p>{{ intervalReady() ? 'MP4 inspeccionado y listo para configurar.' : inspected() ? 'La inspección no midió la duración; consulta el estado antes de crear un corte.' : uploading() ? 'Tu archivo se está transfiriendo. Puedes consultar el progreso en Video de origen.' : 'Carga un archivo propio y comprueba sus datos antes de crear el corte.' }}</p> }
     <dl>
-      <div><dt>Archivo de origen</dt><dd>{{ uploadStatus() ? uploadStateLabel(uploadStatus()!.state) : 'Sin archivo confirmado' }}</dd></div>
+      <div><dt>Estado</dt><dd>{{ uploadStatus() ? uploadStateLabel(uploadStatus()!.state) : 'Sin archivo confirmado' }}</dd></div>
+      @if (uploadStatus()) { <div><dt>Tamaño</dt><dd>{{ uploadStatus()!.bytes / 1024 / 1024 | number:'1.1-1' }} MiB</dd></div> }
       <div><dt>Duración medida</dt><dd>{{ sourceDurationSeconds() !== null ? (sourceDurationSeconds() | number: '1.1-1') + ' s' : 'Pendiente' }}</dd></div>
-      @if (uploadStatus()?.inspection?.result; as source) { <div><dt>Resolución</dt><dd>{{ source.width }} × {{ source.height }}</dd></div> }
+      @if (uploadStatus()?.inspection?.result; as source) { <div><dt>Resolución</dt><dd>{{ source.width }} × {{ source.height }}</dd></div><div><dt>Formato</dt><dd>{{ source.format }}</dd></div> }
     </dl>
+    @if (intervalReady()) { <p class="source-validation-state"><ac-icon name="check" /> Fuente inspeccionada</p> }
     @if (hasUnuploadedSelection()) { <p class="source-candidate-notice"><strong>{{ uploadStatus() ? 'Otra selección local' : 'Selección local' }}</strong><span>{{ file?.name }}</span>{{ selectionError() ? 'Revisa el archivo antes de cargarlo.' : 'Aún no se ha enviado como nuevo origen.' }}</p> }
   </section>
   <section class="project-continuity">
@@ -413,4 +599,33 @@
   </section>
   @if (pipeline()) { <section class="project-running-summary" role="status"><span class="eyebrow">PROCESAMIENTO CONSULTADO</span><strong>{{ workflowStatus('render') }}</strong><button class="text-link" type="button" (click)="showWorkbench('processing', true)">Ver estado y descargas<ac-icon name="arrow" /></button></section> }
 </aside>
+</div>
+</main>
+</div>
+<footer class="creator-wizard-footer">
+      <div class="wizard-footer-progress"><span class="wizard-step-caption">Paso {{ creatorStepIndex() + 1 }} de {{ creatorSteps.length }} · {{ creatorStepLabel() }}</span><p>{{ creatorStep() === 'source' ? sourceMode() === 'link' ? 'Usa un MP4 inspeccionado para generar clips. La vista previa del enlace no se procesará.' : processingSourceReady() ? 'Fuente confirmada. El siguiente paso conserva este video.' : hasUnuploadedSelection() ? 'Tu archivo aún está en este equipo. Cárgalo para comprobar su duración.' : 'La inspección del servidor habilita el siguiente paso.' : creatorStep() === 'configuration' ? 'Se enviarán los ajustes elegidos para esta fuente. Salida MP4/H.264.' : creatorStep() === 'generation' ? 'Estado consultado al servidor. No se estima el tiempo restante.' : 'Los clips listos conservan su intervalo y fuente al abrir el editor.' }}</p></div>
+  <div class="wizard-footer-actions">
+    @if (workbench() === 'drafts') {
+      <button class="button primary" type="button" (click)="openCreatorWizard()">Volver al asistente</button>
+    } @else if (creatorStep() === 'source') {
+      <button class="button" type="button" (click)="requestCloseCreatorWizard()">Cerrar</button>
+      <button class="button primary" type="button" (click)="advanceSource()" [disabled]="sourceActionDisabled()">{{ sourceActionLabel() }}<ac-icon name="arrow" /></button>
+    } @else if (creatorStep() === 'configuration') {
+      <button class="button" type="button" (click)="wizardBack()" [disabled]="busy()">Atrás</button>
+      @if (processingSourceReady()) { <button class="button primary" type="submit" form="clip-configuration-form" [disabled]="generationActionDisabled()">{{ busy() ? 'Enviando…' : generationMode === 'automatic' ? 'Generar ' + clipCount + (clipCount === 1 ? ' clip' : ' clips') : 'Generar 1 clip' }}<ac-icon name="scissors" /></button> }
+      @else { <button class="button primary" type="button" (click)="chooseFileSource()">Elegir fuente</button> }
+    } @else if (creatorStep() === 'generation') {
+      <button class="button" type="button" (click)="requestCloseCreatorWizard()">Cerrar y volver al proyecto</button>
+      @if (reviewReady()) { <button class="button primary" type="button" (click)="goToCreatorStep('review', true)">Revisar resultados</button> }
+    } @else {
+      <button class="button" type="button" (click)="configureFromResult()" [disabled]="!canConfigureResult()">Revisar ajustes para otra generación</button>
+      <button class="button primary" type="button" (click)="requestCloseCreatorWizard()">Volver al proyecto</button>
+    }
+  </div>
+</footer>
+@if (creatorCloseRequested()) {
+  <div class="wizard-exit-overlay"><section class="wizard-exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="wizard-exit-title" aria-describedby="wizard-exit-description"><ac-icon name="film" /><h3 id="wizard-exit-title">¿Salir del asistente?</h3><p id="wizard-exit-description">Se descartará cualquier archivo que todavía no hayas cargado. Los archivos confirmados, los borradores y los trabajos enviados permanecen en el proyecto.</p><div class="button-row"><button id="wizard-keep-working" class="button primary" type="button" (click)="keepCreatorOpen()">Seguir trabajando</button><button class="button" type="button" (click)="discardCreatorSelection()" [disabled]="uploading()">Descartar selección y salir</button></div>@if (uploading()) { <p>Espera a que termine la carga antes de salir.</p> }</section></div>
+}
+
+</section>
 </div>

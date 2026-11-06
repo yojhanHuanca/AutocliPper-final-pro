@@ -14,7 +14,7 @@ test('the editor route has no synthetic project and dashboard drafts use account
   ]);
   assert.doesNotMatch(editor, /ac-editor-demo|MP4 sintético|Proyecto de muestra|demo visual/);
   assert.doesNotMatch(component, /EditorDemoComponent/);
-  assert.match(editor, /class="editor-layout editor-empty-workspace"[\s\S]*?routerLink="\/app\/projects"/);
+  assert.match(editor, /class="editor-layout editor-empty-workspace"[\s\S]*?\[routerLink\]="vm\.design \? '\/design\/projects' : '\/app\/projects'"/);
   assert.match(landing, /Ver el editor/);
   assert.match(dashboard, /return this\.design \? \["\/app\/projects"\] : \["\/app\/edits", draftId\]/);
   assert.match(routes, /path: "app"[\s\S]*?path: "edits"[\s\S]*?path: "design"[\s\S]*?path: "editor"/);
@@ -30,7 +30,7 @@ test('opening the real editor without a draft stays in a useful empty state and 
   assert.match(editor, /class="editor-layout editor-empty-workspace"/);
   assert.match(editor, /Tu video aparecerá aquí/);
   assert.match(editor, /Elegir proyecto/);
-  assert.match(editor, /routerLink="\/app\/projects"/);
+  assert.match(editor, /\[routerLink\]="vm\.design \? '\/design\/projects' : '\/app\/projects'"/);
 });
 
 test('the real editor uses a project clip list, video preview, API-backed inspector and honest unavailable tools', async () => {
@@ -41,7 +41,8 @@ test('the real editor uses a project clip list, video preview, API-backed inspec
   ]);
   assert.match(editor, /class="editor-clip-list"/);
   assert.match(editor, /<ac-editor-preview \/>[\s\S]*?<ac-editor-inspector \/>[\s\S]*?<ac-editor-timeline \/>/);
-  assert.doesNotMatch(editor, /<ac-editor-rail\s*\/>/);
+  assert.match(editor, /@if \(vm\.draft\(\)\) \{[\s\S]*?<div class="editor-layout">\s*<ac-editor-rail \/>/,
+    'The icon rail belongs to an opened draft, not to the empty editor route.');
   for (const tool of ['Recorte', 'Subtítulos', 'Formato', 'Audio', 'Color']) assert.ok(inspector.includes(`>${tool}</button>`));
   assert.match(inspector, /Audio<\/button>/);
   assert.match(inspector, /Color<\/button>/);
@@ -50,7 +51,7 @@ test('the real editor uses a project clip list, video preview, API-backed inspec
   assert.match(timeline, /Dividir crea dos borradores persistidos/);
   assert.match(timeline, /Duplicar/);
   assert.match(timeline, /Eliminar/);
-  assert.match(timeline, /publicación directa.*no está disponible: el servidor no ofrece una operación de publicación/);
+  assert.match(timeline, /YouTube y la bandeja de TikTok requieren una cuenta conectada por OAuth/);
   assert.match(timeline, /role="slider" aria-label="Inicio del recorte"/);
   assert.match(timeline, /role="slider" aria-label="Final del recorte"/);
   assert.match(timeline, /startRangeDrag\(\$event, 'start'/);

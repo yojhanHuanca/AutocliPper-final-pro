@@ -86,15 +86,14 @@ test(
           ).value.id,
           first.value.id,
         );
-        assert.equal(
-          (
-            await c.request("/auth/privacy-requests", "POST", {
-              kind: "deletion",
-              password,
-            })
-          ).status,
-          202,
-        );
+        const deletion = await c.request("/auth/privacy-requests", "POST", {
+          kind: "deletion",
+          password,
+        });
+        assert.equal(deletion.status, 202);
+        assert.equal(deletion.value.kind, "deletion");
+        assert.equal(deletion.value.state, "requested");
+        assert.equal(deletion.value.fulfillment, "pending");
         assert.equal(
           (await c.request("/auth/privacy-requests")).value.items.length,
           2,

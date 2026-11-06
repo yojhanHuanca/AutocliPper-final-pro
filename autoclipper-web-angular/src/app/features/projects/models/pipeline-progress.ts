@@ -4,6 +4,7 @@ export type PipelineProgressStatus =
   | "analysis"
   | "render"
   | "succeeded"
+  | "partial_failed"
   | "failed"
   | "cancelled"
   | "stopping";
@@ -30,12 +31,12 @@ export function pipelineProgress(
   }, -1);
   const activeIndex = Math.max(
     0,
-    ({ queued: 0, audio: 1, analysis: 2, render: 3 } as Record<string, number>)[status]
+    ({ queued: 0, audio: 1, analysis: 2, render: 3, partial_failed: 3 } as Record<string, number>)[status]
       ?? latestObservedStage,
   );
 
   return stages.map((stage, index) => {
-    if (status === "failed" && index === activeIndex)
+    if ((status === "failed" || status === "partial_failed") && index === activeIndex)
       return { ...stage, state: "failed" };
     if (status === "cancelled" && index === activeIndex)
       return { ...stage, state: "cancelled" };

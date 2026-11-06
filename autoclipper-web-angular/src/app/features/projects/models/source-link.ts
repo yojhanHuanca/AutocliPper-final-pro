@@ -7,7 +7,7 @@ export function sourceLinkFeedback(value: string): { valid: boolean; message: st
     const url = new URL(text);
     if (!['https:', 'http:'].includes(url.protocol) || !url.hostname || url.username || url.password)
       return { valid: false, message: 'Usa un enlace completo http o https, sin credenciales.' };
-    return { valid: true, message: 'El formato del enlace es válido. La importación todavía no está disponible.' };
+    return { valid: true, message: 'El formato del enlace es válido. Su uso depende de la plataforma, el tipo de video y los permisos disponibles.' };
   } catch {
     return { valid: false, message: 'Incluye el enlace completo, empezando por https://.' };
   }
@@ -16,6 +16,17 @@ export function sourceLinkFeedback(value: string): { valid: boolean; message: st
 export type SourcePlatform = 'YouTube' | 'Kick' | 'Twitch';
 export type PreviewTarget = { platform: SourcePlatform; kind: 'video' | 'clip' | 'live'; id: string };
 export type SourceLinkResult = { state: 'empty' | 'invalid' | 'unsupported' | 'unverifiable' | 'preview'; title: string; message: string; platform?: SourcePlatform; target?: PreviewTarget };
+import type { Schema } from '../../../core/contracts/api-types';
+export type YoutubeVideoMetadata = Omit<Schema<'YoutubeVideoMetadataDto'>, 'thumbnailUrl'> & { thumbnailUrl?: string | null };
+export type SourceImportResolution = Omit<Schema<'SourceLinkResolutionDto'>, 'youtubeMetadata'> & {
+  /** Runtime JSON contains an HTTPS URL; the current Swagger generator mislabels nullable URI values as objects. */
+  youtubeMetadata?: YoutubeVideoMetadata;
+};
+export function unsupportedSourceImportResolution(target: PreviewTarget): SourceImportResolution | null {
+
+  if (target.platform === 'Kick') return {provider:'kick',state:'unsupported',importable:false,reasonCode:'KICK_MEDIA_API_UNAVAILABLE',nextAction:'upload_authorized_file',message:'Kick no ofrece una API pública documentada para que AutoClipper importe el video desde una URL.',nextStep:'Descarga el clip desde Kick con tu cuenta y sube el archivo MP4.'};
+  return null;
+}
 const youtubeId = /^[A-Za-z0-9_-]{11}$/;
 const clipId = /^[A-Za-z0-9_-]{1,100}$/;
 const channelId = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{0,39}$/;
@@ -47,6 +58,15 @@ export function recognizeSourceLink(value: string): SourceLinkResult {
     if (channel && channelId.test(channel) && !reserved.includes(channel.toLowerCase()) && !url.search) target = {platform,kind:'live',id:channel};
   } else return {state:'unsupported', title:'Esta plataforma no está contemplada.', message:'Utiliza un enlace de YouTube, Kick o Twitch. No cargamos reproductores de otros dominios.'};
   if (!target) return {state:'unverifiable', platform, title:`${platform} reconocido; video no verificable.`, message:platform === 'Kick' ? 'Kick solo permite aquí la vista previa oficial de un canal en directo. Este enlace no se convierte en ese canal y los VOD/clips no se importan. Puedes subir un archivo local.' : 'No reconocemos un video o clip concreto. Copia el enlace desde la página del video; un canal o colección no identifica un video.'};
+  if (platform === 'YouTube') {
+    return {
+      state: 'preview',
+      platform,
+      target,
+      title: 'Video de YouTube reconocido.',
+      message: 'Importa el video y configura los clips. La IA elegirá los momentos y el servidor hará los recortes.',
+    };
+  }
   return {state:'preview', platform, target, title:'Enlace válido para solicitar vista previa.', message:target.kind === 'live' ? 'Es un canal en directo de Kick, no una grabación. Su disponibilidad se comprueba en el reproductor de la plataforma.' : 'Reconocimos la plataforma y el formato. La existencia, los permisos y la reproducción del video todavía no están verificados.'};
 }
 
@@ -59,4 +79,28 @@ export function officialSourcePreview(target: PreviewTarget, parent: string): st
     if (target.kind === 'clip' && clipId.test(target.id)) return `https://clips.twitch.tv/embed?clip=${target.id}&parent=${encodeURIComponent(parent)}&autoplay=false`;
   }
   return null;
+}
+
+/** Normalizes a verified Twitch clip to the exact backend-supported URL shape. */
+export function canonicalTwitchClipImportUrl(result: SourceLinkResult | null | undefined): string | null {
+  const target = result?.target;
+  return target?.platform === 'Twitch' && target.kind === 'clip' && clipId.test(target.id)
+    ? `https://clips.twitch.tv/${target.id}`
+    : null;
+}
+
+/** Normalizes a Twitch VOD URL to the Project import contract. */
+export function canonicalTwitchVodImportUrl(result: SourceLinkResult | null | undefined): string | null {
+  const target = result?.target;
+  return target?.platform === 'Twitch' && target.kind === 'video' && /^\d{1,20}$/u.test(target.id)
+    ? `https://www.twitch.tv/videos/${target.id}`
+    : null;
+}
+
+/** Canonical lookup input for YouTube metadata; this is never used for importing bytes. */
+export function canonicalYouTubeMetadataUrl(result: SourceLinkResult | null | undefined): string | null {
+  const target = result?.target;
+  return target?.platform === 'YouTube' && target.kind === 'video' && youtubeId.test(target.id)
+    ? `https://www.youtube.com/watch?v=${target.id}`
+    : null;
 }

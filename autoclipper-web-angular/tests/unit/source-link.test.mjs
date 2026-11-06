@@ -2,10 +2,11 @@ import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sourceLinkFeedback, recognizeSourceLink, officialSourcePreview, canonicalTwitchClipImportUrl, canonicalYouTubeMetadataUrl, unsupportedSourceImportResolution, SourceLinkPreviewComponent, HttpErrorResponse } from '../../.local/tests/client.mjs';
+import { sourceLinkFeedback, recognizeSourceLink, officialSourcePreview, canonicalTwitchClipImportUrl, canonicalTwitchVodImportUrl, canonicalYouTubeMetadataUrl, unsupportedSourceImportResolution, SourceLinkPreviewComponent, HttpErrorResponse, TimeoutError } from '../../.local/tests/client.mjs';
 import { signal } from '@angular/core';
 
 const sourceLinkTemplate = readFileSync(new URL('../../src/app/features/projects/components/source-link-preview.component.html', import.meta.url), 'utf8');
+const sourceLinkComponent = readFileSync(new URL('../../src/app/features/projects/components/source-link-preview.component.ts', import.meta.url), 'utf8');
 
 test('source link syntax never asserts provider support or import availability', () => {
   for (const value of ['https://example.test/video', '  https://kick.com/example  ', 'http://example.test/a']) {
@@ -19,7 +20,7 @@ test('a late Twitch connection response cannot replace a newer confirmed status'
   const pending = [];
   const component = Object.create(SourceLinkPreviewComponent.prototype);
   Object.assign(component, {
-    canImport: () => true, projectId: () => 'project-fixture', twitchStatusGeneration: 0,
+    canImport: () => true, projectId: () => 'project-fixture', twitchStatusGeneration: 0, result:signal(recognizeSourceLink('https://clips.twitch.tv/ExampleClip')),
     twitchStatus: signal({ configured: false, linked: false, account: null }),
     resolved: signal(null), sourceError: signal(''), sourceNotice: signal(''), importKey: '',
     api: { twitchLinkStatus: () => new Promise((resolve, reject) => pending.push({ resolve, reject })) },
@@ -36,7 +37,7 @@ test('a late Twitch connection response cannot replace a newer confirmed status'
 test('a failed Twitch status refresh clears the old linked state and resolved clip', async () => {
   const component = Object.create(SourceLinkPreviewComponent.prototype);
   Object.assign(component, {
-    canImport: () => true, projectId: () => 'project-fixture', twitchStatusGeneration: 0,
+    canImport: () => true, projectId: () => 'project-fixture', twitchStatusGeneration: 0, result:signal(recognizeSourceLink('https://clips.twitch.tv/ExampleClip')),
     twitchStatus: signal({ configured: true, linked: true, account: { login: 'creator' } }),
     resolved: signal({ title: 'previously available clip' }), sourceError: signal(''), sourceNotice: signal(''), importKey: 'stale-key',
     api: { twitchLinkStatus: async () => { throw new Error('network unavailable'); } },
@@ -55,7 +56,7 @@ test('a failed availability check from a previous project cannot leave its error
   Object.assign(component, {
     canImport: () => true, projectId: () => currentProject,
     value: signal('https://clips.twitch.tv/ExampleClip'), result: signal(recognizeSourceLink('https://clips.twitch.tv/ExampleClip')),
-    twitchStatus: signal({ configured: true, linked: true, account: null }), sourceBusy: signal(false),
+    twitchStatus: signal({ configured: true, linked: true, account: null }), sourceBusy: signal(false), importing: signal(false),
     sourceError: signal(''), sourceNotice: signal(''), resolved: signal(null), importKey: '', sourceOperationGeneration: 0,
     lastProjectId: 'project-alpha', requestedFrame: signal(null), previewState: signal('idle'),
     previewError: signal(''), previewAvailable: { emit() {} },
@@ -82,7 +83,7 @@ test('configured=false clears stale availability and never calls resolve or impo
   const component=Object.create(SourceLinkPreviewComponent.prototype);
   let mutations=0;
   Object.assign(component,{
-    canImport:()=>true,projectId:()=> 'project-fixture',twitchStatusGeneration:0,sourceBusy:signal(false),sourceError:signal(''),sourceNotice:signal(''),
+    canImport:()=>true,projectId:()=> 'project-fixture',twitchStatusGeneration:0,sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),
     twitchStatus:signal({configured:true,linked:true,account:{login:'creator'}}),resolved:signal({title:'old result'}),
     result:signal(recognizeSourceLink('https://clips.twitch.tv/ExampleClip')),value:signal('https://clips.twitch.tv/ExampleClip'),importKey:'old-key',
     api:{twitchLinkStatus:async()=>({configured:false,linked:false,account:null}),resolveSourceLink:async()=>{mutations++;},importSourceLink:async()=>{mutations++;}},
@@ -122,8 +123,7 @@ test('empty, invalid and unverifiable links have explicit states without manufac
 test('YouTube and Kick previews expose their unsupported import contract and authorized-file next action',()=>{
   const youtube=unsupportedSourceImportResolution(recognizeSourceLink('https://youtube.com/watch?v=M7lc1UVf-VE').target);
   const kick=unsupportedSourceImportResolution(recognizeSourceLink('https://kick.com/example-channel').target);
-  assert.deepEqual([youtube.state,youtube.importable,youtube.reasonCode,youtube.nextAction],['unsupported',false,'YOUTUBE_DOWNLOAD_APPROVAL_REQUIRED','upload_authorized_file']);
-  assert.match(youtube.nextStep,/autorización/iu);
+  assert.equal(youtube,null,'YouTube is resolved by the server rather than blocked in the browser.');
   assert.deepEqual([kick.state,kick.importable,kick.reasonCode,kick.nextAction],['unsupported',false,'KICK_MEDIA_API_UNAVAILABLE','upload_authorized_file']);
   assert.match(kick.nextStep,/sube el archivo MP4/iu);
   assert.equal(unsupportedSourceImportResolution(recognizeSourceLink('https://clips.twitch.tv/ExampleClip').target),null);
@@ -137,26 +137,67 @@ test('YouTube metadata lookup shows only server-confirmed details and never enab
   const component=Object.create(SourceLinkPreviewComponent.prototype);
   Object.assign(component,{
     canImport:()=>true,projectId:()=> 'project-metadata',value:signal('https://youtu.be/M7lc1UVf-VE?t=17'),
-    result:signal(result),sourceBusy:signal(false),sourceError:signal(''),sourceNotice:signal(''),
-    sourceOperationGeneration:0,importResolution:signal(unsupportedSourceImportResolution(result.target)),
+    result:signal(result),sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),
+    resolved:signal(null),sourceOperationGeneration:0,youtubeMetadataAbortController:null,importResolution:signal(unsupportedSourceImportResolution(result.target)),
     api:{
-      resolveSourceLink:async(...args)=>{calls.push(['resolve',...args]);return{provider:'youtube',state:'unsupported',importable:false,reasonCode:'YOUTUBE_DOWNLOAD_APPROVAL_REQUIRED',youtubeMetadata:{state:'available',title:'Título consultado',channelTitle:'Canal confirmado',durationSeconds:83,thumbnailUrl:'https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg',uploadStatus:'processed',privacyStatus:'public',embeddable:true}};},
+      resolveSourceLink:async(...args)=>{calls.push(['resolve',...args]);return{provider:'youtube',state:'available',importable:true,youtubeMetadata:{state:'available',title:'Título consultado',channelTitle:'Canal confirmado',durationSeconds:83,thumbnailUrl:'https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg',uploadStatus:'processed',privacyStatus:'public',embeddable:true}};},
       importSourceLink:async(...args)=>{calls.push(['import',...args]);throw new Error('YouTube no se importa desde URL.');},
     },
   });
   await component.resolveYouTubeMetadata();
-  assert.deepEqual(calls,[['resolve','project-metadata','https://www.youtube.com/watch?v=M7lc1UVf-VE']]);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0][0],'resolve');
+  assert.equal(calls[0][1],'project-metadata');
+  assert.equal(calls[0][2],'https://www.youtube.com/watch?v=M7lc1UVf-VE');
+  assert.equal(calls[0][3].timeoutMs,7_000);
+  assert.ok(calls[0][3].signal instanceof AbortSignal);
   const resolution=component.importResolution();
   assert.equal(resolution.youtubeMetadata.title,'Título consultado');
   assert.equal(resolution.youtubeMetadata.channelTitle,'Canal confirmado');
   assert.equal(resolution.youtubeMetadata.durationSeconds,83);
-  assert.equal(resolution.importable,false);
-  assert.equal(resolution.state,'unsupported');
+  assert.equal(resolution.importable,true);
+  assert.equal(resolution.state,'available');
   assert.equal(component.safeYoutubeThumbnail(resolution.youtubeMetadata.thumbnailUrl),'https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg');
   assert.equal(component.safeYoutubeThumbnail('https://example.test/image.jpg'),null);
   assert.equal(component.formatYoutubeDuration(3661),'1:01:01');
-  assert.match(component.sourceNotice(),/MP4 inspeccionado/);
+  assert.match(component.sourceNotice(),/descargará y verificará/);
   assert.equal(component.sourceBusy(),false);
+});
+
+test('YouTube metadata timeout restores the form and leaves a retryable preview-only error', async () => {
+  const result=recognizeSourceLink('https://youtu.be/M7lc1UVf-VE');
+  const component=Object.create(SourceLinkPreviewComponent.prototype);
+  Object.assign(component,{
+    canImport:()=>true,projectId:()=> 'project-metadata',value:signal('https://youtu.be/M7lc1UVf-VE'),result:signal(result),
+    sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),sourceOperationGeneration:0,
+    youtubeMetadataAbortController:null,importResolution:signal(unsupportedSourceImportResolution(result.target)),
+    api:{resolveSourceLink:async()=>{throw new TimeoutError();}},
+  });
+  await component.resolveYouTubeMetadata();
+  assert.equal(component.sourceBusy(),false);
+  assert.match(component.sourceError(),/tardó demasiado/i);
+  assert.equal(component.importResolution(),null);
+  assert.match(sourceLinkTemplate,/Consultar de nuevo/);
+  assert.match(sourceLinkTemplate,/Cancelar consulta/);
+});
+
+test('cancelling YouTube metadata aborts the HTTP signal and suppresses stale errors', async () => {
+  const result=recognizeSourceLink('https://youtu.be/M7lc1UVf-VE');
+  const component=Object.create(SourceLinkPreviewComponent.prototype);
+  Object.assign(component,{
+    canImport:()=>true,projectId:()=> 'project-metadata',value:signal('https://youtu.be/M7lc1UVf-VE'),result:signal(result),
+    sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),sourceOperationGeneration:0,
+    youtubeMetadataAbortController:null,importResolution:signal(unsupportedSourceImportResolution(result.target)),
+    api:{resolveSourceLink:async(_project,_url,{signal})=>new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('aborted','AbortError')),{once:true}))},
+  });
+  const pending=component.resolveYouTubeMetadata();
+  const controller=component.youtubeMetadataAbortController;
+  assert.equal(component.sourceBusy(),true);
+  component.cancelYouTubeMetadata();
+  await pending;
+  assert.equal(controller.signal.aborted,true);
+  assert.equal(component.sourceBusy(),false);
+  assert.match(component.sourceError(),/Consulta cancelada/);
 });
 
 test('official player URLs discard user query strings and refuse unsafe identifiers or origins',()=>{
@@ -179,6 +220,37 @@ test('Twitch import strips tracking parameters and sends only a recognized clip 
   assert.equal(canonicalTwitchClipImportUrl(null),null);
 });
 
+test('Twitch VOD links stay preview-only while Kick VOD remains a manual upload',()=>{
+  const vod=recognizeSourceLink('https://www.twitch.tv/videos/12345?t=30s');
+  assert.equal(canonicalTwitchVodImportUrl(vod),'https://www.twitch.tv/videos/12345');
+  assert.equal(canonicalTwitchVodImportUrl(recognizeSourceLink('https://twitch.tv/creator/clip/ExampleClip')),null);
+  const kick=recognizeSourceLink('https://kick.com/channel/videos/98765');
+  assert.equal(kick.platform,'Kick');
+  assert.equal(kick.target,undefined);
+  assert.match(kick.message,/VOD\/clips no se importan/);
+  assert.doesNotMatch(sourceLinkTemplate,/name="vodEndSeconds"|Segundo final \(segundos\)/);
+  assert.match(sourceLinkTemplate,/Este asistente no pide esos segundos/);
+  assert.doesNotMatch(sourceLinkComponent,/Selecciona el segundo final/);
+});
+
+test('validating a Twitch VOD never calls the interval-based resolve or import endpoints',()=>{
+  const value='https://www.twitch.tv/videos/12345';
+  let called=false;
+  const component=Object.create(SourceLinkPreviewComponent.prototype);
+  Object.assign(component,{
+    canImport:()=>true,projectId:()=> 'project-fixture',value:signal(value),result:signal(null),previewAvailable:{emit:()=>{}},
+    twitchStatus:signal({configured:true,linked:true,account:{login:'creator'}}),sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),
+    resolved:signal(null),importResolution:signal(null),closePreview:()=>{},
+    api:{resolveSourceLink:async()=>{called=true;},importSourceLink:async()=>{called=true;}},
+  });
+  component.validate();
+  assert.equal(component.result().target.kind,'video');
+  assert.equal(component.importResolution().state,'input_required');
+  assert.match(component.importResolution().nextStep,/clip de Twitch ya publicado/);
+  assert.equal(component.resolved(),null);
+  assert.equal(called,false);
+});
+
 test('Twitch availability and import use the normalized clip URL while leaving the pasted URL unchanged',async()=>{
   const pasted='https://www.twitch.tv/creator/clip/ExampleClip-123?tt_content=channel_name';
   const calls=[];
@@ -186,7 +258,7 @@ test('Twitch availability and import use the normalized clip URL while leaving t
   Object.assign(component,{
     canImport:()=>true,projectId:()=> 'project-fixture',value:signal(pasted),
     result:signal(recognizeSourceLink(pasted)),twitchStatus:signal({configured:true,linked:true,account:null}),
-    sourceBusy:signal(false),sourceError:signal(''),sourceNotice:signal(''),resolved:signal(null),importResolution:signal(null),importKey:'stable-key',
+    sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),sourceNotice:signal(''),resolved:signal(null),importResolution:signal(null),importKey:'stable-key',
     api:{
       resolveSourceLink:async(...args)=>{calls.push(['resolve',...args]);return{provider:'twitch',state:'available',importable:true,title:'Clip autorizado',message:'La cuenta tiene permiso para descargar este clip.',nextStep:'Confirma la importación.'};},
       importSourceLink:async(...args)=>{calls.push(['import',...args]);return{state:'succeeded',uploadId:'confirmed-upload',title:'Clip autorizado'};},
@@ -196,13 +268,13 @@ test('Twitch availability and import use the normalized clip URL while leaving t
   await component.resolveTwitch();
   assert.equal(component.resolved().title,'Clip autorizado');
   assert.equal(component.importResolution().state,'available');
-  assert.match(component.sourceNotice(),/inspección deben finalizar/);
+  assert.match(component.sourceNotice(),/inspeccionará; después podrás elegir cantidad y duración/);
   assert.deepEqual(calls,[['resolve','project-fixture','https://clips.twitch.tv/ExampleClip-123']]);
   component.importKey='stable-key';
   await component.importTwitch();
   assert.deepEqual(calls.slice(1),[
     ['import','project-fixture','https://clips.twitch.tv/ExampleClip-123','stable-key'],
-    ['selected',{uploadId:'confirmed-upload',title:'Clip autorizado'}],
+    ['selected',{uploadId:'confirmed-upload',title:'Clip autorizado',provider:'twitch'}],
   ]);
   assert.equal(component.value(),pasted);
 });
@@ -212,7 +284,7 @@ test('Twitch unavailable resolution stays actionable and is not presented as a t
   const component=Object.create(SourceLinkPreviewComponent.prototype);
   Object.assign(component,{
     canImport:()=>true,projectId:()=> 'project-fixture',value:signal(value),result:signal(recognizeSourceLink(value)),
-    twitchStatus:signal({configured:true,linked:true,account:null}),sourceBusy:signal(false),sourceError:signal(''),
+    twitchStatus:signal({configured:true,linked:true,account:null}),sourceBusy:signal(false),importing:signal(false),sourceError:signal(''),
     sourceNotice:signal(''),resolved:signal(null),importResolution:signal(null),importKey:'',sourceOperationGeneration:0,
     api:{resolveSourceLink:async()=>({provider:'twitch',state:'unavailable',importable:false,reasonCode:'TWITCH_CHANNEL_EDITOR_REQUIRED',nextAction:'connect_broadcaster_or_editor_account',message:'La cuenta no puede descargar el clip.',nextStep:'Vincula una cuenta con permiso en el canal.'})},
   });
@@ -230,7 +302,7 @@ test('a confirmed Twitch disconnection during import removes stale availability 
     canImport: () => true, projectId: () => 'project-fixture', value: signal(pasted),
     result: signal(recognizeSourceLink(pasted)), twitchStatusGeneration: 0, sourceOperationGeneration: 0,
     twitchStatus: signal({ configured: true, linked: true, account: { login: 'creator' } }),
-    resolved: signal({ title: 'Clip todavía listo' }), sourceBusy: signal(false),
+    resolved: signal({ title: 'Clip todavía listo' }), sourceBusy: signal(false), importing: signal(false),
     sourceError: signal(''), sourceNotice: signal(''), importKey: 'stable-key',
     api: { importSourceLink: async () => { throw new HttpErrorResponse({ status: 409, error: { code: 'TWITCH_ACCOUNT_NOT_LINKED' } }); } },
   });
@@ -249,7 +321,7 @@ test('validation prepares an official preview without loading its iframe until a
   const component=Object.create(SourceLinkPreviewComponent.prototype);
   const trusted=[];
   const availability=[];
-  Object.assign(component,{value:signal(''),result:signal(null),resolved:signal(null),sourceNotice:signal(''),sourceError:signal(''),sourceBusy:signal(false),sourceOperationGeneration:0,linkChanged:{emit(){}},previewAvailable:{emit(value){availability.push(value);}},requestedFrame:signal(null),previewState:signal('idle'),previewError:signal(''),previewFits:()=>true,active:()=>true,sanitizer:{bypassSecurityTrustResourceUrl:url=>{trusted.push(url);return url;}},focusPreview:()=>{},frameTimer:undefined});
+  Object.assign(component,{value:signal(''),result:signal(null),resolved:signal(null),sourceNotice:signal(''),sourceError:signal(''),sourceBusy:signal(false),importing:signal(false),sourceOperationGeneration:0,linkChanged:{emit(){}},previewAvailable:{emit(value){availability.push(value);}},requestedFrame:signal(null),previewState:signal('idle'),previewError:signal(''),previewFits:()=>true,active:()=>true,sanitizer:{bypassSecurityTrustResourceUrl:url=>{trusted.push(url);return url;}},focusPreview:()=>{},frameTimer:undefined});
   const originalWindow=globalThis.window; globalThis.window={location:{hostname:'localhost'}};
   try {
   component.update({target:{value:'https://youtu.be/M7lc1UVf-VE'}});
@@ -269,15 +341,15 @@ test('validating YouTube prepares preview-only UI without calling source resolve
   let backendCalls=0;
   Object.assign(component,{
     value:signal('https://www.youtube.com/watch?v=M7lc1UVf-VE'),result:signal(null),resolved:signal(null),
-    sourceNotice:signal(''),sourceError:signal(''),sourceBusy:signal(false),sourceOperationGeneration:0,
+    sourceNotice:signal(''),sourceError:signal(''),sourceBusy:signal(false),importing:signal(false),sourceOperationGeneration:0,
     previewAvailable:{emit(){}},requestedFrame:signal(null),previewState:signal('idle'),previewError:signal(''),
     importResolution:signal(null),canImport:()=>true,
     api:{resolveSourceLink:async()=>{backendCalls++;},importSourceLink:async()=>{backendCalls++;}},frameTimer:undefined,
   });
   component.validate();
   assert.equal(component.result().target.platform,'YouTube');
-  assert.equal(component.importResolution().importable,false);
-  assert.equal(component.importResolution().nextAction,'upload_authorized_file');
+  assert.equal(component.importResolution(),null);
+  assert.equal(component.resolved(),null);
   assert.equal(backendCalls,0);
 });
 
@@ -358,7 +430,7 @@ test('reusing the source preview for a different project clears the old URL and 
     lastProjectId:'project-alpha',value:signal('https://youtu.be/M7lc1UVf-VE'),
     result:signal(recognizeSourceLink('https://youtu.be/M7lc1UVf-VE')),
     previewAvailable:{emit:value=>availability.push(value)},resolved:signal({title:'stale clip'}),
-    sourceNotice:signal('stale notice'),sourceError:signal('stale error'),sourceBusy:signal(false),sourceOperationGeneration:0,importKey:'stale-key',
+    sourceNotice:signal('stale notice'),sourceError:signal('stale error'),sourceBusy:signal(false),importing:signal(false),sourceOperationGeneration:0,importKey:'stale-key',
     requestedFrame:signal('stale-frame'),previewState:signal('ready'),previewError:signal(''),
   });
   component.synchronizeProjectSource('project-beta','https://youtu.be/ScMzIvxBSi4');
@@ -368,7 +440,7 @@ test('reusing the source preview for a different project clears the old URL and 
   assert.equal(component.importKey,'');
   assert.equal(component.requestedFrame(),null);
   assert.equal(component.previewState(),'idle');
-  assert.match(component.result().message,/sube el archivo original/i);
+  assert.match(component.result().message,/Importa el video/i);
 
   component.synchronizeProjectSource('project-gamma','');
   assert.equal(component.value(),'');

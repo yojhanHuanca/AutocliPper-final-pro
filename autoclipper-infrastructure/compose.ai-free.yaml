@@ -1,0 +1,44 @@
+# Real local generative selection. No cloud key, no paid API, and no public Ollama port.
+services:
+  local-ai:
+    profiles: ['app']
+    image: ollama/ollama:0.40.7@sha256:2e6cc92ffa43b4b1a2e70e315407e00ac97ec125afc71277d73c7efe01c4f31b
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NO_CLOUD: '1'
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_MAX_LOADED_MODELS: '1'
+      OLLAMA_CONTEXT_LENGTH: '8192'
+    volumes: ['local-ai-models:/root/.ollama']
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 128
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  billing:
+    environment:
+      DEV_PROCESSING_SECONDS_PER_MONTH: ${LOCAL_AI_PROCESSING_SECONDS_PER_MONTH:-21600}
+  analysis:
+    environment:
+      AI_ANALYSIS_PROVIDER: local_ai
+      LOCAL_AI_URL: http://local-ai:11434
+      LOCAL_AI_MODEL: qwen3:0.6b
+      LOCAL_AI_MODEL_DIGEST: 7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435
+      OPENAI_API_KEY: ''
+      GEMINI_API_KEY: ''
+      DEEPGRAM_API_KEY: ''
+      PAID_AI_ENABLED: 'false'
+      AI_MAX_ESTIMATED_USD_PER_JOB: '0'
+    depends_on:
+      local-ai: {condition: service_healthy}
+volumes:
+  local-ai-models:
+    name: autoclipper-ollama-selection-models

@@ -1,10 +1,49 @@
 import { Injectable, inject } from "@angular/core";
 import type { Schema, Response } from "../../../core/contracts/api-types";
+import type { paths } from "../../../core/contracts/gateway.generated";
 import { ApiTransport } from "../../../core/http/api-transport.service";
 import { uploadContentType, type UploadPhase } from '../models/upload-file';
+import type { SourceImportResolution } from '../models/source-link';
+
+type SourceLinkImportResult =
+  | { id: string; state: 'importing'; retryAfterSeconds: number }
+  | { id: string; state: 'succeeded'; uploadId: string | null; duplicate?: boolean; inspection?: { status: string }; title?: string; durationSeconds?: number };
+
 @Injectable({ providedIn: "root" })
 export class ProjectsApi {
   private readonly api = inject(ApiTransport);
+  analysisProviders() {
+    return this.api.get<Response<"/v1/analyses/providers">>("/analyses/providers");
+  }
+  twitchLinkStatus() {
+    return this.api.get<{ configured: boolean; linked: boolean; account: { id?: string; login?: string } | null }>("/auth/twitch/link");
+  }
+  linkTwitch() {
+    return this.api.post<{ authorizationUrl: string; expiresInSeconds: number; scope: "editor:manage:clips" }>("/auth/twitch/link", {});
+  }
+  unlinkTwitch() {
+    return this.api.delete<{ unlinked: boolean }>("/auth/twitch/link");
+  }
+  resolveSourceLink(projectId: string, url: string, options?: { signal?: AbortSignal; timeoutMs?: number; vodOffsetSeconds?: number; durationSeconds?: number; title?: string }) {
+    const path = `/projects/${encodeURIComponent(projectId)}/source-links/resolve`;
+    const body = {
+      url,
+      ...(options?.vodOffsetSeconds === undefined ? {} : { vodOffsetSeconds: options.vodOffsetSeconds }),
+      ...(options?.durationSeconds === undefined ? {} : { durationSeconds: options.durationSeconds }),
+      ...(options?.title?.trim() ? { title: options.title.trim() } : {}),
+    };
+    return options?.signal
+      ? this.api.postCancelable<SourceImportResolution>(path, body, options.signal, options.timeoutMs ?? 7_000)
+      : this.api.post<SourceImportResolution>(path, body);
+  }
+  sourceLinkCapabilities(projectId: string) {
+    return this.api.get<Schema<'SourceLinkCapabilitiesDto'>>(`/projects/${encodeURIComponent(projectId)}/source-links/capabilities`);
+  }
+  importSourceLink(projectId: string, url: string, key: string, options?: { vodOffsetSeconds?: number; durationSeconds?: number; title?: string }) {
+    return this.api.post<SourceLinkImportResult>(
+      `/projects/${encodeURIComponent(projectId)}/source-links/import`, { url, ...options }, key,
+    );
+  }
   list(workspaceId: string, search = "") {
     return this.api.get<Schema<"ProjectListDto">>(
       `/projects?workspaceId=${encodeURIComponent(workspaceId)}&limit=100${search ? "&search=" + encodeURIComponent(search) : ""}`,
@@ -42,11 +81,27 @@ export class ProjectsApi {
   abortUpload(id: string) {
     return this.api.delete(`/uploads/${encodeURIComponent(id)}`);
   }
-  createPipeline(id: string, body: Schema<"PipelineSpecDto">, key: string) {
+  createPipeline(id: string, body: Schema<"PipelineSpecDto"> | Schema<'AutomaticPipelineSpecDto'>, key: string) {
     return this.api.post<Schema<"PipelineStatusDto">>(
       `/uploads/${encodeURIComponent(id)}/pipelines`,
       body,
       key,
+    );
+  }
+  createProcessing(id: string, body: Schema<"ClipProcessingSpecDto">, key: string) {
+    return this.api.post<paths['/v1/uploads/{id}/processing']['post']['responses'][201]['content']['application/json']>(
+      `/uploads/${encodeURIComponent(id)}/processing`, body, key,
+    );
+  }
+  processing(id: string) {
+    return this.api.get<Schema<"ProcessingStatusDto">>(`/processing/${encodeURIComponent(id.trim())}`);
+  }
+  cancelProcessing(id: string) {
+    return this.api.delete(`/processing/${encodeURIComponent(id)}`);
+  }
+  processingDownload(id: string, kind: Schema<"ProcessingArtifactDto">['kind']) {
+    return this.api.get<Response<"/v1/processing/{id}/download">>(
+      `/processing/${encodeURIComponent(id)}/download?kind=${encodeURIComponent(kind)}`,
     );
   }
   pipeline(id: string) {
@@ -60,6 +115,11 @@ export class ProjectsApi {
   pipelineDownload(id: string, kind: string) {
     return this.api.get<Response<"/v1/pipelines/{id}/download">>(
       `/pipelines/${encodeURIComponent(id)}/download?kind=${encodeURIComponent(kind)}`,
+    );
+  }
+  pipelineClipDownload(id: string, index: number, kind: 'video' | 'srt' | 'vtt' = 'video') {
+    return this.api.get<Response<"/v1/pipelines/{id}/clips/{index}/download">>(
+      `/pipelines/${encodeURIComponent(id)}/clips/${encodeURIComponent(String(index))}/download?kind=${encodeURIComponent(kind)}`,
     );
   }
   createEdit(id: string, body: Schema<"CreateEditDto">, key: string) {

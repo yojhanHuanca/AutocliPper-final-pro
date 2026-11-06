@@ -1,6 +1,7 @@
 # Opt-in local ASR. Download the verified 74.1 MiB model with setup-analysis-model.mjs first.
 services:
   analysis:
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,uid=1000,gid=1000']
     image: autoclipper-analysis-local:0.3.0
     build:
       context: ../autoclipper-backend-microservices
@@ -13,6 +14,6 @@ services:
       WHISPER_ENGINE_VERSION: 'v1.9.5-d1be6fde (CLI 1.9.5-dev)'
       WHISPER_MODEL: tiny
     volumes: ['../.local/models:/models:ro']
-    mem_limit: 768m
+    mem_limit: 1536m
     cpus: 2
     stop_grace_period: 330s

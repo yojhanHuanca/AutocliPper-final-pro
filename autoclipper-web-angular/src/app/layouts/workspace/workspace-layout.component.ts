@@ -130,6 +130,7 @@ export class WorkspaceLayoutComponent {
   }
   async selectWorkspace(id: string): Promise<void> {
     if (this.design || this.workspaceSwitching() || !this.workspace.workspaces().some((item) => item.id === id)) return;
+    this.error.set("");
     const previous = this.workspace.workspaceId();
     if (id === previous) return;
     const path = this.router.url.split(/[?#]/, 1)[0];
@@ -139,7 +140,10 @@ export class WorkspaceLayoutComponent {
     this.workspaceSwitching.set(true);
     try {
       const navigated = await this.router.navigateByUrl('/app/projects');
-      if (!navigated && this.workspace.workspaceId() === id) this.workspace.workspaceId.set(previous);
+      if (!navigated && this.workspace.workspaceId() === id) {
+        this.workspace.workspaceId.set(previous);
+        this.error.set('No pudimos abrir los proyectos del nuevo espacio. Se conserva el espacio anterior; selecciona otra vez el destino para reintentar.');
+      }
     } catch (error) {
       if (this.workspace.workspaceId() === id) this.workspace.workspaceId.set(previous);
       this.error.set(`No pudimos abrir los proyectos del nuevo espacio: ${errorMessage(error)}`);

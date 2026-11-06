@@ -55,10 +55,22 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "google"
+                    "google",
+                    "twitch"
                   ],
                   "properties": {
                     "google": {
+                      "type": "object",
+                      "required": [
+                        "configured"
+                      ],
+                      "properties": {
+                        "configured": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "twitch": {
                       "type": "object",
                       "required": [
                         "configured"
@@ -169,6 +181,532 @@
           "identity"
         ],
         "security": []
+      }
+    },
+    "/v1/auth/twitch/link": {
+      "post": {
+        "operationId": "IdentityController_linkTwitch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "authorizationUrl",
+                    "expiresInSeconds",
+                    "scope"
+                  ],
+                  "properties": {
+                    "authorizationUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "example": 300
+                    },
+                    "scope": {
+                      "type": "string",
+                      "example": "editor:manage:clips channel:manage:clips",
+                      "description": "Only these clip-download scopes are requested. Authorize the scope matching the linked broadcaster/editor role."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "IdentityController_twitchLinkStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "configured",
+                    "linked",
+                    "account"
+                  ],
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "linked": {
+                      "type": "boolean"
+                    },
+                    "account": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "login": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "IdentityController_unlinkTwitch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "unlinked"
+                  ],
+                  "properties": {
+                    "unlinked": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/twitch/callback": {
+      "get": {
+        "operationId": "IdentityController_twitchCallback",
+        "parameters": [],
+        "responses": {
+          "303": {
+            "description": "OAuth callback; successful links redirect to the configured first-party web origin."
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
       }
     },
     "/v1/auth/google/challenge": {
@@ -2413,6 +2951,437 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/media-export": {
+      "post": {
+        "operationId": "IdentityController_privacyMediaExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Media task attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Media task attribution; legacy unattributed tasks block preparation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyMediaExportDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/privacy-requests/{id}/analysis-export": {
+      "post": {
+        "operationId": "IdentityController_privacyAnalysisExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Analysis job attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Analysis job attribution; no transcript or selection payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyAnalysisExportDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/privacy-requests/{id}/status": {
+      "get": {
+        "operationId": "IdentityController_privacyDeletionStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own deletion-request status only. Fulfillment remains pending; this endpoint does not claim or perform a purge.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyDeletionStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
     "/v1/auth/privacy-requests/{id}/manifest": {
       "get": {
         "operationId": "IdentityController_privacyRequestManifest",
@@ -4524,6 +5493,42 @@
               "default": 25,
               "type": "integer"
             }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4671,6 +5676,42 @@
               "maximum": 50,
               "default": 25,
               "type": "integer"
+            }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -4820,6 +5861,42 @@
               "default": 25,
               "type": "integer"
             }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4829,6 +5906,280 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminConsumptionPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "AdminController_audit",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAuditPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/grants": {
+      "get": {
+        "operationId": "AdminController_grants",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGrantsPageDto"
                 }
               }
             }
@@ -6257,6 +7608,793 @@
         ]
       }
     },
+    "/v1/social/connections": {
+      "get": {
+        "operationId": "SocialController_connections",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Configured and connected publishing accounts. Never contains credentials."
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/social/{provider}/connect": {
+      "post": {
+        "operationId": "SocialController_connect",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/social/{provider}/callback": {
+      "get": {
+        "operationId": "SocialController_callback",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/social/{provider}/connection": {
+      "delete": {
+        "operationId": "SocialController_disconnect",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/processing/{id}/publications": {
+      "post": {
+        "operationId": "SocialController_begin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "title",
+                  "madeForKids",
+                  "consent"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "youtube",
+                      "tiktok"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "privacy": {
+                    "type": "string",
+                    "enum": [
+                      "private",
+                      "unlisted",
+                      "public"
+                    ],
+                    "default": "private"
+                  },
+                  "madeForKids": {
+                    "type": "boolean"
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/social/publications/{id}": {
+      "get": {
+        "operationId": "SocialController_status",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "social"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
     "/v1/projects/storage": {
       "get": {
         "operationId": "ProjectController_storage",
@@ -6969,6 +9107,420 @@
             "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
           }
         ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/projects/{id}/source-links/resolve": {
+      "post": {
+        "operationId": "ProjectController_resolveSourceLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceLinkResolutionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/projects/{id}/source-links/capabilities": {
+      "get": {
+        "operationId": "ProjectController_sourceLinkCapabilities",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider preview/import/processing capabilities for this project and user; never includes provider credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceLinkCapabilitiesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/projects/{id}/source-links/import": {
+      "post": {
+        "operationId": "ProjectController_importSourceLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceLinkDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -8616,6 +11168,131 @@
         ]
       }
     },
+    "/v1/uploads/{id}/source-playback": {
+      "get": {
+        "operationId": "DerivativesController_sourcePlayback",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issues a 120-second private inline playback URL after project editor authorization. The signed storage URL supports standard Range requests; it is a bearer capability and must not be logged or placed in referrers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcePlaybackDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "processing"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
     "/v1/analyses/providers": {
       "get": {
         "operationId": "AnalysisController_providers",
@@ -8630,6 +11307,7 @@
                   "required": [
                     "transcription",
                     "selection",
+                    "automaticPipeline",
                     "paidExecutionEnabled"
                   ],
                   "properties": {
@@ -8646,7 +11324,8 @@
                           "required": [
                             "configured",
                             "maxSeconds",
-                            "diarization"
+                            "diarization",
+                            "diagnostic"
                           ],
                           "properties": {
                             "configured": {
@@ -8657,6 +11336,55 @@
                             },
                             "diarization": {
                               "type": "boolean"
+                            },
+                            "diagnostic": {
+                              "type": "object",
+                              "required": [
+                                "configured",
+                                "status",
+                                "code",
+                                "missingSettings",
+                                "nextSteps"
+                              ],
+                              "properties": {
+                                "configured": {
+                                  "type": "boolean"
+                                },
+                                "status": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "missingSettings": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "model": {
+                                  "type": "string"
+                                },
+                                "budgetUsd": {
+                                  "type": "number"
+                                },
+                                "maxEstimatedCostUsd": {
+                                  "type": "number"
+                                },
+                                "maxInputBytes": {
+                                  "type": "integer"
+                                },
+                                "maxOutputTokens": {
+                                  "type": "integer"
+                                }
+                              }
                             }
                           }
                         },
@@ -8684,18 +11412,292 @@
                     "selection": {
                       "type": "object",
                       "required": [
-                        "ollama"
+                        "provider",
+                        "local",
+                        "ollama",
+                        "openai",
+                        "gemini"
                       ],
                       "properties": {
-                        "ollama": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "openai",
+                            "gemini",
+                            "ollama",
+                            "local_ai"
+                          ]
+                        },
+                        "local_ai": {
+                          "type": "object",
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "model": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "local": {
                           "type": "object",
                           "required": [
-                            "configured"
+                            "configured",
+                            "status",
+                            "algorithm",
+                            "externalCostUsd"
                           ],
                           "properties": {
                             "configured": {
                               "type": "boolean"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ready"
+                              ]
+                            },
+                            "algorithm": {
+                              "type": "string"
+                            },
+                            "externalCostUsd": {
+                              "type": "number",
+                              "enum": [
+                                0
+                              ]
                             }
+                          }
+                        },
+                        "readiness": {
+                          "type": "object",
+                          "required": [
+                            "status",
+                            "blockers"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "disabled",
+                                "missing_credentials",
+                                "ready",
+                                "unsupported"
+                              ]
+                            },
+                            "blockers": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "ollama": {
+                          "type": "object",
+                          "required": [
+                            "configured",
+                            "diagnostic"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "diagnostic": {
+                              "type": "object",
+                              "required": [
+                                "configured",
+                                "status",
+                                "code",
+                                "missingSettings",
+                                "nextSteps"
+                              ],
+                              "properties": {
+                                "configured": {
+                                  "type": "boolean"
+                                },
+                                "status": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "missingSettings": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "model": {
+                                  "type": "string"
+                                },
+                                "budgetUsd": {
+                                  "type": "number"
+                                },
+                                "maxEstimatedCostUsd": {
+                                  "type": "number"
+                                },
+                                "maxInputBytes": {
+                                  "type": "integer"
+                                },
+                                "maxOutputTokens": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "openai": {
+                          "type": "object",
+                          "required": [
+                            "configured",
+                            "diagnostic"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "diagnostic": {
+                              "type": "object",
+                              "required": [
+                                "configured",
+                                "status",
+                                "code",
+                                "missingSettings",
+                                "nextSteps"
+                              ],
+                              "properties": {
+                                "configured": {
+                                  "type": "boolean"
+                                },
+                                "status": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "missingSettings": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "model": {
+                                  "type": "string"
+                                },
+                                "budgetUsd": {
+                                  "type": "number"
+                                },
+                                "maxEstimatedCostUsd": {
+                                  "type": "number"
+                                },
+                                "maxInputBytes": {
+                                  "type": "integer"
+                                },
+                                "maxOutputTokens": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "gemini": {
+                          "type": "object",
+                          "required": [
+                            "configured",
+                            "diagnostic"
+                          ],
+                          "properties": {
+                            "configured": {
+                              "type": "boolean"
+                            },
+                            "diagnostic": {
+                              "type": "object",
+                              "required": [
+                                "configured",
+                                "status",
+                                "code",
+                                "missingSettings",
+                                "nextSteps"
+                              ],
+                              "properties": {
+                                "configured": {
+                                  "type": "boolean"
+                                },
+                                "status": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "missingSettings": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "model": {
+                                  "type": "string"
+                                },
+                                "budgetUsd": {
+                                  "type": "number"
+                                },
+                                "maxEstimatedCostUsd": {
+                                  "type": "number"
+                                },
+                                "maxInputBytes": {
+                                  "type": "integer"
+                                },
+                                "maxOutputTokens": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "automaticPipeline": {
+                      "type": "object",
+                      "required": [
+                        "ready",
+                        "selectionMode",
+                        "blockers"
+                      ],
+                      "properties": {
+                        "ready": {
+                          "type": "boolean"
+                        },
+                        "selectionMode": {
+                          "type": "string",
+                          "enum": [
+                            "local"
+                          ]
+                        },
+                        "blockers": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
                           }
                         }
                       }
@@ -9793,6 +12795,177 @@
           },
           "413": {
             "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "editor"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/edits/{id}/split": {
+      "post": {
+        "operationId": "EditorController_split",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "Quoted current source draft version; missing returns 428 and stale versions return 412.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed double-submit token from GET /v1/auth/csrf. Origin must equal the configured Angular origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditorSplitDraftRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditorSplitDraftResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -12585,7 +15758,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PipelineSpecDto"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PipelineSpecDto"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AutomaticPipelineSpecDto"
+                  }
+                ]
               }
             }
           }
@@ -12977,6 +16157,178 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "video",
+                "srt",
+                "vtt"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "url",
+                    "expiresInSeconds",
+                    "contentType",
+                    "bytes",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "maximum": 120
+                    },
+                    "contentType": {
+                      "type": "string"
+                    },
+                    "bytes": {
+                      "type": "integer"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Classified error with a safe correlation identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pipelines"
+        ],
+        "security": [
+          {
+            "cookieSession": []
+          }
+        ]
+      }
+    },
+    "/v1/pipelines/{id}/clips/{index}/download": {
+      "get": {
+        "operationId": "PipelineController_downloadClip",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "index",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
             }
           },
           {
@@ -14559,6 +17911,326 @@
           "data"
         ]
       },
+      "PrivacyOwnerTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode"
+        ]
+      },
+      "PrivacyMediaProcessingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "inspectionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "inspectionId"
+        ]
+      },
+      "PrivacyMediaDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inspections": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyOwnerTaskDto"
+            }
+          },
+          "processing": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyMediaProcessingDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "inspections",
+          "processing"
+        ]
+      },
+      "PrivacyMediaExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "media-task-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyMediaDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
+      "PrivacyAnalysisJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcriptPresent": {
+            "type": "boolean"
+          },
+          "selectionPresent": {
+            "type": "boolean"
+          },
+          "providerAttempts": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "transcriptPresent",
+          "selectionPresent",
+          "providerAttempts"
+        ]
+      },
+      "PrivacyAnalysisDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobs": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyAnalysisJobDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "jobs"
+        ]
+      },
+      "PrivacyAnalysisExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "analysis-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyAnalysisDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
       "PrivacyStatusResponseDto": {
         "type": "object",
         "properties": {
@@ -14614,6 +18286,65 @@
           "items"
         ]
       },
+      "PrivacyDeletionStatusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "deletion"
+            ]
+          },
+          "requestState": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "processing",
+              "completed",
+              "rejected"
+            ],
+            "description": "Stored request state; it does not establish that data was purged."
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ],
+            "description": "Global deletion fulfillment is still pending."
+          },
+          "purgeCompleted": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "This status endpoint never claims that a purge completed."
+          },
+          "deletionExecutor": {
+            "type": "string",
+            "enum": [
+              "not_implemented"
+            ],
+            "description": "No global deletion executor is currently implemented."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "requestState",
+          "fulfillment",
+          "purgeCompleted",
+          "deletionExecutor",
+          "createdAt"
+        ]
+      },
       "PrivacyScopeStatusDto": {
         "type": "object",
         "properties": {
@@ -14642,6 +18373,7 @@
               "owner_unavailable",
               "snapshot_changed",
               "limit_exceeded",
+              "attribution_missing",
               "not_implemented"
             ]
           },
@@ -14960,7 +18692,9 @@
                 "users.read",
                 "workspaces.read",
                 "jobs.read",
-                "consumption.read"
+                "consumption.read",
+                "audit.read",
+                "grants.read"
               ]
             }
           },
@@ -15270,6 +19004,170 @@
           "nextBeforeId"
         ]
       },
+      "AdminAuditDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "subjectUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "users.read",
+              "workspaces.read",
+              "jobs.read",
+              "consumption.read",
+              "audit.read",
+              "grants.read"
+            ],
+            "nullable": true
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "denied",
+              "reauthenticated",
+              "reauth_denied",
+              "grant",
+              "revoke"
+            ]
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operatorReference": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "subjectUserId",
+          "permission",
+          "workspaceId",
+          "outcome",
+          "correlationId",
+          "operatorReference",
+          "createdAt"
+        ]
+      },
+      "AdminAuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAuditDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminGrantDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "users.read",
+                "workspaces.read",
+                "jobs.read",
+                "consumption.read",
+                "audit.read",
+                "grants.read"
+              ]
+            }
+          },
+          "workspaceIds": {
+            "nullable": true,
+            "description": "Null means explicitly global.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revokedAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "permissions",
+          "workspaceIds",
+          "revision",
+          "revokedAt",
+          "updatedAt"
+        ]
+      },
+      "AdminGrantsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGrantDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
       "InvitationDto": {
         "type": "object",
         "properties": {
@@ -15526,6 +19424,261 @@
           "expiresAt"
         ]
       },
+      "YoutubeVideoMetadataDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "YOUTUBE_METADATA_NOT_CONFIGURED",
+              "YOUTUBE_METADATA_NOT_FOUND",
+              "YOUTUBE_METADATA_RATE_LIMITED",
+              "YOUTUBE_METADATA_UNAVAILABLE"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "channelTitle": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "thumbnailUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true
+          },
+          "uploadStatus": {
+            "type": "object",
+            "nullable": true
+          },
+          "privacyStatus": {
+            "type": "object",
+            "nullable": true
+          },
+          "embeddable": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "SourceLinkResolutionDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "youtube",
+              "kick",
+              "twitch"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable",
+              "unsupported",
+              "input_required"
+            ]
+          },
+          "importable": {
+            "type": "boolean"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "YOUTUBE_DOWNLOAD_APPROVAL_REQUIRED",
+              "KICK_MEDIA_API_UNAVAILABLE",
+              "TWITCH_OAUTH_NOT_CONFIGURED",
+              "TWITCH_ACCOUNT_NOT_LINKED",
+              "TWITCH_CLIP_SCOPE_REQUIRED",
+              "TWITCH_CHANNEL_EDITOR_REQUIRED",
+              "TWITCH_RATE_LIMITED",
+              "TWITCH_VOD_INTERVAL_REQUIRED",
+              "TWITCH_VOD_OFFSET_OUT_OF_RANGE",
+              "TWITCH_VOD_NOT_FOUND",
+              "TWITCH_VOD_CLIP_OUTCOME_UNKNOWN"
+            ]
+          },
+          "nextAction": {
+            "type": "string",
+            "enum": [
+              "upload_authorized_file",
+              "configure_twitch_oauth",
+              "link_twitch_account",
+              "connect_broadcaster_or_editor_account",
+              "retry_after_rate_limit",
+              "import_twitch_clip",
+              "import_twitch_vod_clip",
+              "import_youtube_video",
+              "contact_support"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "nextStep": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "clipId": {
+            "type": "string"
+          },
+          "vodId": {
+            "type": "string"
+          },
+          "vodOffsetSeconds": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 9007199254740991
+          },
+          "previewUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Official YouTube IFrame embed URL for preview only; never an import URL."
+          },
+          "videoId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "youtubeMetadata": {
+            "description": "YouTube Data API metadata only. Presence of metadata does not enable import.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/YoutubeVideoMetadataDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "state",
+          "importable"
+        ]
+      },
+      "SourceProviderCapabilityDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "youtube",
+              "kick",
+              "twitch"
+            ]
+          },
+          "configurationState": {
+            "type": "string",
+            "enum": [
+              "not_required",
+              "ready",
+              "oauth_not_configured",
+              "account_not_linked",
+              "clip_scope_missing"
+            ]
+          },
+          "previewAvailable": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "previewKinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "youtube_video",
+                "kick_live_channel",
+                "twitch_video",
+                "twitch_clip"
+              ]
+            }
+          },
+          "importAvailable": {
+            "type": "boolean"
+          },
+          "importReasonCode": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "YOUTUBE_DOWNLOAD_APPROVAL_REQUIRED",
+              "KICK_MEDIA_API_UNAVAILABLE",
+              "TWITCH_OAUTH_NOT_CONFIGURED",
+              "TWITCH_ACCOUNT_NOT_LINKED",
+              "TWITCH_CLIP_SCOPE_REQUIRED"
+            ]
+          },
+          "requiresClipPermissionCheck": {
+            "type": "boolean"
+          },
+          "processingAvailable": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "processingReasonCode": {
+            "type": "string",
+            "enum": [
+              "SOURCE_BYTES_UNAVAILABLE",
+              "UPLOAD_CONFIRMATION_AND_INSPECTION_REQUIRED"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "configurationState",
+          "previewAvailable",
+          "previewKinds",
+          "importAvailable",
+          "importReasonCode",
+          "requiresClipPermissionCheck",
+          "processingAvailable",
+          "processingReasonCode"
+        ]
+      },
+      "SourceLinkCapabilitiesDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "providers": {
+            "minItems": 3,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceProviderCapabilityDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "providers"
+        ]
+      },
       "ProjectDto": {
         "type": "object",
         "properties": {
@@ -15646,6 +19799,38 @@
         "required": [
           "name",
           "version"
+        ]
+      },
+      "SourceLinkDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "description": "Twitch clip or VOD, YouTube, or Kick URL. Twitch VOD import requires an explicit interval and broadcaster/editor OAuth permission."
+          },
+          "vodOffsetSeconds": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 9007199254740991,
+            "description": "Required for Twitch VOD imports: zero-based second in the VOD where the excerpt ends. The selected VOD duration is the effective upper bound."
+          },
+          "durationSeconds": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 60,
+            "description": "Required for Twitch VOD imports: clip duration in seconds."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "description": "Optional title for the Twitch clip created from a VOD."
+          }
+        },
+        "required": [
+          "url"
         ]
       },
       "UploadDto": {
@@ -16052,6 +20237,9 @@
           "message": {
             "type": "string"
           },
+          "nextAction": {
+            "type": "string"
+          },
           "correlationId": {
             "type": "string",
             "format": "uuid"
@@ -16304,6 +20492,46 @@
           "durationSeconds"
         ]
       },
+      "SourcePlaybackDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Short-lived bearer capability for inline playback. Keep it out of logs and referrer headers. The URL accepts standard HTTP Range requests for seeking."
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120,
+            "example": 120
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "video/mp4",
+              "video/webm",
+              "video/quicktime",
+              "video/x-matroska"
+            ]
+          },
+          "bytes": {
+            "type": "number",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "url",
+          "expiresInSeconds",
+          "contentType",
+          "bytes",
+          "sha256"
+        ]
+      },
       "ManualTranscriptRenderDto": {
         "type": "object",
         "properties": {
@@ -16330,6 +20558,14 @@
               "square",
               "horizontal"
             ]
+          },
+          "subtitles": {
+            "type": "string",
+            "enum": [
+              "transcript",
+              "none"
+            ],
+            "default": "transcript"
           }
         },
         "required": [
@@ -16362,6 +20598,14 @@
               "square",
               "horizontal"
             ]
+          },
+          "subtitles": {
+            "type": "string",
+            "enum": [
+              "transcript",
+              "none"
+            ],
+            "default": "transcript"
           }
         },
         "required": [
@@ -16382,6 +20626,38 @@
         },
         "required": [
           "mode"
+        ]
+      },
+      "LocalSelectionDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "local"
+            ]
+          },
+          "count": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "minSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120
+          },
+          "maxSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120
+          }
+        },
+        "required": [
+          "mode",
+          "count",
+          "minSeconds",
+          "maxSeconds"
         ]
       },
       "LlmSelectionDto": {
@@ -16407,6 +20683,18 @@
             "type": "number",
             "minimum": 1,
             "maximum": 120
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "general",
+              "tutorial",
+              "interview",
+              "gameplay",
+              "commentary",
+              "reaction"
+            ],
+            "default": "general"
           },
           "instructions": {
             "type": "string",
@@ -16452,10 +20740,13 @@
                 "$ref": "#/components/schemas/NoSelectionDto"
               },
               {
+                "$ref": "#/components/schemas/LocalSelectionDto"
+              },
+              {
                 "$ref": "#/components/schemas/LlmSelectionDto"
               }
             ],
-            "description": "none preserves a real transcript without simulating AI segment selection."
+            "description": "local selects deterministic, evenly distributed transcript windows without a generative model; llm requires separately authorized paid execution."
           }
         },
         "required": [
@@ -16628,7 +20919,10 @@
           "provider": {
             "type": "string",
             "enum": [
-              "ollama"
+              "local",
+              "ollama",
+              "openai",
+              "gemini"
             ]
           },
           "model": {
@@ -16636,12 +20930,14 @@
           },
           "revision": {
             "type": "string",
-            "description": "Pinned model SHA-256."
+            "description": "Pinned local-model digest or external selector configuration fingerprint."
           },
           "promptVersion": {
             "type": "string",
             "enum": [
-              "segment-selection-v1"
+              "segment-selection-v1",
+              "segment-selection-v2",
+              "segment-selection-local-v1"
             ]
           },
           "usage": {
@@ -16649,9 +20945,8 @@
           },
           "estimatedExternalCostUsd": {
             "type": "number",
-            "enum": [
-              0
-            ]
+            "minimum": 0,
+            "description": "Estimated external model cost; zero for local Ollama."
           }
         },
         "required": [
@@ -16773,6 +21068,156 @@
           "selection",
           "providerOutcomeUnknown",
           "phases"
+        ]
+      },
+      "EditorSpecDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "clip"
+            ]
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "endSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Clip length 0.1–120 seconds."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          },
+          "framing": {
+            "$ref": "#/components/schemas/FramingDto"
+          },
+          "splitScreen": {
+            "$ref": "#/components/schemas/SplitScreenDto"
+          },
+          "subtitles": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/NoEditorCaptionsDto"
+              },
+              {
+                "$ref": "#/components/schemas/UserEditorCaptionsDto"
+              },
+              {
+                "$ref": "#/components/schemas/TranscriptEditorCaptionsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "kind",
+          "startSeconds",
+          "endSeconds",
+          "aspect"
+        ]
+      },
+      "EditorRevisionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "restored"
+            ]
+          },
+          "restoredFromVersion": {
+            "type": "number",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditorSpecDto"
+          },
+          "renderSpec": {
+            "description": "Immutable server-resolved render description, including verified transcript provenance.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProcessingSpecDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "action",
+          "restoredFromVersion",
+          "authorId",
+          "createdAt",
+          "spec",
+          "renderSpec"
+        ]
+      },
+      "EditorDraftDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revision": {
+            "$ref": "#/components/schemas/EditorRevisionDto"
+          }
+        },
+        "required": [
+          "id",
+          "uploadId",
+          "projectId",
+          "name",
+          "version",
+          "revision"
         ]
       },
       "NoEditorCaptionsDto": {
@@ -16953,65 +21398,39 @@
           "durationSeconds"
         ]
       },
-      "EditorSpecDto": {
+      "EditorSplitDraftRequestDto": {
         "type": "object",
         "properties": {
-          "version": {
-            "type": "number",
-            "enum": [
-              1
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "clip"
-            ]
-          },
-          "startSeconds": {
-            "type": "number",
-            "minimum": 0
-          },
-          "endSeconds": {
+          "cutSeconds": {
             "type": "number",
             "minimum": 0,
-            "description": "Clip length 0.1–120 seconds."
-          },
-          "aspect": {
-            "type": "string",
-            "enum": [
-              "source",
-              "vertical",
-              "square",
-              "horizontal"
-            ]
-          },
-          "framing": {
-            "$ref": "#/components/schemas/FramingDto"
-          },
-          "splitScreen": {
-            "$ref": "#/components/schemas/SplitScreenDto"
-          },
-          "subtitles": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/NoEditorCaptionsDto"
-              },
-              {
-                "$ref": "#/components/schemas/UserEditorCaptionsDto"
-              },
-              {
-                "$ref": "#/components/schemas/TranscriptEditorCaptionsDto"
-              }
-            ]
+            "maximum": 14400,
+            "description": "Source-timeline timestamp inside the current draft range. Both output clips must remain at least 0.1 seconds."
           }
         },
         "required": [
-          "version",
-          "kind",
-          "startSeconds",
-          "endSeconds",
-          "aspect"
+          "cutSeconds"
+        ]
+      },
+      "EditorSplitDraftResultDto": {
+        "type": "object",
+        "properties": {
+          "sourceDraftId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Input draft is retained unchanged; split returns two new drafts that reuse its source upload."
+          },
+          "left": {
+            "$ref": "#/components/schemas/EditorDraftDto"
+          },
+          "right": {
+            "$ref": "#/components/schemas/EditorDraftDto"
+          }
+        },
+        "required": [
+          "sourceDraftId",
+          "left",
+          "right"
         ]
       },
       "CreateEditDto": {
@@ -17028,95 +21447,6 @@
         "required": [
           "name",
           "spec"
-        ]
-      },
-      "EditorRevisionDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
-            "type": "number",
-            "minimum": 1
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "created",
-              "updated",
-              "restored"
-            ]
-          },
-          "restoredFromVersion": {
-            "type": "number",
-            "nullable": true
-          },
-          "authorId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "spec": {
-            "$ref": "#/components/schemas/EditorSpecDto"
-          },
-          "renderSpec": {
-            "description": "Immutable server-resolved render description, including verified transcript provenance.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ProcessingSpecDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "version",
-          "action",
-          "restoredFromVersion",
-          "authorId",
-          "createdAt",
-          "spec",
-          "renderSpec"
-        ]
-      },
-      "EditorDraftDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "uploadId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "projectId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "version": {
-            "type": "number",
-            "minimum": 1
-          },
-          "revision": {
-            "$ref": "#/components/schemas/EditorRevisionDto"
-          }
-        },
-        "required": [
-          "id",
-          "uploadId",
-          "projectId",
-          "name",
-          "version",
-          "revision"
         ]
       },
       "UpdateEditDto": {
@@ -17892,6 +22222,184 @@
           "aspect"
         ]
       },
+      "AutomaticPipelineSpecDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [
+              2
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "automatic"
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "whisper_cpp"
+            ],
+            "description": "Local ASR; no external transcription API."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "es",
+              "en"
+            ],
+            "default": "auto"
+          },
+          "clipCount": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3,
+            "description": "The selector returns exactly this many distinct source intervals."
+          },
+          "maxDurationSeconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120,
+            "description": "Optional upper bound per clip; omitted means 120 seconds."
+          },
+          "selectionMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "llm"
+            ],
+            "default": "local",
+            "description": "Local is deterministic, evenly distributed, and free of generative-model calls. llm requires separate paid AI authorization."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "general",
+              "tutorial",
+              "interview",
+              "gameplay",
+              "commentary",
+              "reaction"
+            ]
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 2000,
+            "default": "",
+            "description": "User selection instructions passed to the fixed, versioned backend prompt. Requires selectionMode=llm and paid AI authorization; never interpreted by the local deterministic selector."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "source",
+              "vertical",
+              "square",
+              "horizontal"
+            ]
+          },
+          "subtitles": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PipelineSubtitlesNoneDto"
+              },
+              {
+                "$ref": "#/components/schemas/PipelineSubtitlesTranscriptDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "mode",
+          "provider",
+          "clipCount",
+          "contentType",
+          "aspect",
+          "subtitles"
+        ]
+      },
+      "PipelineSubtitlesNoneDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "none"
+            ]
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "PipelineSubtitlesTranscriptDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "transcript"
+            ]
+          },
+          "style": {
+            "$ref": "#/components/schemas/SubtitleStyleDto"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "PipelineClipStatusDto": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "startSeconds": {
+            "type": "number"
+          },
+          "endSeconds": {
+            "type": "number"
+          },
+          "processingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "index",
+          "status",
+          "title",
+          "startSeconds",
+          "endSeconds",
+          "processingId",
+          "errorCode"
+        ]
+      },
       "PipelineEventDto": {
         "type": "object",
         "properties": {
@@ -17928,12 +22436,20 @@
               "render",
               "stopping",
               "succeeded",
+              "partial_failed",
               "failed",
               "cancelled"
             ]
           },
           "spec": {
-            "$ref": "#/components/schemas/PipelineSpecDto"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PipelineSpecDto"
+              },
+              {
+                "$ref": "#/components/schemas/AutomaticPipelineSpecDto"
+              }
+            ]
           },
           "version": {
             "type": "number"
@@ -17987,11 +22503,34 @@
             "type": "number",
             "description": "Unallocated portion of the upfront storage reservation; children settle their transferred portions."
           },
+          "requestedClips": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "completedClips": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "settledClips": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Children in a terminal render state; progress is measured, not estimated."
+          },
           "events": {
             "maxItems": 8,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PipelineEventDto"
+            }
+          },
+          "clips": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineClipStatusDto"
             }
           }
         },
@@ -18062,6 +22601,7 @@
           },
           "plan": {
             "nullable": true,
+            "description": "Assigned plan or current configured development default; the read does not persist an entitlement.",
             "type": "object",
             "allOf": [
               {
@@ -18087,7 +22627,8 @@
             "type": "number"
           },
           "availableSeconds": {
-            "type": "number"
+            "type": "number",
+            "description": "Available development material seconds after current reservations and consumption; never money or CPU time."
           }
         },
         "required": [

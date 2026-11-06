@@ -13,6 +13,15 @@ export type PrivacyContributionResult =
 @Injectable({ providedIn: "root" })
 export class SettingsApi {
   private readonly api = inject(ApiTransport);
+  twitchLinkStatus() {
+    return this.api.get<{ configured: boolean; linked: boolean; account: { id?: string; login?: string } | null }>("/auth/twitch/link");
+  }
+  linkTwitch() {
+    return this.api.post<{ authorizationUrl: string; expiresInSeconds: number; scope: "editor:manage:clips" }>("/auth/twitch/link", {});
+  }
+  unlinkTwitch() {
+    return this.api.delete<{ unlinked: boolean }>("/auth/twitch/link");
+  }
   profile() {
     return this.api.get<Schema<"ProfileResponseDto">>("/auth/profile");
   }

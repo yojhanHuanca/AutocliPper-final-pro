@@ -18,6 +18,7 @@ export class ProxyController {
     "auth/*path",
     "workspaces",
     "workspaces/*path",
+    "social/*path",
     "projects",
     "projects/*path",
     "uploads/*path",
@@ -62,20 +63,31 @@ export class ProxyController {
     headers["x-correlation-id"] = String(res.locals["correlationId"]);
     let upstream: globalThis.Response;
     try {
+      const timeoutMs = req.method === "POST" && /^\/v1\/projects\/[0-9a-f-]+\/source-links\/import$/u.test(raw) ? 330000 : 20000;
       upstream = await fetch(new URL(req.originalUrl, base), {
         method: req.method,
         headers,
         ...(["GET", "HEAD"].includes(req.method)
           ? {}
           : { body: JSON.stringify(req.body ?? {}) }),
-        redirect: "error",
-        signal: AbortSignal.timeout(20000),
+        redirect: "manual",
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
       throw new ServiceUnavailableException();
     }
     for (const value of upstream.headers.getSetCookie())
       res.appendHeader("set-cookie", value);
+    if(upstream.status>=300&&upstream.status<400) {
+      const expected=new URL("/app/settings?provider=twitch&status=linked",process.env["CORS_ORIGIN"]??"http://localhost:4200").toString();
+      const socialCallback=/^\/v1\/social\/(youtube|tiktok)\/callback$/u.exec(raw);
+      const socialRedirects=socialCallback?["linked","denied"].map(status=>new URL(`/app/settings?social=${socialCallback[1]}&status=${status}`,process.env["CORS_ORIGIN"]??"http://localhost:4200").toString()):[];
+      if(req.method!=="GET"||upstream.status!==303||!((raw==="/v1/auth/twitch/callback"&&upstream.headers.get("location")===expected)||socialRedirects.includes(upstream.headers.get("location")??""))) throw new ServiceUnavailableException();
+      res.setHeader("location",upstream.headers.get("location")!).status(303).end();
+      return;
+    }
+    if(req.method==="GET"&&/^\/v1\/uploads\/[0-9a-f-]+\/source-playback$/iu.test(raw)){res.setHeader("cache-control","no-store");res.setHeader("referrer-policy","no-referrer");}
+    if(/^\/v1\/auth\/privacy-requests(?:\/|$)/iu.test(raw))res.setHeader("cache-control","private, no-store");
     const type = upstream.headers.get("content-type");
     if (type) res.setHeader("content-type", type);
     const etag = upstream.headers.get("etag");

@@ -24,6 +24,7 @@ export const inspectionTasks = pgTable(
   {
     id: uuid().primaryKey(),
     workspaceId: uuid("workspace_id").notNull(),
+    creatorId: uuid('creator_id'),
     objectKey: text("object_key").notNull(),
     expectedBytes: integer("expected_bytes").notNull(),
     expectedEtag: text("expected_etag").notNull(),
@@ -57,6 +58,7 @@ export const inspectionTasks = pgTable(
 
 export const processingTasks = pgTable("processing_tasks", {
   id: uuid().primaryKey(), workspaceId: uuid("workspace_id").notNull(),
+  creatorId:uuid('creator_id'),
   inspectionId: uuid("inspection_id").notNull().references(()=>inspectionTasks.id),
   secondaryInspectionId:uuid("secondary_inspection_id").references(()=>inspectionTasks.id),
   spec: jsonb().notNull(), requestHash: text("request_hash").notNull(),

@@ -4,7 +4,7 @@ import type pg from "pg";
 import type {Redis} from "ioredis";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {adminAuthority,adminPage,adminPermission,adminSessionToken,adminUsersPage,adminWorkspacesPage,adminJobsPage,adminConsumptionPage,type AdminPermission} from "@autoclipper/api-contracts";
+import {adminAuthority,adminPage,adminPermission,adminSessionToken,adminUsersPage,adminWorkspacesPage,adminJobsPage,adminConsumptionPage,adminAuditPage,adminGrantsPage,type AdminPermission} from "@autoclipper/api-contracts";
 import {body,cookie,digest,internalJson,same,type ServiceConfig} from "@autoclipper/http-security";
 import type {MfaManager} from "./mfa.manager.js";
 
@@ -58,8 +58,12 @@ export class AdminManager {
     await this.boundary(req);
     const query=body(adminPage,input);if(query.workspaceId)throw new BadRequestException();
     await this.authorize({token:this.token(req),permission:"users.read",correlationId});
-    const rows=(await this.pool.query<{id:string;verified:boolean;mfa_enabled:boolean;created_at:Date}>("SELECT u.id,u.verified_at IS NOT NULL AS verified,COALESCE(m.enabled,false) AS mfa_enabled,u.created_at FROM users u LEFT JOIN user_mfa m ON m.user_id=u.id WHERE ($1::uuid IS NULL OR u.id<$1) ORDER BY u.id DESC LIMIT $2",[query.beforeId??null,query.limit+1])).rows;
-    const items=rows.slice(0,query.limit).map(row=>({id:row.id,verified:row.verified,mfaEnabled:row.mfa_enabled,createdAt:row.created_at.toISOString()}));return body(adminUsersPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
+    const conditions:string[]=[],params:(string|number|boolean|null)[]=[query.beforeId??null,query.limit+1];
+    if(query.verified!==undefined){conditions.push("u.verified_at IS NOT NULL = $"+(params.length+1));params.push(query.verified);}
+    if(query.mfaEnabled!==undefined){conditions.push("m.enabled = $"+(params.length+1));params.push(query.mfaEnabled);}
+    const where=conditions.length?"WHERE "+conditions.join(" AND "):"";
+    const rows=(await this.pool.query<{id:string;verified:boolean;mfaEnabled:boolean;createdAt:Date}>(`SELECT u.id,u.verified_at IS NOT NULL AS verified,m.enabled AS mfa_enabled,u.created_at FROM users u LEFT JOIN user_mfa m ON m.user_id=u.id WHERE ($1::uuid IS NULL OR u.id<$1) ${where} ORDER BY u.id DESC LIMIT $2`,params)).rows;
+    const items=rows.slice(0,query.limit).map(row=>({id:row.id,verified:row.verified,mfaEnabled:row.mfaEnabled,createdAt:row.createdAt.toISOString()}));return body(adminUsersPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
   }
   async forward(req:Request,permission:Exclude<AdminPermission,"users.read">,input:unknown,correlationId:string){
     await this.boundary(req);
@@ -67,5 +71,19 @@ export class AdminManager {
     const target=permission==="workspaces.read"?{url:this.config.WORKSPACE_URL,path:"/v1/internal/admin-workspaces"}:permission==="jobs.read"?{url:process.env["PROJECT_URL"]??"http://127.0.0.1:3004",path:"/v1/internal/admin-jobs"}:{url:process.env["BILLING_URL"]??"http://127.0.0.1:3007",path:"/v1/internal/admin-consumption"};
     const value=await internalJson(target.url,target.path,this.config,{token,query,correlationId},true);
     return permission==="workspaces.read"?body(adminWorkspacesPage,value):permission==="jobs.read"?body(adminJobsPage,value):body(adminConsumptionPage,value);
+  }
+  async auditRead(req:Request,input:unknown,correlationId:string){
+    await this.boundary(req);
+    const query=body(adminPage,input);if(query.workspaceId)throw new BadRequestException();
+    await this.authorize({token:this.token(req),permission:"audit.read",correlationId});
+    const rows=(await this.pool.query<{id:string;actor_user_id:string|null;subject_user_id:string|null;permission:string|null;workspace_id:string|null;outcome:string;correlation_id:string;operator_reference:string|null;created_at:Date}>("SELECT id,actor_user_id,subject_user_id,permission,workspace_id,outcome,correlation_id,operator_reference,created_at FROM admin_access_audit WHERE ($1::uuid IS NULL OR id<$1) ORDER BY id DESC LIMIT $2",[query.beforeId??null,query.limit+1])).rows;
+    const items=rows.slice(0,query.limit).map(row=>({id:row.id,actorUserId:row.actor_user_id,subjectUserId:row.subject_user_id,permission:row.permission,workspaceId:row.workspace_id,outcome:row.outcome,correlationId:row.correlation_id,operatorReference:row.operator_reference,createdAt:row.created_at.toISOString()}));return body(adminAuditPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
+  }
+  async grants(req:Request,input:unknown,correlationId:string){
+    await this.boundary(req);
+    const query=body(adminPage,input);if(query.workspaceId)throw new BadRequestException();
+    await this.authorize({token:this.token(req),permission:"grants.read",correlationId});
+    const rows=(await this.pool.query<{user_id:string;permissions:string[];workspace_ids:string[]|null;revision:number;revoked_at:Date|null;updated_at:Date}>("SELECT user_id,permissions,workspace_ids,revision,revoked_at,updated_at FROM admin_grants WHERE ($1::uuid IS NULL OR user_id<$1) ORDER BY user_id DESC LIMIT $2",[query.beforeId??null,query.limit+1])).rows;
+    const items=rows.slice(0,query.limit).map(row=>({userId:row.user_id,permissions:row.permissions,workspaceIds:row.workspace_ids,revision:row.revision,revokedAt:row.revoked_at?.toISOString()??null,updatedAt:row.updated_at.toISOString()}));return body(adminGrantsPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.userId:null});
   }
 }

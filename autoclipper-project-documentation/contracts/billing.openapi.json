@@ -164,6 +164,7 @@
           },
           "plan": {
             "nullable": true,
+            "description": "Assigned plan or current configured development default; the read does not persist an entitlement.",
             "type": "object",
             "allOf": [
               {
@@ -189,7 +190,8 @@
             "type": "number"
           },
           "availableSeconds": {
-            "type": "number"
+            "type": "number",
+            "description": "Available development material seconds after current reservations and consumption; never money or CPU time."
           }
         },
         "required": [

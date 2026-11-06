@@ -98,6 +98,91 @@ Se volvió a consultar GET http://localhost:3000/v1/health/ready: ECONNREFUSED. 
 
 Una única revisión visual de cierre de /design/projects/structure a 1440×1000 y 390×844 confirmó ausencia de overflow horizontal, campos de tiempo vacíos y cero borradores/recibos ficticios; consola sin errores/advertencias. Capturas: C:/Users/USER/Documents/Codex/artifacts/autoclipper-project-handoff-2026-10-17/desktop-empty.jpg y mobile-empty.jpg. El resultado poblado se valida solo con fixtures de DTO en tests mientras la API está apagada.
 
+## Mejora del panel administrativo — 2026-11-01 (Actualizado con grants)
+
+Auditoría, listado de grants y mejora visual de la consola /admin existente, manteniendo el contrato de seguridad y la identidad de AutoClipper. Se verificó que todos los controles visibles corresponden al contrato real del backend (GET/POST access, users, workspaces, jobs, consumption, audit, grants) y que no hay botones para acciones sin endpoint autorizado.
+
+**Seguridad validada:**
+- No hay uso de localStorage/sessionStorage para datos sensibles
+- No hay console.log/console.warn con contraseñas, factores o datos privados
+- clearData() se ejecuta al expirar elevación, recibir 401/403, cambiar grant o perder MFA
+- Contraseña y factor se limpian inmediatamente después de elevate()
+- Los 21 tests existentes cubren: sin grant/MFA/elevación, cambio de scope/permisos, revocación, expiración, 401/403/429/503, paginación, filtros locales y estados de trabajo
+
+**Diseño mejorado:**
+- Gradientes sutiles en fondo y paneles (manteniendo blanco, cobalto, azul, rosa, negro, tono hueso)
+- Sombras suaves y bordes redondeados para jerarquía visual clara
+- Transiciones suaves en hover de botones y tarjetas
+- Mejor contraste en tablas con background en cabecera
+- Estados hover en tabs y tarjetas de overview
+- Focus visible con outline de 2px y offset de 3px
+- Soporte para prefers-reduced-motion (todas las transiciones deshabilitadas)
+
+**Accesibilidad verificada:**
+- Navegación por teclado completa (tabs con roving, ArrowLeft/Right, Home/End)
+- ARIA completo: role="tablist", role="tab", role="tabpanel", aria-selected, aria-controls, aria-labelledby
+- Tablas con caption, scope="col" en headers
+- tabindex dinámico para tabs activos/inactivos
+- Labels asociados a inputs con for implícito
+- role="status" para mensajes de carga/error
+- Responsive: breakpoints a 900px y 600px, ancho mínimo 375px
+- Sin overflow horizontal en móvil
+
+**Contrato backend verificado:**
+- AdminApi usa rutas correctas: /admin/access, /admin/users, /admin/workspaces, /admin/jobs, /admin/consumption, /admin/audit, /admin/grants
+- Paginación con limit=25 y beforeId
+- Filtro workspaceId para workspaces/jobs/consumption
+- DTOs redactados según contrato: AdminAccessDto, AdminUserDto, AdminWorkspaceDto, AdminJobDto, AdminConsumptionDto, AdminAuditDto, AdminGrantDto
+- Elevación con POST /admin/access, body {password, factor}, respuesta {elevatedUntil}
+- Nuevo permiso audit.read para lectura de auditoría administrativa
+- Nuevo permiso grants.read para lectura de grants administrativos
+
+**Nueva funcionalidad implementada:**
+- GET /v1/admin/audit: Lectura paginada de auditoría administrativa (permiso audit.read)
+- Tabla admin_access_audit redactada: actorUserId, subjectUserId, permission, workspaceId, outcome, correlationId, operatorReference, createdAt
+- UI de auditoría en /admin con tabla desplazable, filtros locales y paginación
+- Estados de auditoría: allowed (Permitido), denied (Denegado), reauthenticated (Reautenticado), reauth_denied (Reautenticación denegada), grant (Grant concedido), revoke (Grant revocado)
+- Colores de resultado: success para allowed/reauthenticated/grant, error para denied/reauth_denied/revoke
+- GET /v1/admin/grants: Lectura paginada de grants administrativos (permiso grants.read)
+- Tabla admin_grants redactada: userId, permissions, workspaceIds, revision, revokedAt, updatedAt
+- UI de grants en /admin con tabla desplazable, filtros locales y paginación
+- Estados de grants: Activo (sin revokedAt), Revocado (con revokedAt)
+- Colores de estado: success para activo, error para revocado
+
+**Pruebas ejecutadas:**
+- Typecheck: aprobado (ngc -p tsconfig.app.json --noEmit)
+- admin-console-guard.test.mjs: 16 tests aprobados (64.8ms)
+- admin-api.test.mjs: 1 test aprobado (18.3ms)
+- admin-console-initial-access.test.mjs: 1 test aprobado (10.8ms)
+- admin-console-refresh.test.mjs: 1 test aprobado (5.6ms)
+- admin-console-tabs.test.mjs: 2 tests aprobados (14.3ms)
+- Total: 21 tests de administración, todos aprobados
+
+**Archivos modificados:**
+- autoclipper-web-angular/src/app/features/administration/pages/admin-console.component.css (mejoras visuales, estilos de auditoría y grants)
+- autoclipper-web-angular/src/app/features/administration/pages/admin-console.component.ts (secciones audit y grants, métodos auxiliares)
+- autoclipper-web-angular/src/app/features/administration/pages/admin-console.component.html (UI de auditoría y grants)
+- autoclipper-web-angular/src/app/features/administration/data-access/admin-api.service.ts (métodos audit y grants)
+- autoclipper-backend-microservices/packages/autoclipper-api-contracts/src/administration.ts (AdminAuditDto, AdminAuditPageDto, AdminGrantDto, AdminGrantsPageDto, permisos audit.read y grants.read)
+- autoclipper-backend-microservices/apps/autoclipper-identity-service/migrations/0004_administration.sql (CHECK actualizado para 6 permisos y audit.read/grants.read)
+- autoclipper-backend-microservices/apps/autoclipper-identity-service/src/application/admin.manager.ts (métodos auditRead y grants)
+- autoclipper-backend-microservices/apps/autoclipper-identity-service/src/interfaces/admin.controller.ts (endpoints GET /admin/audit y GET /admin/grants)
+- Contratos regenerados: OpenAPI backend, gateway.generated.d.ts frontend
+
+**Límites pendientes:**
+- No se verificó con cuenta operadora autorizada real (solo tests sintéticos)
+- No se probaron flujos E2E con backend activo
+- No se crearon capturas de pantalla (requiere backend activo y cuenta autorizada)
+- La aceptación con operador humano y datos reales sigue pendiente
+- Funciones no implementadas (requieren aprobación de seguridad y diseño adicional):
+  - Gestión de grants administrativos (conceder/revocar/actualizar)
+  - Filtros de servidor para usuarios y trabajos
+  - Acciones sobre workspaces (revocar acceso, transferir, suspender)
+  - Cancelar/reintentar trabajos
+  - Ajustes administrativos de consumo
+  - Tickets de soporte
+  - Vista general operativa con métricas de salud
+
 ## Guardar subtítulos y exportar la revisión — 2026-10-17
 
 La acción explícita «Guardar y exportar» realiza PATCH con la versión/If-Match actual, conserva el borrador devuelto y solo entonces solicita POST /edits/{id}/renders con revisionVersion de esa nueva revisión. Una validación fallida o un 412 no solicita render. Si el render se rechaza, la revisión guardada permanece limpia y visible; se puede reintentar la exportación sin crear otra revisión. El rol se comprueba de nuevo después de guardar y los controles de composición se deshabilitan durante la operación.
@@ -269,3 +354,85 @@ Las respuestas de consulta deben conservar el ID pedido y el proyecto actual ant
 ## Errores de inspección y pipeline para creadores — 2026-10-19
 
 Los fallos de inspección/procesamiento ahora anuncian un mensaje accesible y orientado a la acción, sin exponer códigos internos del worker. Los controles existentes de consulta/cancelación/reintento siguen siendo autoritativos. Typecheck Angular y build de producción aprobados; sin llamadas a runtime.
+
+## Límites versionados en consumo — 2026-10-19
+
+La vista de consumo presenta el límite mensual de procesamiento y el máximo de pipelines simultáneos solo cuando el `ConsumptionDto` incluye una asignación de desarrollo. La versión inmutable queda desplegable; el progreso usa el límite mensual explícito de esa versión e incluye tanto segundos consumidos como reservados. Sin plan asignado no se inventa un límite. El ledger sigue mostrando los movimientos recibidos (reserva, consumo y liberación), con sus etapas y paginación. La página indica que la asignación es local de desarrollo y que no hay precios, compras ni créditos comerciales.
+
+## Entrada de fuentes desde la creación de proyectos — 2026-10-19
+
+El recorrido mantiene la creación contractual del proyecto y conduce al detalle, donde se elige entre archivo local y enlace. El archivo se previsualiza localmente y solo se envía tras la acción explícita de carga: MP4, WebM, MOV o MKV, máximo 100 MiB, carga privada firmada y posterior inspección del servidor. El intervalo queda limitado a la duración inspeccionada (hasta 300 s). El texto del selector de enlaces aclara que validar y previsualizar no importa el video; el campo y su validador comparten el límite de 2048 caracteres. Las vistas YouTube/Kick se mantienen compactas; Twitch conserva el ancho y alto mínimos que exige su reproductor.
+
+La detección usa una allowlist cerrada de hosts y rutas HTTPS. YouTube admite formas de enlace de video conocidas para una vista previa oficial; Twitch admite video y clips para preview; Kick solo un canal en directo, no VOD ni clips. La vista previa requiere acción expresa y consulta al proveedor directamente desde el navegador. No se envía la URL a AutoClipper ni se habilita procesamiento por enlace. La lista de fuentes muestra Kick primero por prioridad de UX; eso no representa mayor compatibilidad ni importación disponible.
+
+Bloqueos: YouTube no tiene ruta autorizada de importación publicada por el backend; Kick no ofrece una API oficial de descarga de medios identificada; Twitch requiere OAuth con scope y verificación del broadcaster/editor, almacenamiento seguro de tokens y transferencia durable antes de admitir clips descargables. VODs/directos de Twitch y videos/clips de Kick no quedan habilitados por reconocer una URL. Sin runtime disponible no se creó proyecto, cargó archivo ni envió una URL durante esta entrega.
+
+## Intervalo de clip y traspaso al editor — 2026-10-19
+
+El selector requiere una duración real de la inspección; si no llega, el procesamiento y la creación del borrador permanecen bloqueados en vez de asumir 300 segundos. Los controles ajustan inicio y fin dentro del medio inspeccionado y del máximo contractual de 120 segundos. El borrador para un resultado exitoso conserva el intervalo devuelto por el pipeline y solo vincula `analysisId` cuando el pipeline corresponde a la carga elegida; el editor obtiene los tiempos de los segmentos reales de esa transcripción. En el editor, campos numéricos y pista respetan duración y límites. Un 412 conserva la última revisión cargada, el ETag usado y la copia local sin guardar; la interfaz explica que recargar descarta la copia local.
+
+Evidencia: pasaron las pruebas focalizadas `manual pipeline interval is constrained to the inspected source duration`, `editing a completed clip uses its returned spec and cannot claim an unknown or different source` y `timeline and caption validation follow async load, local corrections and changed clip bounds` (3/3); `npm run typecheck` aprobado. Sin llamadas a runtime; sin cambios de backend ni documentos de arquitectura/diseño.
+
+## Recorrido ejecutable del creador — 2026-10-19
+
+Ejecutable en una sesión: cargar el archivo y consultar su inspección; seleccionar manualmente un intervalo dentro de la duración real (0,1–120 s y máximo 300 s por solicitud); enviar ese `startSeconds`/`endSeconds` al pipeline con `selection.mode: none`; consultar/cancelar/reintentar el pipeline; crear el borrador cuando el pipeline de esa carga termina; pasar al editor el `spec` devuelto por el pipeline; vincular solo el `analysisId` real de la misma carga y cargar del endpoint de análisis sus segmentos/timestamps; editar subtítulos y revisiones con `If-Match`; solicitar exportación de la revisión guardada y consultar/descargar únicamente artefactos devueltos por el servidor. El borrador espera durante pipelines activos de procedencia confirmada o desconocida para no perder la asociación de transcripción.
+
+Bloqueado por contrato, sin inferencias: al recargar, la consulta `GET /pipelines/{id}` no devuelve `uploadId` y el contrato no publica un listado de pipelines por carga. La referencia de procedencia guardada en el navegador no se toma como prueba, por lo que un pipeline reanudado por ID queda explícitamente sin vínculo y su transcripción no se asocia al borrador; el usuario debe volver a procesar desde la carga seleccionada para obtener un vínculo de sesión verificable. El pipeline usa selección manual (`mode: none`); no hay selección automática de momentos ni puntuaciones de IA en este recorrido. Los enlaces de proveedores sirven como vista previa: la importación y el procesamiento de sus medios siguen bloqueados.
+
+Evidencia de esta entrega: cuatro pruebas focalizadas cubren el límite del intervalo, la espera y traspaso desde el pipeline, el rechazo de vínculos de carga no confirmados, segmentos reales, y la conservación del ETag/borrador local ante conflicto 412. `npm run typecheck` y `npm run build` aprobaron; el build mostró la advertencia del runtime Node 25.9.0 impar/no LTS. No se consultó un runtime compartido ni se cambiaron backend o documentos WIP de arquitectura/diseño.
+
+## Páginas de proyectos recibidos — 2026-10-19
+
+La colección divide los proyectos devueltos por la consulta real en páginas de 12; indica el rango visible y el total recibido, limita anterior/siguiente y vuelve a la primera página al ejecutar una búsqueda nueva. Cambiar de página solo recorre los resultados ya recibidos.
+
+Límite del contrato: `GET /projects` admite una consulta de hasta 100 y no entrega cursor ni total global. Esto mejora la navegación dentro de la respuesta recibida, pero no completa la paginación de servidor pendiente en el backlog. Carpetas, etiquetas y favoritos siguen sin contratos y no aparecen como controles. La prueba `project collection pages through only the real results returned by the capped query`, `npm run typecheck` y `npm run build` pasaron. Build mostró advertencia de Node 25.9.0 impar/no LTS.
+
+YouTube, Kick y Twitch continúan siendo vistas previas solamente: no se agregó ningún control para importar o procesar sus enlaces. No se tocó backend ni el WIP de `status.md`, `launch-backlog.md` o documentos de arquitectura/diseño.
+
+## Consulta administrativa y alcance propio — 2026-10-19
+
+La consola muestra los cuatro permisos y el alcance que devuelve `GET /v1/admin/access` para la propia cuenta, con los UUID autorizados desplegables. Las listas de usuarios, espacios, trabajos y consumo siguen usando los endpoints paginados y exigen permiso y elevación vigentes. Ante un fallo de una página posterior se conservan las filas confirmadas y se reintenta el mismo cursor; 401/403 retiran los datos y cierran el acceso. La auditoría ya no figura como pestaña deshabilitada.
+
+Límite del contrato: no existe una ruta pública para enumerar grants de otras cuentas, páginas de scopes ni eventos de auditoría. El acceso propio no se presenta como un listado paginado. Tampoco se habilitan suspensión, borrado, créditos o soporte.
+
+Evidencia: 16 pruebas focalizadas de administración aprobadas, incluidas autoridad, paginación y reintento; `npm run typecheck` y `npm run build` aprobados. La compilación señaló Node 25.9.0 como versión impar no LTS. Sin consultas a runtime ni cambios de backend.
+
+## Entrada de video local — 2026-10-19
+
+El selector del proyecto acepta un archivo arrastrado o elegido con el control nativo, usando la misma validación de tipo y tamaño y respetando el rol de solo lectura. Arrastrar no inicia la carga: el usuario confirma «Cargar archivo privado». El progreso visible identifica la etapa de preparación, transferencia, confirmación o inspección, sin inventar un porcentaje de bytes que el PUT firmado actual no reporta. Tras la inspección, el panel muestra duración, dimensiones, formato y códecs devueltos por el servidor. Un fallo de transferencia aparece junto al archivo con reintento si no existe intención pendiente; si la intención existe, ofrece consultar su estado antes de liberar o repetir la carga.
+
+Evidencia: dos pruebas focalizadas de arrastrar/soltar y recuperación de una transferencia fallida aprobaron; `npm run typecheck` y `npm run build` aprobaron. El build avisó que Node 25.9.0 es impar/no LTS. Los enlaces de YouTube, Kick y Twitch siguen como vistas previas sin importación; no se llamaron servicios reales ni se modificó el backend.
+
+## Continuidad del enlace y revisión del clip — 2026-10-20
+
+El enlace pegado, su validación local y el resultado de plataforma permanecen al alternar entre archivo/enlace o al abrir otra pestaña del proyecto; el iframe oficial se cierra cuando queda oculto. Un pipeline exitoso ofrece «Revisar clip»: solo por acción del usuario solicita el endpoint real `GET /pipelines/{id}/download?kind=video`, recupera el MP4 privado con credenciales omitidas y sin redirecciones, y reproduce un blob local. El blob se revoca al cerrar, cambiar de pipeline/proyecto o perder acceso. Los fallos de descarga o reproducción dejan disponible un nuevo intento con un enlace fresco. La descarga y el editor siguen separados.
+
+Límite: el gateway/OpenAPI actual no tiene endpoint para validar una URL externa en servidor, entregar metadatos de YouTube/Kick/Twitch o importarla a una carga/pipeline. La validación del formulario de enlaces sigue siendo sintáctica y la vista previa depende del reproductor oficial; no se presenta como importación. Pruebas focalizadas: 8 de enlaces y 1 de revisión privada aprobadas; `npm run typecheck` y `npm run build` aprobados. Sin llamadas a runtime ni cambios de backend.
+
+## Acción de procesamiento y recuperación — 2026-10-20
+
+La pestaña «Procesar clip» ahora guía al usuario a elegir un intervalo y muestra «Generar clip MP4», junto con una explicación concreta de que el corte es manual y la transcripción local depende de que el servicio esté configurado. Al fallar o cancelarse un pipeline se puede reintentar la misma selección mediante una solicitud nueva; un fallo de inspección de carga pide seleccionar el video de nuevo en lugar de sugerir una consulta de solo lectura como si reintentara la carga. La CTA de la portada aclara que primero se crea la cuenta y luego se trabaja en el estudio.
+
+Verificación: 4 pruebas focalizadas del flujo aprobaron; `npm run typecheck`, `npm run build` y `git diff --check` aprobaron. La vista de estructura se recorrió en el navegador a 390×844 px; el documento mide 375 px de ancho, sin desbordamiento horizontal. La compilación avisó que Node 25.9.0 es impar y no LTS. No se reinició el servidor ni se probaron credenciales, cargas o servicios externos. El contrato sigue requiriendo un proyecto autenticado y una carga inspeccionada para ejecutar la generación real.
+
+## Render manual sin dependencia de ASR — 2026-10-20
+
+La pantalla de configuración del proyecto llama al contrato real `POST /uploads/{id}/processing` para un solo intervalo manual y aspecto. Consulta `GET /processing/{id}`, permite cancelación y, al terminar, obtiene el MP4 privado bajo demanda, ofrece descarga y puede crear un borrador sin transcript desde el mismo archivo/intervalo. El request omite `subtitles`; no se muestra un SRT/VTT generado ni se simula el clip. La opción de pipeline con Whisper queda separada: la respuesta 503 `TRANSCRIPTION_NOT_CONFIGURED` se conserva y señala el render manual como alternativa. El panel deja claro que cantidad múltiple, clasificación de contenido y subtítulos automáticos no están disponibles con los contratos/proveedores locales actuales; expone los formatos con dimensiones fijas conocidas.
+
+Verificación: 5 pruebas focalizadas aprobaron, incluidas la forma exacta del request manual y el manejo del error ASR 503; `npm run typecheck`, `npm run build` y `git diff --check` aprobaron. En la vista de estructura del navegador se revisó el panel de configuración a 390 px, sin desbordamiento horizontal. La vista de estructura no permite autenticar, subir un archivo ni ejecutar la tarea; no se reinició el stack ni se llamó al backend.
+
+## Pipeline automático de varios clips — 2026-10-20
+
+Se sincronizaron los tipos Angular con el contrato público v2. Tras validar una carga, el proyecto permite solicitar generación automática configurando 1–3 clips, duración máxima opcional (1–120 s), tipo de contenido, idioma, aspecto y subtítulos de transcript o ninguno. La solicitud v2 usa `mode=automatic`; el modo manual conserva su intervalo y `POST /uploads/{id}/processing`. El estado usa etapas y resultados devueltos por el servidor; cada clip muestra su estado/código y, si terminó, ofrece vista previa MP4, descarga individual, SRT/VTT solo si se solicitaron subtítulos y entrada al editor con intervalo/transcript de esa fuente. `partial_failed` conserva los resultados disponibles y los errores de los demás clips. 503 `TRANSCRIPTION_NOT_CONFIGURED` y `SELECTION_NOT_CONFIGURED` mantienen sus códigos y explican qué proveedor falta. Enlaces externos continúan sin importación.
+
+Verificación: 33 pruebas del flujo del proyecto aprobaron; `npm run typecheck`, `npm run build`, `npm run contracts:check` y `git diff --check` aprobaron. La vista de configuración en el navegador se inspeccionó a 390 px (contenido de 375 px, sin desbordamiento horizontal). El build vuelve a advertir que Node 25.9.0 es impar/no LTS. El navegador estaba en vista de estructura, por lo que no se autenticó, no se subió un medio ni se creó un pipeline real. No se reinició `:4200` ni se modificó Docker.
+
+## Editor real: estado persistido y límites verificados — 2026-10-30
+
+El editor de cuenta es `/app/edits/:id`; `/design/editor` es una demostración y no carga ni guarda borradores de la cuenta. El editor real obtiene la revisión actual y sus metadatos, ofrece la lista de borradores del proyecto, reproduce la fuente privada a solicitud y permite ajustar inicio/final, aspecto, encuadre manual, una segunda fuente para pantalla dividida y subtítulos manuales o de una transcripción autorizada. Guardar crea una revisión versionada con control optimista de `version`/ETag; «Guardar y exportar» solicita el render de esa revisión. Historial, comentarios, revisión y exportaciones se consultan desde sus rutas reales.
+
+El contrato no ofrece seguimiento de caras, detección automática de momentos, mezcla ni volumen para una fuente única, filtros de color, capas de texto libres ni una línea de tiempo multipista. El corte es manual y debe quedar dentro de una fuente inspeccionada; dura entre 0,1 y 120 s. El encuadre son dos fracciones manuales (x/y entre 0 y 1), no coordenadas faciales. Pantalla dividida admite una segunda carga autorizada. Subtítulos de usuario admiten hasta 200 cues validados; la descripción completa no puede superar 65 000 bytes. Estos controles se mantienen deshabilitados o explicados cuando el contrato no los admite.
+
+En una consulta SQL de solo lectura se encontró un borrador real de versión 1 ligado al proyecto abierto. Su carga estaba confirmada y la inspección asociada figuraba `succeeded`, con 78,43 s y 832×464. Se preservaron los datos; no se escribieron revisiones ni se usaron fixtures para esa constatación. La base Project/Media responde en `127.0.0.1:15432`, pero Angular `:4200` y el gateway `:3000` no tienen proceso escuchando. Por tanto, esto confirma el estado persistido, pero no la apertura autenticada por HTTP ni el ciclo de edición, guardado y recarga desde la UI. No se levantaron ni reiniciaron servicios.
+
+Verificación local de esta continuación: 309 pruebas unitarias Angular aprobadas, `npm run typecheck` y `npm run build` aprobados. El build informa Node 25.9.0 (versión impar, no LTS). La aceptación de negocio del editor puede probar guardado concurrente, historial y MP4 real, pero requiere los servicios y workers; no se ejecutó contra datos del usuario.

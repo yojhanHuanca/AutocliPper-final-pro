@@ -4,8 +4,8 @@
     <h1>Tu consumo, a la vista.</h1>
     <p>Segundos de material procesado por etapa en este espacio.</p>
   </div>
-  <button class="button" type="button" (click)="load()" [disabled]="busy() || !workspace.workspaceId()">
-    Actualizar<ac-icon name="arrow" />
+  <button class="button" type="button" (click)="load()" [disabled]="busy() || !workspace.workspaceId()" [attr.aria-busy]="busy()">
+    {{ busy() ? "Actualizando…" : "Actualizar" }}<ac-icon name="refresh" />
   </button>
 </section>
 @if (accessDenied()) {
@@ -13,8 +13,9 @@
     No se pudo confirmar el acceso a todos los datos de consumo de este espacio. Verifica el espacio seleccionado y tus permisos de lectura.
   </div>
 } @else if (overviewError()) {
-  <div class="alert error" role="alert">
-    El resumen de consumo no se pudo cargar: {{ overviewError() }}
+  <div class="alert error consumption-error" role="group" aria-label="Problema al consultar la asignación">
+    <span role="alert">El resumen de consumo no se pudo cargar: {{ overviewError() }}</span>
+    <button class="button small" type="button" (click)="load()" [disabled]="busy()">{{ busy() ? "Consultando…" : "Reintentar resumen" }}</button>
   </div>
 }
 @if (busy() && consumption()) { <p class="muted" role="status">Actualizando el resumen; se conserva la última consulta.</p> }
@@ -64,19 +65,15 @@
     </p>
     @if (usage.plan) { <div class="quota-meter">
       <div class="quota-meter-label">
-        <strong>Uso de la asignación</strong>
+        <strong>Asignación consumida o reservada</strong>
         <span>{{ quotaProgress(usage) | number: "1.0-1" }} %</span>
       </div>
-      <progress
-        max="100"
-        [value]="quotaProgress(usage)"
-        [attr.aria-label]="'Uso de la asignación: ' + (quotaProgress(usage) | number: '1.0-1') + ' por ciento'"
-      ></progress>
-      <p>
-        {{ usage.consumedSeconds + usage.reservedSeconds | number: "1.0-2" }}
-        s usados o reservados de {{ quotaTotal(usage) | number: "1.0-2" }} s
-        en este periodo.
-      </p>
+      <div class="quota-meter-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="quotaProgress(usage)" [attr.aria-valuetext]="'Consumido: ' + (usage.consumedSeconds | number: '1.0-2') + ' segundos; reservado: ' + (usage.reservedSeconds | number: '1.0-2') + ' segundos; disponible: ' + (usage.availableSeconds | number: '1.0-2') + ' segundos de ' + (quotaTotal(usage) | number: '1.0-2') + ' segundos'" aria-label="Material consumido o reservado de la asignación">
+        <span class="quota-meter-consumed" [style.width.%]="quotaSegment(usage.consumedSeconds,usage)"></span>
+        <span class="quota-meter-reserved" [style.width.%]="quotaSegment(usage.reservedSeconds,usage)"></span>
+      </div>
+      <div class="quota-meter-legend" aria-label="Detalle de la asignación"><span><i class="consumed-dot"></i>Consumido <strong>{{ usage.consumedSeconds | number: "1.0-2" }} s</strong></span><span><i class="reserved-dot"></i>Reservado <strong>{{ usage.reservedSeconds | number: "1.0-2" }} s</strong></span><span><i class="available-dot"></i>Disponible <strong>{{ usage.availableSeconds | number: "1.0-2" }} s</strong></span></div>
+      <p>La barra suma material consumido y reservado frente a los {{ quotaTotal(usage) | number: "1.0-2" }} s de la asignación de este periodo.</p>
     </div> } @else { <p class="resource-id">No hay un límite versionado asignado; se muestran únicamente los valores actuales devueltos por la API.</p> }
     @if (usage.plan; as plan) {
       <details class="plan-details">
@@ -135,10 +132,11 @@
       }
     </div>
   </div>
-  <p class="ledger-stage-note">Los filtros se aplican a los movimientos cargados, no hacen una consulta ni representan el total histórico. Reserva, consumo y liberación son segundos de material; no son cargos monetarios. El resumen superior corresponde al periodo vigente.</p>
+  <p class="ledger-stage-note">Cada fila es un movimiento confirmado por etapa. El ID de pipeline relaciona reservas, consumos y liberaciones con su trabajo. Los filtros solo abarcan los registros ya cargados; no representan el total histórico. Son segundos de material, no cargos monetarios.</p>
   @if (ledgerError()) {
-    <div class="alert error" role="alert">
-      @if (ledgerError().includes('cursor repetido')) { {{ ledgerError() }} } @else { {{ ledger().length ? "No se pudieron actualizar los movimientos." : "No se pudieron cargar los movimientos." }} {{ ledgerError() }} }
+    <div class="alert error consumption-error" role="group" aria-label="Problema al consultar los movimientos">
+      <span role="alert">@if (ledgerError().includes('cursor repetido')) { {{ ledgerError() }} } @else { {{ ledger().length ? "No se pudieron actualizar los movimientos." : "No se pudieron cargar los movimientos." }} {{ ledgerError() }} }</span>
+      @if (!ledgerError().includes('cursor repetido')) { <button class="button small" type="button" (click)="nextId() ? loadMore() : load()" [disabled]="busy() || loadingMore()">{{ loadingMore() ? "Cargando…" : "Reintentar movimientos" }}</button> }
     </div>
   }
   <div class="table-scroll" tabindex="0" role="region" aria-label="Historial de movimientos; desplaza la tabla para ver todas las columnas">
@@ -161,10 +159,10 @@
             <td>{{ entry.periodStart | date: "mediumDate": "UTC" }}</td>
             <td>{{ stageLabel(entry.stage) }}</td>
             <td>
-              <span class="badge">{{ kindLabel(entry.kind) }}</span>
+              <span class="badge movement-badge" [class.reserve]="entry.kind === 'reserve'" [class.consume]="entry.kind === 'consume'" [class.release]="entry.kind === 'release'">{{ kindLabel(entry.kind) }}</span>
             </td>
             <td>{{ entry.seconds | number: "1.0-2" }}</td>
-            <td class="resource-id" [title]="entry.pipelineId">{{ shortPipelineId(entry.pipelineId) }}</td>
+            <td class="resource-id" [title]="entry.pipelineId" [attr.aria-label]="'ID de pipeline: ' + entry.pipelineId">{{ shortPipelineId(entry.pipelineId) }}</td>
           </tr>
         } @empty {
           @if (ledger().length) {

@@ -137,6 +137,24 @@ test('real PostgreSQL, Redis/BullMQ, S3 and FFmpeg inspection', { timeout: 18000
       const missing = await terminal(await enqueue(undefined));
       assert.equal(missing.status, 'failed'); assert.equal(missing.attempts, 3); assert.equal(missing.error_code, 'STORAGE_OR_NETWORK_ERROR');
     });
+    await t.test('recreated Redis jobs preserve the durable inspection retry budget', async () => {
+      const id = await enqueue(undefined);
+      for (const expectedAttempt of [1, 2]) {
+        await eventually(async () => {
+          const row = (await pool.query('SELECT status,attempts FROM inspection_tasks WHERE id=$1', [id])).rows[0];
+          const job = await queue.getJob(id);
+          return row?.status === 'queued' && row.attempts === expectedAttempt && job && await job.getState() === 'delayed';
+        }, 30000);
+        await stopWorker();
+        const delayed = await queue.getJob(id);
+        if (delayed) await delayed.remove();
+        await startWorker();
+      }
+      const row = await terminal(id);
+      assert.equal(row.status, 'failed');
+      assert.equal(row.attempts, 3);
+      assert.equal(row.error_code, 'STORAGE_OR_NETWORK_ERROR');
+    });
     await t.test('metrics require authorization and temporary files are removed', async () => {
       const denied = await fetch(`http://127.0.0.1:${port}/v1/metrics`);
       assert.equal(denied.status, 401);

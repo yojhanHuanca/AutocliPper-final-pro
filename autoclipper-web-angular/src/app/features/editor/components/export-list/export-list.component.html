@@ -46,6 +46,7 @@
       <button class="button small" type="button" (click)="vm.render()" [disabled]="!vm.canEditCollaboration() || vm.busy() || vm.dirty() || vm.currentRenderPending()">Volver a exportar esta revisión</button>
     }
     @if (item.status === "succeeded") {
+      @if (vm.hasVideoArtifact(item) && vm.canEditCollaboration()) { <ac-social-publish [processingId]="item.id" [clipTitle]="vm.draft()?.name || 'Mi clip'" /> }
       @if (vm.hasVideoArtifact(item)) {
       <button class="button small" type="button" (click)="vm.preview(item)" [disabled]="vm.busy()">
         Reproducir<ac-icon name="play" />

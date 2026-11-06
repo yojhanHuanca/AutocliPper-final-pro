@@ -11,20 +11,24 @@ import { Component, input } from "@angular/core";
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <path [attr.d]="paths[name()] || paths['grid']" />
+    <path [attr.d]="iconPaths[name()] || iconPaths['grid']" />
   </svg>`,
 })
 export class IconComponent {
   readonly name = input("grid");
-  readonly paths: Record<string, string> = {
+  static readonly paths: Record<string, string> = {
     scissors:
       "M6 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M6 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M8.5 7.5 21 21 M8.5 16.5 21 3 M12 12h.01",
     grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     folder: "M3 7V4h6l2 3h10v13H3z",
     play: "M8 4v16l13-8z",
+    pause: "M7 5h3v14H7z M14 5h3v14h-3z",
+    volume: "M11 5 6 9H3v6h3l5 4z M15.5 8.5a5 5 0 0 1 0 7 M18.5 5.5a9 9 0 0 1 0 13",
+    volumeOff: "M11 5 6 9H3v6h3l5 4z M16 9l5 6 M21 9l-5 6",
     film: "M3 3h18v18H3z M7 3v18 M17 3v18 M3 8h4 M3 16h4 M17 8h4 M17 16h4",
     chart: "M4 20V10 M10 20V4 M16 20v-8 M22 20H2",
     settings: "M4 7h16 M4 17h16 M8 4v6 M16 14v6",
+    sliders: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M2 14h4 M10 8h4 M18 16h4",
     arrow: "M4 12h16 M14 6l6 6-6 6",
     plus: "M12 4v16 M4 12h16",
     upload: "M12 16V3 M7 8l5-5 5 5 M3 16v5h18v-5",
@@ -41,5 +45,8 @@ export class IconComponent {
     mail: "M2 5h20v14H2z M2 5l10 8L22 5",
     link: "M9 15l6-6 M8 17l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0 M16 7l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0",
     heart: "M12 21 3 12a5 5 0 0 1 9-6a5 5 0 0 1 9 6z",
+    lock: "M5 10h14v11H5z M8 10V7a4 4 0 1 1 8 0v3 M12 14v3",
+    refresh: "M20 7v5h-5 M4 17v-5h5 M5.6 9A7 7 0 0 1 18 6l2 2 M4 16l2 2a7 7 0 0 0 12.4-3",
   };
+  get iconPaths(): Record<string, string> { return IconComponent.paths; }
 }

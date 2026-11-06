@@ -116,20 +116,31 @@ export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
           .update(inspectionOutbox)
           .set({ deliveredAt: null })
           .where(eq(inspectionOutbox.taskId, task.id));
-      else if ((await job.getState()) === "failed")
-        await this.db
-          .update(inspectionTasks)
-          .set({
-            status: "failed",
-            errorCode: "RECOVERY_RETRIES_EXHAUSTED",
-            finishedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(inspectionTasks.id, task.id),
-              inArray(inspectionTasks.status, ["queued", "running"]),
-            ),
-          );
+      else if ((await job.getState()) === "failed") {
+        const lease = await this.pool.connect();
+        let locked = false;
+        try {
+          locked = Boolean((await lease.query<{ locked: boolean }>(
+            "SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked",
+            [`inspection:${task.id}`],
+          )).rows[0]?.locked);
+          if (locked)
+            await lease.query(
+              "UPDATE inspection_tasks SET status='failed',error_code='RECOVERY_RETRIES_EXHAUSTED',finished_at=now() WHERE id=$1 AND status IN ('queued','running')",
+              [task.id],
+            );
+        } finally {
+          try {
+            if (locked)
+              await lease.query(
+                "SELECT pg_advisory_unlock(hashtextextended($1,0))",
+                [`inspection:${task.id}`],
+              );
+          } finally {
+            lease.release();
+          }
+        }
+      }
     }
     const events = await this.db
       .select()
@@ -171,78 +182,76 @@ export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
     const parsed = inspectionEvent.safeParse(job.data);
     if (!parsed.success) throw new UnrecoverableError("INVALID_EVENT");
     const event = parsed.data;
-    const [task] = await this.db
-      .select()
-      .from(inspectionTasks)
-      .where(eq(inspectionTasks.id, event.taskId));
-    if (!task || task.correlationId !== event.correlationId)
-      throw new UnrecoverableError("TASK_NOT_FOUND");
-    if (task.status === "succeeded" || task.status === "failed") return;
-    const claimed = await this.db
-      .update(inspectionTasks)
-      .set({
-        status: "running",
-        attempts: job.attemptsMade + 1,
-        startedAt: new Date(),
-        errorCode: null,
-      })
-      .where(
-        and(
-          eq(inspectionTasks.id, task.id),
-          inArray(inspectionTasks.status, ["queued", "running"]),
-        ),
-      )
-      .returning({ id: inspectionTasks.id });
-    if (!claimed.length) return;
-    const started = performance.now();
+    const lease = await this.pool.connect();
+    let locked = false;
+    const abort = new AbortController();
+    const leaseLost = () => abort.abort();
+    lease.on("error", leaseLost);
     try {
-      const result = await inspectObject(this.s3, this.config, task);
-      await this.db
-        .update(inspectionTasks)
-        .set({ status: "succeeded", result, finishedAt: new Date() })
-        .where(
-          and(
-            eq(inspectionTasks.id, task.id),
-            inArray(inspectionTasks.status, ["queued", "running"]),
-          ),
+      locked = Boolean((await lease.query<{ locked: boolean }>(
+        "SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked",
+        [`inspection:${event.taskId}`],
+      )).rows[0]?.locked);
+      if (!locked) throw new Error("INSPECTION_LEASE_BUSY");
+      const task = (await lease.query<{
+        id: string; workspaceId: string; objectKey: string; expectedBytes: number;
+        expectedEtag: string; expectedSha256: string | null; correlationId: string;
+        status: string; attempts: number;
+      }>(
+        `SELECT id,workspace_id AS "workspaceId",object_key AS "objectKey",
+          expected_bytes AS "expectedBytes",expected_etag AS "expectedEtag",
+          expected_sha256 AS "expectedSha256",correlation_id AS "correlationId",
+          status,attempts FROM inspection_tasks WHERE id=$1`,
+        [event.taskId],
+      )).rows[0];
+      if (!task || task.correlationId !== event.correlationId)
+        throw new UnrecoverableError("TASK_NOT_FOUND");
+      if (task.status === "succeeded" || task.status === "failed") return;
+      const claimed = await lease.query<{ attempts: number }>(
+        "UPDATE inspection_tasks SET status='running',attempts=attempts+1,started_at=now(),error_code=NULL WHERE id=$1 AND status IN ('queued','running') RETURNING attempts",
+        [task.id],
+      );
+      if (!claimed.rows[0]) return;
+      const attempt = Number(claimed.rows[0].attempts);
+      const maxAttempts = Math.max(1, Number(job.opts.attempts ?? 1));
+      const started = performance.now();
+      try {
+        const result = await inspectObject(this.s3, this.config, task, abort.signal);
+        await lease.query(
+          "UPDATE inspection_tasks SET status='succeeded',result=$2,finished_at=now() WHERE id=$1 AND status='running' AND attempts=$3",
+          [task.id, result, attempt],
         );
-      logger.info({
-        code: "INSPECTION_COMPLETED",
-        taskId: task.id,
-        correlationId: event.correlationId,
-        durationMs: Math.round(performance.now() - started),
-        bytes: task.expectedBytes,
-      });
-    } catch (error) {
-      const code =
-        error instanceof InspectionError
-          ? error.code
-          : "STORAGE_OR_NETWORK_ERROR";
-      const terminal =
-        (error instanceof InspectionError && !error.retryable) ||
-        job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
-      await this.db
-        .update(inspectionTasks)
-        .set({
-          status: terminal ? "failed" : "queued",
-          errorCode: code,
-          finishedAt: terminal ? new Date() : null,
-        })
-        .where(
-          and(
-            eq(inspectionTasks.id, task.id),
-            inArray(inspectionTasks.status, ["queued", "running"]),
-          ),
+        logger.info({
+          code: "INSPECTION_COMPLETED",
+          taskId: task.id,
+          correlationId: event.correlationId,
+          durationMs: Math.round(performance.now() - started),
+          bytes: task.expectedBytes,
+        });
+      } catch (error) {
+        const code = error instanceof InspectionError ? error.code : "STORAGE_OR_NETWORK_ERROR";
+        const terminal = (error instanceof InspectionError && !error.retryable) || attempt >= maxAttempts;
+        await lease.query(
+          "UPDATE inspection_tasks SET status=$2,error_code=$3,finished_at=$4 WHERE id=$1 AND status='running' AND attempts=$5",
+          [task.id, terminal ? "failed" : "queued", code, terminal ? new Date() : null, attempt],
         );
-      logger.warn({
-        code,
-        taskId: task.id,
-        correlationId: event.correlationId,
-      });
-      if (terminal) throw new UnrecoverableError(code);
-      // BullMQ persists errors: deliberately discard the potentially sensitive cause.
-      // eslint-disable-next-line preserve-caught-error
-      throw new Error(code);
+        logger.warn({ code, taskId: task.id, correlationId: event.correlationId });
+        if (terminal) throw new UnrecoverableError(code);
+        // BullMQ persists errors: deliberately discard the potentially sensitive cause.
+        // eslint-disable-next-line preserve-caught-error
+        throw new Error(code);
+      }
+    } finally {
+      lease.removeListener("error", leaseLost);
+      try {
+        if (locked)
+          await lease.query(
+            "SELECT pg_advisory_unlock(hashtextextended($1,0))",
+            [`inspection:${event.taskId}`],
+          );
+      } finally {
+        lease.release();
+      }
     }
   }
 

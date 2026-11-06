@@ -1,0 +1,46 @@
+import '@angular/compiler';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { signal } from '@angular/core';
+import { AdminConsoleComponent } from '../../.local/tests/client.mjs';
+
+test('administrative access retries do not issue overlapping permission reads', async () => {
+  const component = Object.create(AdminConsoleComponent.prototype);
+  let resolve;
+  let calls = 0;
+  component.api = { access: () => { calls++; return new Promise(done => resolve = done); } };
+  component.access = signal(null);
+  component.accessVersion = 0;
+  component.loadingAccess = signal(false);
+  component.loadingPage = signal(false);
+  component.mutationBusy = signal(false);
+  component.activeView = signal('summary');
+  component.summaryRows = signal({});
+  component.message = signal('');
+  component.error = signal('');
+  component.notFound = signal(false);
+  component.elevatedUntil = signal('');
+  component.now = signal(Date.now());
+  component.section = signal(null);
+  component.pageVersion = 0;
+  component.users = signal([]);
+  component.workspaces = signal([]);
+  component.jobs = signal([]);
+  component.consumption = signal([]);
+  component.nextBeforeId = signal(null);
+  component.localSearch = signal('');
+  component.jobKindFilter = signal('');
+  component.jobStatusFilter = signal('');
+  component.pageFailed = signal(false);
+  component.failedCursor = signal(null);
+  component.sections = [];
+  component.clearData = () => {};
+
+  const first = component.refreshAccess();
+  await component.refreshAccess();
+  assert.equal(calls, 1);
+  resolve({granted:false,mfaEnabled:false,permissions:[],workspaceIds:[],elevatedUntil:null});
+  await first;
+  assert.equal(component.loadingAccess(), false);
+  assert.equal(component.access().granted, false);
+});

@@ -1,0 +1,12 @@
+import {readFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {resolve,join} from 'node:path';
+const root=resolve(fileURLToPath(new URL('../..',import.meta.url))),local=join(root,'.local','native-login');
+const config=JSON.parse(await readFile(join(local,'config.json'),'utf8')),state=JSON.parse(await readFile(join(local,'state.json'),'utf8'));
+const base=`http://localhost:${state.gatewayPort}/v1`;
+const live=await fetch(base+'/health/live');if(live.status!==200)throw new Error(`Gateway live returned ${live.status}`);
+const csrf=await fetch(base+'/auth/csrf',{headers:{origin:'http://localhost:4200'}});if(csrf.status!==200)throw new Error(`CSRF returned ${csrf.status}`);
+const token=(await csrf.json()).csrfToken,cookies=csrf.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');
+const login=await fetch(base+'/auth/login',{method:'POST',headers:{origin:'http://localhost:4200','content-type':'application/json','x-csrf-token':token,cookie:cookies},body:JSON.stringify({email:config.testEmail,password:config.testPassword})});
+if(login.status!==200)throw new Error(`Test login returned ${login.status}`);
+console.log(`Native gateway live, CSRF and test login passed at ${base}`);

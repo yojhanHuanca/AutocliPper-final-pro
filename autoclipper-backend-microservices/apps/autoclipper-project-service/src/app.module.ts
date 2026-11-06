@@ -1,3 +1,5 @@
+import { SocialController } from "./interfaces/social.controller.js";
+import { SocialPublishingService } from "./application/social-publishing.service.js";
 import { Module } from "@nestjs/common";
 import { ProjectService } from "./application/project.service.js";
 import { ProjectController } from "./interfaces/project.controller.js";
@@ -6,5 +8,5 @@ import { AnalysisController } from "./interfaces/analysis.controller.js";
 import { EditorController } from "./interfaces/editor.controller.js";
 import { CollaborationController } from "./interfaces/collaboration.controller.js";
 import { PipelineController } from "./interfaces/pipeline.controller.js";
-@Module({ providers: [ProjectService], controllers: [ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController,PipelineController] })
+@Module({ providers: [ProjectService,SocialPublishingService], controllers: [SocialController,ProjectController,DerivativesController,AnalysisController,EditorController,CollaborationController,PipelineController] })
 export class AppModule {}

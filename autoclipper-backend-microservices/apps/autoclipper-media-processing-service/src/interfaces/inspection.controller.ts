@@ -12,7 +12,9 @@ import { ApiExcludeController } from "@nestjs/swagger";
 import type { Request } from "express";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { body, requireInternal } from "@autoclipper/http-security";
+import { body, requireInternal, internalJson } from "@autoclipper/http-security";
+import {privacyOwnerRequest,privacyMediaAuthority} from '@autoclipper/api-contracts';
+import {prepareMediaExport} from '../application/privacy-exports.js';
 import { InspectionRuntime } from "../application/inspection-runtime.js";
 import { inspectionTasks, inspectionOutbox } from "../infrastructure/schema.js";
 import { validateObjectKey } from "../domain/inspection.js";
@@ -20,6 +22,12 @@ import { validateObjectKey } from "../domain/inspection.js";
 @Controller("internal")
 export class InspectionController {
   constructor(@Inject(InspectionRuntime) readonly runtime: InspectionRuntime) {}
+  @Post('privacy-media-export') @HttpCode(200) async privacyMediaExport(@Req()req:Request,@Body()input:unknown){
+    requireInternal(req,this.runtime.config);
+    const data=body(privacyOwnerRequest,input);
+    const authority=body(privacyMediaAuthority,await internalJson(process.env['IDENTITY_URL']??'http://127.0.0.1:3002','/v1/internal/privacy-media-export-authorize',this.runtime.config,{...data,scope:'media-task-attribution-v1'}));
+    return prepareMediaExport(this.runtime.pool,authority.userId,authority.requestId,data.idempotencyKey,data.correlationId);
+  }
   @Post("inspections") @HttpCode(200) async submit(
     @Req() req: Request,
     @Body() input: unknown,
@@ -30,6 +38,7 @@ export class InspectionController {
         .object({
           id: z.uuid(),
           workspaceId: z.uuid(),
+          creatorId: z.uuid(),
           objectKey: z.string().max(512),
           expectedBytes: z.number().int().positive().max(104857600),
           expectedEtag: z.string().min(1).max(200),
@@ -49,6 +58,7 @@ export class InspectionController {
       if (
         !task ||
         task.workspaceId !== data.workspaceId ||
+        task.creatorId !== data.creatorId ||
         task.objectKey !== data.objectKey ||
         task.expectedBytes !== data.expectedBytes ||
         task.expectedEtag !== data.expectedEtag ||

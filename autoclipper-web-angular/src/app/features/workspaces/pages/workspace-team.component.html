@@ -1,5 +1,5 @@
 <div class="team-studio">
-<header class="team-studio-heading"><div><span class="eyebrow">CONFIGURACIÓN DEL ESTUDIO</span><h1>Tu equipo, bien conectado.</h1><p>Las personas, los permisos y el material que comparten contigo.</p></div>
+<header class="team-studio-heading"><div><span class="eyebrow">CONFIGURACIÓN DEL ESTUDIO</span><h1>{{ pageTitle() }}</h1><p>{{ pageDescription() }}</p></div>
   @if (canManage() && activeWorkspace()?.kind === 'team') { <button type="button" class="button primary" (click)="focusSection('team-invite-email')"><ac-icon name="plus" />Invitar a alguien</button> }
 </header>
 <ac-account-section-nav [design]="design" section="team" />
@@ -39,7 +39,7 @@
         </div>
       </div>
       <div class="team-overview-role">
-        <span>Tu rol</span><strong>{{ roleLabel(workspace.role) }}</strong>
+        <span>{{ forbidden() || workspacePermissionsUnconfirmed() || workspaceListRefreshFailed() ? 'Estado del acceso' : 'Tu rol' }}</span><strong>{{ activePermissionLabel() }}</strong>
       </div>
     </section>
 

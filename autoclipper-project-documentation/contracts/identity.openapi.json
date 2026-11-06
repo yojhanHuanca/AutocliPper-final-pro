@@ -13,10 +13,22 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "google"
+                    "google",
+                    "twitch"
                   ],
                   "properties": {
                     "google": {
+                      "type": "object",
+                      "required": [
+                        "configured"
+                      ],
+                      "properties": {
+                        "configured": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "twitch": {
                       "type": "object",
                       "required": [
                         "configured"
@@ -31,6 +43,132 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
+    "/v1/auth/twitch/link": {
+      "post": {
+        "operationId": "IdentityController_linkTwitch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "authorizationUrl",
+                    "expiresInSeconds",
+                    "scope"
+                  ],
+                  "properties": {
+                    "authorizationUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "example": 300
+                    },
+                    "scope": {
+                      "type": "string",
+                      "example": "editor:manage:clips channel:manage:clips",
+                      "description": "Only these clip-download scopes are requested. Authorize the scope matching the linked broadcaster/editor role."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      },
+      "get": {
+        "operationId": "IdentityController_twitchLinkStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "configured",
+                    "linked",
+                    "account"
+                  ],
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "linked": {
+                      "type": "boolean"
+                    },
+                    "account": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "login": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      },
+      "delete": {
+        "operationId": "IdentityController_unlinkTwitch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "unlinked"
+                  ],
+                  "properties": {
+                    "unlinked": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
+    "/v1/auth/twitch/callback": {
+      "get": {
+        "operationId": "IdentityController_twitchCallback",
+        "parameters": [],
+        "responses": {
+          "303": {
+            "description": "OAuth callback; successful links redirect to the configured first-party web origin."
           }
         },
         "tags": [
@@ -642,6 +780,134 @@
         ]
       }
     },
+    "/v1/auth/privacy-requests/{id}/media-export": {
+      "post": {
+        "operationId": "IdentityController_privacyMediaExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Media task attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Media task attribution; legacy unattributed tasks block preparation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyMediaExportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
+    "/v1/auth/privacy-requests/{id}/analysis-export": {
+      "post": {
+        "operationId": "IdentityController_privacyAnalysisExport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "UUID for this Analysis job attribution snapshot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyProfileProofDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial Analysis job attribution; no transcript or selection payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyAnalysisExportDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
+    "/v1/auth/privacy-requests/{id}/status": {
+      "get": {
+        "operationId": "IdentityController_privacyDeletionStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own deletion-request status only. Fulfillment remains pending; this endpoint does not claim or perform a purge.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyDeletionStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "identity"
+        ]
+      }
+    },
     "/v1/auth/privacy-requests/{id}/manifest": {
       "get": {
         "operationId": "IdentityController_privacyRequestManifest",
@@ -1200,6 +1466,42 @@
               "default": 25,
               "type": "integer"
             }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1252,6 +1554,42 @@
               "maximum": 50,
               "default": 25,
               "type": "integer"
+            }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1306,6 +1644,42 @@
               "default": 25,
               "type": "integer"
             }
+          },
+          {
+            "description": "Filter users by verified status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "verified",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter users by MFA enabled status (true/false). Only applies to users endpoint.",
+            "required": false,
+            "name": "mfaEnabled",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter jobs by kind (audio/render/analysis/pipeline). Only applies to jobs endpoint.",
+            "required": false,
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter jobs by status. Only applies to jobs endpoint.",
+            "required": false,
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1315,6 +1689,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminConsumptionPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "AdminController_audit",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAuditPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "administration-read-only"
+        ]
+      }
+    },
+    "/v1/admin/grants": {
+      "get": {
+        "operationId": "AdminController_grants",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGrantsPageDto"
                 }
               }
             }
@@ -2445,6 +2903,326 @@
           "data"
         ]
       },
+      "PrivacyOwnerTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode"
+        ]
+      },
+      "PrivacyMediaProcessingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "inspectionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "inspectionId"
+        ]
+      },
+      "PrivacyMediaDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inspections": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyOwnerTaskDto"
+            }
+          },
+          "processing": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyMediaProcessingDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "inspections",
+          "processing"
+        ]
+      },
+      "PrivacyMediaExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "media-task-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyMediaDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
+      "PrivacyAnalysisJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcriptPresent": {
+            "type": "boolean"
+          },
+          "selectionPresent": {
+            "type": "boolean"
+          },
+          "providerAttempts": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "transcriptPresent",
+          "selectionPresent",
+          "providerAttempts"
+        ]
+      },
+      "PrivacyAnalysisDataDto": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobs": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivacyAnalysisJobDto"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "subjectId",
+          "jobs"
+        ]
+      },
+      "PrivacyAnalysisExportDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "analysis-attribution-v1"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ]
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "globalFulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PrivacyAnalysisDataDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "receiptId",
+          "scope",
+          "state",
+          "fulfillment",
+          "globalFulfillment",
+          "createdAt",
+          "capturedAt",
+          "sha256",
+          "data"
+        ]
+      },
       "PrivacyStatusResponseDto": {
         "type": "object",
         "properties": {
@@ -2500,6 +3278,65 @@
           "items"
         ]
       },
+      "PrivacyDeletionStatusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "deletion"
+            ]
+          },
+          "requestState": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "processing",
+              "completed",
+              "rejected"
+            ],
+            "description": "Stored request state; it does not establish that data was purged."
+          },
+          "fulfillment": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ],
+            "description": "Global deletion fulfillment is still pending."
+          },
+          "purgeCompleted": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "This status endpoint never claims that a purge completed."
+          },
+          "deletionExecutor": {
+            "type": "string",
+            "enum": [
+              "not_implemented"
+            ],
+            "description": "No global deletion executor is currently implemented."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "requestState",
+          "fulfillment",
+          "purgeCompleted",
+          "deletionExecutor",
+          "createdAt"
+        ]
+      },
       "PrivacyScopeStatusDto": {
         "type": "object",
         "properties": {
@@ -2528,6 +3365,7 @@
               "owner_unavailable",
               "snapshot_changed",
               "limit_exceeded",
+              "attribution_missing",
               "not_implemented"
             ]
           },
@@ -2846,7 +3684,9 @@
                 "users.read",
                 "workspaces.read",
                 "jobs.read",
-                "consumption.read"
+                "consumption.read",
+                "audit.read",
+                "grants.read"
               ]
             }
           },
@@ -3143,6 +3983,170 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminConsumptionDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminAuditDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "subjectUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "users.read",
+              "workspaces.read",
+              "jobs.read",
+              "consumption.read",
+              "audit.read",
+              "grants.read"
+            ],
+            "nullable": true
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "denied",
+              "reauthenticated",
+              "reauth_denied",
+              "grant",
+              "revoke"
+            ]
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operatorReference": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "subjectUserId",
+          "permission",
+          "workspaceId",
+          "outcome",
+          "correlationId",
+          "operatorReference",
+          "createdAt"
+        ]
+      },
+      "AdminAuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAuditDto"
+            }
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextBeforeId"
+        ]
+      },
+      "AdminGrantDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "users.read",
+                "workspaces.read",
+                "jobs.read",
+                "consumption.read",
+                "audit.read",
+                "grants.read"
+              ]
+            }
+          },
+          "workspaceIds": {
+            "nullable": true,
+            "description": "Null means explicitly global.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "revokedAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "permissions",
+          "workspaceIds",
+          "revision",
+          "revokedAt",
+          "updatedAt"
+        ]
+      },
+      "AdminGrantsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGrantDto"
             }
           },
           "nextBeforeId": {

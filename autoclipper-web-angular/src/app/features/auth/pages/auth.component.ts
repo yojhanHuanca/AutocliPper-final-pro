@@ -34,6 +34,7 @@ export class AuthComponent {
   readonly error = signal("");
   readonly message = signal("");
   readonly reducedMotion = signal(false);
+  readonly storyPaused = signal(false);
   readonly stepIndex = signal(0);
   readonly invitationReady = signal(false);
   readonly invitationChecking = signal(false);
@@ -58,6 +59,7 @@ export class AuthComponent {
   passwordConfirmation = "";
   factor = "";
   token = "";
+  private invitationWorkspaceIds: string[] | null = null;
   constructor() {
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.reducedMotion.set(motionPreference.matches);
@@ -70,7 +72,7 @@ export class AuthComponent {
       const timer = window.setInterval(tick, milliseconds);
       return () => window.clearInterval(timer);
     });
-    effect(() => cycle.configure(false, this.reducedMotion()));
+    effect(() => cycle.configure(this.storyPaused(), this.reducedMotion()));
     this.destroyRef.onDestroy(() => {
       motionPreference.removeEventListener("change", updateMotionPreference);
       cycle.destroy();
@@ -94,6 +96,12 @@ export class AuthComponent {
   get mode(): string {
     return this.route.snapshot.data["mode"] as string;
   }
+  selectStoryStep(index: number): void {
+    if (!Number.isInteger(index) || index < 0 || index >= this.scenes.length) return;
+    this.stepIndex.set(index);
+    this.storyPaused.set(true);
+  }
+  toggleStoryPause(): void { this.storyPaused.update((paused) => !paused); }
   get title(): string {
     return (
       {
@@ -170,6 +178,7 @@ export class AuthComponent {
       this.email = "";
       this.factor = "";
       this.message.set("");
+      this.invitationWorkspaceIds = null;
     } catch (error) {
       this.error.set(errorMessage(error));
     }
@@ -202,8 +211,15 @@ export class AuthComponent {
           this.message.set("Sesión iniciada. Revisa que esta sea la cuenta que recibió el correo y pulsa «Aceptar invitación» para confirmar.");
           return;
         }
-        await this.workspaces.acceptInvitation(this.token);
+        if (this.invitationWorkspaceIds == null) {
+          await this.workspaces.loadWorkspaces();
+          this.invitationWorkspaceIds = this.workspaces.workspaces().map((workspace) => workspace.id);
+        }
+        const userId = this.session.user()?.id;
+        if (!userId) throw new Error("Inicia sesión con la cuenta que recibió la invitación.");
+        await this.workspaces.acceptInvitation(this.token, this.invitationWorkspaceIds, userId);
         this.token = "";
+        this.invitationWorkspaceIds = null;
         this.message.set("Invitación aceptada. Ya tienes acceso al espacio.");
         await this.router.navigateByUrl("/app");
       } else if (this.mode === "login") {

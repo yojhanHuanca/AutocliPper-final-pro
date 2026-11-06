@@ -43,13 +43,18 @@
     }
     @if (vm.clipRangeUsable()) {
     <div class="timeline-lane-heading"><strong>VIDEO</strong><span>Fuente privada · recorte seleccionado</span></div>
-    <div class="source-track-scroll"><div #rangeTrack class="source-track" [style.width.%]="zoomPercent()" role="group" [attr.aria-label]="'Selecciona el recorte en una fuente de ' + duration + ' segundos. Arrastra los extremos o usa el teclado.'" (pointermove)="moveRangeDrag($event, rangeTrack)" (pointerup)="endRangeDrag()" (pointercancel)="endRangeDrag()">
+    <div class="source-track-scroll">
+      <div class="studio-time-ruler" [style.width.%]="zoomPercent()" aria-hidden="true">
+        @for (fraction of [0, 0.25, 0.5, 0.75, 1]; track fraction) {
+          <span>{{ (duration * fraction) | number:'1.0-1' }} s</span>
+        }
+      </div>
+      <div #rangeTrack class="source-track" [style.width.%]="zoomPercent()" role="group" [attr.aria-label]="'Selecciona el recorte en una fuente de ' + duration + ' segundos. Arrastra los extremos o usa el teclado.'" (pointermove)="moveRangeDrag($event, rangeTrack)" (pointerup)="endRangeDrag()" (pointercancel)="endRangeDrag()">
       <div class="selected-range" role="group" tabindex="0" [attr.aria-disabled]="!vm.canChangeCaptions()" [attr.aria-label]="'Mover el recorte completo: ' + (vm.spec.startSeconds | number:'1.1-1') + ' a ' + (vm.spec.endSeconds | number:'1.1-1') + ' segundos. Usa ←/→ para moverlo; Mayús mueve un segundo; Inicio y Fin llevan a los extremos.'" [style.left.%]="vm.spec.startSeconds / duration * 100" [style.width.%]="(vm.spec.endSeconds - vm.spec.startSeconds) / duration * 100" (pointerdown)="startSelectionDrag($event)" (keydown)="moveSelectionKeydown($event)"></div>
       <button type="button" class="range-handle range-handle-start" role="slider" aria-label="Inicio del recorte" [style.left.%]="vm.spec.startSeconds / duration * 100" [attr.aria-valuemin]="vm.timelineStartMin()" [attr.aria-valuemax]="vm.timelineStartMax()" [attr.aria-valuenow]="vm.spec.startSeconds" [attr.aria-valuetext]="(vm.spec.startSeconds | number:'1.1-1') + ' segundos'" [disabled]="!vm.canChangeCaptions()" (pointerdown)="startRangeDrag($event, 'start', rangeTrack)" (keydown)="rangeHandleKeydown($event, 'start')"></button>
       <button type="button" class="range-handle range-handle-end" role="slider" aria-label="Final del recorte" [style.left.%]="vm.spec.endSeconds / duration * 100" [attr.aria-valuemin]="vm.timelineEndMin()" [attr.aria-valuemax]="vm.timelineEndMax()" [attr.aria-valuenow]="vm.spec.endSeconds" [attr.aria-valuetext]="(vm.spec.endSeconds | number:'1.1-1') + ' segundos'" [disabled]="!vm.canChangeCaptions()" (pointerdown)="startRangeDrag($event, 'end', rangeTrack)" (keydown)="rangeHandleKeydown($event, 'end')"></button>
       @if (vm.sourceTime() !== null) { <div class="source-track-playhead" [style.left.%]="(vm.sourceTime()! / duration) * 100" aria-hidden="true"></div> }
     </div></div>
-    <div class="track-labels"><span>0 s</span><span>{{ duration | number: "1.1-1" }} s</span></div>
     <p class="timeline-help range-drag-help">Arrastra los extremos para recortar o el tramo azul para moverlo completo. Enfoca un extremo para ajustarlo; enfoca el tramo y usa ←/→ para desplazarlo.</p>
     <details class="clip-range-controls">
       <summary>Ajustar intervalo del clip</summary>
@@ -104,7 +109,7 @@
   @if (vm.draft()) {
     <div class="timeline-lane-heading"><strong>AUDIO</strong><span>Conservado de la fuente · el API no entrega una forma de onda analizable.</span></div>
     <div class="audio-source-track" aria-label="Pista de audio original preservada, sin forma de onda disponible"><span>Audio original · sin controles de mezcla</span></div>
-    <p class="timeline-help">Puedes descargar el MP4 generado. La publicación directa a YouTube, Kick o Twitch no está disponible: el servidor no ofrece una operación de publicación.</p>
+    <p class="timeline-help">Exporta la revisión para descargar el MP4 o compartirlo desde Exportaciones. YouTube y la bandeja de TikTok requieren una cuenta conectada por OAuth.</p>
   }
   @if (vm.timeline().captionSource !== 'none') { <ac-caption-cue-editor context="timeline" /> }
 </section>

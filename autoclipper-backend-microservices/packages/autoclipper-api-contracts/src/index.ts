@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export * from './business.js';
 export type { paths, components, operations } from './generated.js';
 
@@ -8,6 +8,7 @@ export class HealthResponse {
 export class ErrorResponse {
   @ApiProperty({ example: 'RESOURCE_NOT_FOUND' }) code!: string;
   @ApiProperty({ example: 'Request could not be completed' }) message!: string;
+  @ApiPropertyOptional({ type: String, example: 'configure_openai' }) nextAction?: string;
   @ApiProperty({ format: 'uuid' }) correlationId!: string;
 }
 export class ReadinessResponse {
@@ -22,3 +23,4 @@ export * from "./pipeline.js";
 export * from "./consumption.js";
 export * from "./administration.js";
 export * from "./privacy.js";
+export * from "./sources.js";

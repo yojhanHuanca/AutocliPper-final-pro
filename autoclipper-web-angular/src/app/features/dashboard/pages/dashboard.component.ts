@@ -32,6 +32,7 @@ export class DashboardComponent {
     return !this.design && this.workspace.loaded() && this.workspace.workspaces().length > 0 && !this.activeWorkspace();
   }
   readonly canCreate = computed(() => !this.design && !this.vm.denied() && this.workspace.loaded() && !!this.activeWorkspace() && hasWorkspaceLevel(this.activeWorkspace()!.role, "editor"));
+  readonly resumeProcessing = computed(() => this.vm.processing().find(item => item.status === "queued" || item.status === "running") ?? null);
   readonly resumeDraft = computed(() => this.vm.drafts()[0] ?? null);
   readonly resumeProject = computed(() => this.vm.projects()[0] ?? null);
   readonly quotaProgress = consumptionQuotaProgress;
@@ -99,5 +100,13 @@ export class DashboardComponent {
     if (source.state === "aborted") return "Carga cancelada";
     if (source.state === "pending") return "Sin confirmar";
     return ({ succeeded: "Inspeccionado", failed: "Inspección rechazada", queued: "En espera", running: "Inspeccionando" } as Record<string, string>)[source.inspection?.status ?? ""] ?? "Inspección pendiente";
+  }
+  processingLabel(status: string): string {
+    return ({ queued: "En cola", running: "Procesando", succeeded: "Completado", failed: "Falló", cancelled: "Cancelado" } as Record<string, string>)[status] ?? "Estado no disponible";
+  }
+  processingSummary(item: import("../state/dashboard.state").HomeProcessing): string {
+    return item.spec.kind === "clip" && Number.isFinite(item.spec.startSeconds) && Number.isFinite(item.spec.endSeconds)
+      ? `Clip · ${item.spec.startSeconds}–${item.spec.endSeconds} s${item.spec.aspect ? ` · ${item.spec.aspect}` : ""}`
+      : item.spec.kind === "audio" ? "Audio de trabajo" : "Render guardado";
   }
 }

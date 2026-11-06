@@ -1,0 +1,11 @@
+.git
+.angular
+node_modules
+dist
+coverage
+tests
+docs
+.local
+.env
+.env.*
+!.env.example

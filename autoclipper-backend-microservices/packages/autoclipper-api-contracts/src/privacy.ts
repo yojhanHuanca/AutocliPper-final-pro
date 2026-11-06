@@ -195,16 +195,71 @@ export class PrivacyBillingExportDto {
   @ApiProperty({type:PrivacyBillingDataDto}) data!:PrivacyBillingDataDto;
 }
 
+export const privacyOwnerRequest=z.object({capability:z.string().regex(/^[A-Za-z0-9_-]{43}$/u),idempotencyKey:z.uuid(),correlationId:z.uuid()}).strict();
+export const privacyMediaAuthorityRequest=privacyOwnerRequest.extend({scope:z.literal('media-task-attribution-v1')}).strict();
+export const privacyAnalysisAuthorityRequest=privacyOwnerRequest.extend({scope:z.literal('analysis-attribution-v1')}).strict();
+export const privacyMediaAuthority=z.object({userId:z.uuid(),requestId:z.uuid(),scope:z.literal('media-task-attribution-v1')}).strict();
+export const privacyAnalysisAuthority=z.object({userId:z.uuid(),requestId:z.uuid(),scope:z.literal('analysis-attribution-v1')}).strict();
+const privacyTaskTimestamp=z.iso.datetime();
+const privacyTaskBase=z.object({id:z.uuid(),workspaceId:z.uuid(),status:z.string().min(1).max(32),createdAt:privacyTaskTimestamp,finishedAt:privacyTaskTimestamp.nullable(),errorCode:z.string().max(100).nullable()}).strict();
+export const privacyMediaData=z.object({schemaVersion:z.literal(1),subjectId:z.uuid(),inspections:z.array(privacyTaskBase).max(500),processing:z.array(privacyTaskBase.extend({inspectionId:z.uuid()}).strict()).max(500)}).strict().superRefine((value,ctx)=>{if(value.inspections.length+value.processing.length>500)ctx.addIssue({code:'custom',message:'Media attribution exceeds 500 rows'});});
+export const privacyAnalysisData=z.object({schemaVersion:z.literal(1),subjectId:z.uuid(),jobs:z.array(privacyTaskBase.extend({transcriptPresent:z.boolean(),selectionPresent:z.boolean(),providerAttempts:z.number().int().nonnegative().max(1000)}).strict()).max(500)}).strict();
+const privacyOwnerExportBase=z.object({requestId:z.uuid(),receiptId:z.uuid(),state:z.literal('prepared'),fulfillment:z.literal('partial'),globalFulfillment:z.literal('pending'),createdAt:privacyTaskTimestamp,capturedAt:privacyTaskTimestamp,sha256:z.string().regex(/^[a-f0-9]{64}$/u)});
+export const privacyMediaExport=privacyOwnerExportBase.extend({scope:z.literal('media-task-attribution-v1'),data:privacyMediaData}).strict();
+export const privacyAnalysisExport=privacyOwnerExportBase.extend({scope:z.literal('analysis-attribution-v1'),data:privacyAnalysisData}).strict();
+const privacyOwnerFailure=z.union([z.object({state:z.literal('snapshot_changed'),requestId:z.uuid()}).strict(),z.object({state:z.literal('limit_exceeded'),requestId:z.uuid()}).strict(),z.object({state:z.literal('attribution_missing'),requestId:z.uuid()}).strict()]);
+export const privacyMediaResult=z.union([privacyMediaExport,privacyOwnerFailure]);
+export const privacyAnalysisResult=z.union([privacyAnalysisExport,privacyOwnerFailure]);
+export class PrivacyOwnerTaskDto {
+  @ApiProperty({format:'uuid'}) id!:string;
+  @ApiProperty({format:'uuid'}) workspaceId!:string;
+  @ApiProperty() status!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;
+  @ApiProperty({type:String,format:'date-time',nullable:true}) finishedAt!:string|null;
+  @ApiProperty({type:String,nullable:true}) errorCode!:string|null;
+}
+export class PrivacyMediaProcessingDto extends PrivacyOwnerTaskDto {@ApiProperty({format:'uuid'}) inspectionId!:string;}
+export class PrivacyMediaDataDto {
+  @ApiProperty({enum:[1]}) schemaVersion!:number;
+  @ApiProperty({format:'uuid'}) subjectId!:string;
+  @ApiProperty({type:[PrivacyOwnerTaskDto],maxItems:500}) inspections!:PrivacyOwnerTaskDto[];
+  @ApiProperty({type:[PrivacyMediaProcessingDto],maxItems:500}) processing!:PrivacyMediaProcessingDto[];
+}
+export class PrivacyAnalysisJobDto extends PrivacyOwnerTaskDto {
+  @ApiProperty() transcriptPresent!:boolean;
+  @ApiProperty() selectionPresent!:boolean;
+  @ApiProperty({minimum:0,maximum:1000}) providerAttempts!:number;
+}
+export class PrivacyAnalysisDataDto {
+  @ApiProperty({enum:[1]}) schemaVersion!:number;
+  @ApiProperty({format:'uuid'}) subjectId!:string;
+  @ApiProperty({type:[PrivacyAnalysisJobDto],maxItems:500}) jobs!:PrivacyAnalysisJobDto[];
+}
+export class PrivacyMediaExportDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;@ApiProperty({format:'uuid'}) receiptId!:string;
+  @ApiProperty({enum:['media-task-attribution-v1']}) scope!:string;@ApiProperty({enum:['prepared']}) state!:string;
+  @ApiProperty({enum:['partial']}) fulfillment!:string;@ApiProperty({enum:['pending']}) globalFulfillment!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;@ApiProperty({format:'date-time'}) capturedAt!:string;
+  @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;@ApiProperty({type:PrivacyMediaDataDto}) data!:PrivacyMediaDataDto;
+}
+export class PrivacyAnalysisExportDto {
+  @ApiProperty({format:'uuid'}) requestId!:string;@ApiProperty({format:'uuid'}) receiptId!:string;
+  @ApiProperty({enum:['analysis-attribution-v1']}) scope!:string;@ApiProperty({enum:['prepared']}) state!:string;
+  @ApiProperty({enum:['partial']}) fulfillment!:string;@ApiProperty({enum:['pending']}) globalFulfillment!:string;
+  @ApiProperty({format:'date-time'}) createdAt!:string;@ApiProperty({format:'date-time'}) capturedAt!:string;
+  @ApiProperty({pattern:'^[a-f0-9]{64}$'}) sha256!:string;@ApiProperty({type:PrivacyAnalysisDataDto}) data!:PrivacyAnalysisDataDto;
+}
+
 export const privacyRequestManifest= z.object({
   requestId:z.uuid(),kind:z.literal('export'),requestState:z.enum(['requested','processing']),
   globalFulfillment:z.enum(['pending','ready_for_assembly']),requiredScopes:z.number().int().nonnegative(),preparedScopes:z.number().int().nonnegative(),
-  scopes:z.array(z.object({scope:z.enum(['identity-profile-v1','workspace-memberships-v1','project-attribution-v1','media-task-attribution-v1','analysis-attribution-v1','consumption-attribution-v1']),required:z.boolean(),supported:z.boolean(),status:z.enum(['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','not_implemented']),receiptId:z.uuid().nullable(),sha256:z.string().regex(/^[a-f0-9]{64}$/u).nullable(),capturedAt:z.iso.datetime().nullable(),lastErrorCode:z.enum(['OWNER_UNAVAILABLE','OWNER_REJECTED','INVALID_OWNER_RECEIPT','SNAPSHOT_CHANGED','SCOPE_TOO_LARGE','NOT_IMPLEMENTED']).nullable(),attempts:z.number().int().nonnegative()}).strict()).max(20),
+  scopes:z.array(z.object({scope:z.enum(['identity-profile-v1','workspace-memberships-v1','project-attribution-v1','media-task-attribution-v1','analysis-attribution-v1','consumption-attribution-v1']),required:z.boolean(),supported:z.boolean(),status:z.enum(['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','attribution_missing','not_implemented']),receiptId:z.uuid().nullable(),sha256:z.string().regex(/^[a-f0-9]{64}$/u).nullable(),capturedAt:z.iso.datetime().nullable(),lastErrorCode:z.enum(['OWNER_UNAVAILABLE','OWNER_REJECTED','INVALID_OWNER_RECEIPT','SNAPSHOT_CHANGED','SCOPE_TOO_LARGE','ATTRIBUTION_MISSING','NOT_IMPLEMENTED']).nullable(),attempts:z.number().int().nonnegative()}).strict()).max(20),
 }).strict().superRefine((value,ctx)=>{const prepared=value.scopes.filter(scope=>scope.required&&scope.status==='prepared'&&scope.receiptId!==null&&scope.sha256!==null);if(value.preparedScopes!==prepared.length||value.requiredScopes!==value.scopes.filter(scope=>scope.required).length||value.globalFulfillment!==(prepared.length===value.requiredScopes?'ready_for_assembly':'pending'))ctx.addIssue({code:'custom',message:'Privacy scope reconciliation counters do not match valid receipts'});});
 export class PrivacyScopeStatusDto {
   @ApiProperty({enum:['identity-profile-v1','workspace-memberships-v1','project-attribution-v1','media-task-attribution-v1','analysis-attribution-v1','consumption-attribution-v1']}) scope!:string;
   @ApiProperty() required!:boolean;
   @ApiProperty() supported!:boolean;
-  @ApiProperty({enum:['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','not_implemented']}) status!:string;
+  @ApiProperty({enum:['pending','prepared','owner_unavailable','snapshot_changed','limit_exceeded','attribution_missing','not_implemented']}) status!:string;
   @ApiProperty({type:String,format:'uuid',nullable:true}) receiptId!:string|null;
   @ApiProperty({type:String,pattern:'^[a-f0-9]{64}$',nullable:true}) sha256!:string|null;
   @ApiProperty({type:String,format:'date-time',nullable:true}) capturedAt!:string|null;

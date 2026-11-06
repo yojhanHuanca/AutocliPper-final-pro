@@ -13,12 +13,24 @@ test('invitation login accepts optional TOTP or recovery factors like regular lo
   });
 });
 
-test('session redirects can return to the authenticated admin console without allowing external paths', () => {
+test('session redirects preserve valid protected destinations and query fragments without allowing external paths', () => {
   assert.equal(safeAuthReturnUrl('/admin'), '/admin');
   assert.equal(safeAuthReturnUrl('/admin?section=jobs'), '/admin?section=jobs');
   assert.equal(safeAuthReturnUrl('/app/team'), '/app/team');
+  assert.equal(safeAuthReturnUrl('/app/projects?filter=recent#list'), '/app/projects?filter=recent#list');
   assert.equal(safeAuthReturnUrl('//example.com'), '/app');
+  assert.equal(safeAuthReturnUrl('https://example.com/app'), '/app');
   assert.equal(safeAuthReturnUrl('/login'), '/app');
+  for (const invalid of [
+    '/app/../login',
+    '/app/%2e%2e/register',
+    '/app//projects',
+    '/app/%2f%2fevil.example',
+    '/app/%5c%5cevil.example',
+    '/app/%ZZ',
+  ]) {
+    assert.equal(safeAuthReturnUrl(invalid), '/app', `Unsafe or malformed destination: ${invalid}`);
+  }
 });
 
 test('invitation sign-in sends the factor and keeps the invitation token for explicit acceptance', async () => {
@@ -52,8 +64,8 @@ test('changing accounts preserves the in-memory invitation token and acceptance 
   component.error = signal('');
   component.message = signal('');
   component.authCompleted = signal(false);
-  component.session = { user: () => ({ email: 'person@example.com' }), logout: async () => { logouts++; } };
-  component.workspaces = { acceptInvitation: async token => { accepted.push(token); } };
+  component.session = { user: () => ({ id:'invited-user', email: 'person@example.com' }), logout: async () => { logouts++; } };
+  component.workspaces = { workspaces: signal([{id:'workspace-old'}]), loadWorkspaces: async()=>{}, acceptInvitation: async (...args) => { accepted.push(args); } };
   component.router = { navigateByUrl: async url => { navigated.push(url); } };
   component.email = 'wrong@example.com';
   component.token = 'opaque-invitation-token';
@@ -61,9 +73,9 @@ test('changing accounts preserves the in-memory invitation token and acceptance 
   assert.equal(logouts, 1);
   assert.equal(component.email, '');
   assert.equal(component.token, 'opaque-invitation-token');
-  component.session.user = () => ({ email: 'person@example.com' });
+  component.session.user = () => ({ id:'invited-user', email: 'person@example.com' });
   await component.submit();
-  assert.deepEqual(accepted, ['opaque-invitation-token']);
+  assert.deepEqual(accepted, [['opaque-invitation-token', ['workspace-old'], 'invited-user']]);
   assert.deepEqual(navigated, ['/app']);
   assert.equal(component.token, '');
 });

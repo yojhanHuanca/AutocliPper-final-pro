@@ -9,6 +9,7 @@
 }
 @if (busy() && !profile()) { <p class="muted" role="status">Consultando tu cuenta…</p> }
 @if (profileError()) { <div class="alert error" role="alert">Perfil: {{ profileError() }} <button class="button small" type="button" (click)="load()" [disabled]="busy()">Reintentar carga</button></div> }
+<ac-social-publish />
 <div class="account-layout">
   <aside class="account-rail" aria-label="Resumen y secciones de la cuenta">
     <section class="account-identity"><span class="account-identity-avatar">{{ design ? 'AC' : (profile()?.name ?? '…').slice(0,2).toUpperCase() }}</span><div><strong>{{ design ? 'Tu perfil de creador' : profile()?.name ?? (busy() ? 'Consultando cuenta…' : 'Perfil no disponible') }}</strong><p>{{ design ? 'Conecta tu cuenta para ver tus datos.' : profile()?.email ?? 'Sin identidad confirmada' }}</p></div></section>
@@ -48,7 +49,7 @@
             <div class="account-field-grid">
               <label>Zona horaria<input name="timezone" [attr.aria-invalid]="!!timezone && !timezoneValid()" [attr.aria-describedby]="timezone && !timezoneValid() ? 'settings-timezone-error' : null" [(ngModel)]="timezone" (ngModelChange)="error.set(''); message.set('')" required [disabled]="design || busy()" placeholder="America/Lima" /></label>
               <label>Idioma preferido<select name="locale" [(ngModel)]="locale" [disabled]="design || busy()"><option value="es">Español</option><option value="en">English</option></select></label>
-              <label>Aspecto de la interfaz<select name="theme" [(ngModel)]="theme" [disabled]="design || busy()"><option value="system">Según el dispositivo</option><option value="light">Claro · blanco y hueso</option><option value="dark">Oscuro · negro y hueso</option></select></label>
+              <label>Aspecto de la interfaz<select name="theme" [(ngModel)]="theme" [disabled]="design || busy()"><option value="system">Predeterminado · claro</option><option value="light">Claro · blanco y hueso</option><option value="dark">Oscuro · negro y hueso</option></select></label>
               <label class="preference-toggle"><input type="checkbox" name="emailNotifications" [(ngModel)]="emailNotifications" [disabled]="design || busy()" /> Recibir notificaciones por correo</label>
           </div>
             @if (timezone && !timezoneValid()) { <p id="settings-timezone-error" class="field-error" role="alert">Escribe una zona horaria IANA válida, por ejemplo America/Lima.</p> }
@@ -58,14 +59,40 @@
           <button
             class="button primary"
             type="submit"
-            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && theme === profile()!.preferences.theme)"
+            [disabled]="design || busy() || profileForm.invalid || !profile() || !timezoneValid() || (name.trim() === profile()!.name && timezone.trim() === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && profileThemeMatches())"
           >
             Guardar perfil<ac-icon name="check" />
           </button>
-          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && theme === profile()!.preferences.theme)">Descartar cambios</button>
+          <button class="button" type="button" (click)="resetProfile()" [disabled]="design || busy() || !profile() || (name === profile()!.name && timezone === profile()!.preferences.timezone && emailNotifications === profile()!.preferences.emailNotifications && locale === profile()!.preferences.locale && profileThemeMatches())">Descartar cambios</button>
           </div>
         </form>
       </article>
+      @if (!design) {
+        <article class="panel account-twitch-card" aria-labelledby="twitch-settings-title">
+          <div class="panel-heading">
+            <div><span class="eyebrow">CONEXIÓN DE PROVEEDOR</span><h2 id="twitch-settings-title">Twitch</h2><p>Vincula una cuenta con permiso para consultar e importar clips compatibles.</p></div>
+            @if (twitchStatusConfirmed() && twitchStatus()?.linked) { <span class="account-status-pill is-ready">Vinculada</span> }
+          </div>
+          @if (twitchStatusLoading() && !twitchStatus()) { <p class="muted" role="status">Consultando el estado de Twitch…</p> }
+          @if (twitchStatusError()) { <div class="alert error" role="alert">No se pudo confirmar la conexión. {{ twitchStatusError() }} <button class="button small" type="button" (click)="loadTwitchLinkStatus()" [disabled]="twitchStatusLoading() || twitchBusy()">Volver a consultar</button></div> }
+          @if (twitchStatus(); as status) {
+            @if (!twitchStatusConfirmed()) { <p class="session-list-stale" role="status">Se conserva el último resultado solo como referencia. Las acciones quedan bloqueadas hasta confirmar el estado actual.</p> }
+            @if (!status.configured) {
+              <div class="empty-inline" role="status"><ac-icon name="shield" /><p>La conexión Twitch aún no está configurada en este servidor. Puedes seguir usando un MP4 propio.</p></div>
+            } @else if (status.linked) {
+              <div class="account-provider-state"><span class="workspace-access-icon"><ac-icon name="check" /></span><div><strong>{{ status.account?.login ? '@' + status.account.login : 'Cuenta Twitch vinculada' }}</strong><p>La vinculación está confirmada por Identity. Para importar un clip, Twitch también debe confirmar que esta cuenta tiene permiso sobre el canal que lo publicó.</p></div></div>
+              @if (twitchDisconnectConfirmation()) {
+                <div class="session-revoke-confirm" role="group" aria-label="Confirmar desconexión de Twitch"><span>AutoClipper eliminará la credencial vinculada. La revocación del token en Twitch puede no confirmarse.</span><button class="button small danger" type="button" (click)="disconnectTwitch()" [disabled]="!twitchStatusConfirmed() || twitchBusy()">{{ twitchBusy() ? 'Desvinculando…' : 'Confirmar desconexión' }}</button><button class="button small" type="button" (click)="cancelTwitchDisconnect()" [disabled]="twitchBusy()">Cancelar</button></div>
+              } @else {
+                <button class="button small danger" type="button" (click)="disconnectTwitch()" [disabled]="!twitchStatusConfirmed() || twitchBusy()">Desconectar Twitch</button>
+              }
+            } @else {
+              <div class="account-provider-state"><span class="workspace-access-icon"><ac-icon name="link" /></span><div><strong>No hay una cuenta Twitch vinculada.</strong><p>La autorización solicita el permiso de Twitch para administrar clips. La importación sigue sujeta a una comprobación de acceso al canal y de disponibilidad.</p></div></div>
+              <button class="button primary" type="button" (click)="connectTwitch()" [disabled]="!twitchStatusConfirmed() || !status.configured || twitchBusy()">{{ twitchBusy() ? 'Abriendo autorización…' : 'Vincular cuenta Twitch' }}<ac-icon name="arrow" /></button>
+            }
+          }
+        </article>
+      }
     }
     @if (tab() === "Espacio de trabajo") {
       <article class="panel account-workspace-card">
@@ -280,13 +307,16 @@
         </p>
         <div class="notice" role="note">
           <strong>Exportar:</strong> puedes descargar aportes JSON parciales de
-          Identity, Workspace y Project para una solicitud pendiente. Cada aporte
-          declara su alcance y deja la solicitud global pendiente.
+          Identity, Workspace, Project, Billing, Media y Analysis cuando el manifiesto
+          de la solicitud confirma que el alcance es requerido y está disponible.
+          Cada aporte declara su alcance y deja la solicitud global pendiente; no hay
+          un ensamblado ni una descarga global disponibles desde esta pantalla.
           <br /><strong>Eliminar:</strong> por ahora solo se registra la
           solicitud. La purga global de cuenta y datos está pendiente; la
           limpieza operativa de cargas expiradas de Project tampoco equivale a
           borrar tu cuenta ni tus datos.
         </div>
+        <p class="workspace-preferences-note" role="note"><strong>Conservación de datos:</strong> no hay una política global aprobada ni un plazo único para conservar cuentas, proyectos o medios. Como excepción limitada, Project intenta limpiar metadatos de importaciones fallidas al cumplir 30 días: hasta 50 filas por ejecución, cada minuto, solo cuando proyecto y espacio coinciden, no se inició un efecto externo ni se registró un recurso de Twitch y la carga asociada no existe o está abortada, limpiada y coincide en creador, proyecto y espacio. Importaciones exitosas o con un efecto de Twitch iniciado pueden permanecer sin plazo definido. La limpieza operativa de cargas vencidas no elimina la cuenta ni constituye una purga global.</p>
         @if (!mfa()) { <p class="alert">Comprueba el estado de 2FA en Seguridad antes de registrar una solicitud.</p> }
         <form
           class="account-proof-form"

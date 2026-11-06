@@ -158,6 +158,10 @@
             "type": "string",
             "example": "Request could not be completed"
           },
+          "nextAction": {
+            "type": "string",
+            "example": "configure_openai"
+          },
           "correlationId": {
             "type": "string",
             "format": "uuid"

@@ -29,6 +29,13 @@
       "when": 1792015000000,
       "tag": "0003_split_screen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792457404000,
+      "tag": "0004_privacy_exports",
+      "breakpoints": true
     }
   ]
 }

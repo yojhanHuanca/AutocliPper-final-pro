@@ -509,11 +509,14 @@
 .auth-visual-copy h2 { margin: 6px 0 5px; color: #1a2d50; font-size: clamp(25px, 3vw, 39px); font-weight: 570; line-height: 1.07; letter-spacing: -.05em; }
 .auth-visual-copy h2 em { color: var(--auth-accent); font-style: normal; transition: color 900ms ease; }
 .auth-visual-copy p { max-width: 430px; margin: 0; color: #566783; font-size: 11px; line-height: 1.55; }
-.auth-visual-steps { justify-content: flex-start; gap: 7px; min-height: 25px; }
-.auth-visual-steps button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #78869c; background: #dfe5ef; cursor: pointer; transition: width 500ms cubic-bezier(.2,.7,.2,1), flex-basis 500ms cubic-bezier(.2,.7,.2,1), border-radius 500ms ease, color 500ms ease, background 500ms ease; }
-.auth-visual-steps button span { font-size: 11px; font-weight: 750; }
-.auth-visual-steps button.active { width: 44px; flex-basis: 44px; border-radius: 99px; color: white; background: var(--auth-accent); box-shadow: 0 3px 10px var(--auth-accent-soft); }
+.auth-visual-steps { justify-content: flex-start; flex-wrap: wrap; gap: 7px; min-height: 25px; }
+.auth-visual-steps .auth-scene-step { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #78869c; background: #dfe5ef; cursor: pointer; transition: width 500ms cubic-bezier(.2,.7,.2,1), flex-basis 500ms cubic-bezier(.2,.7,.2,1), border-radius 500ms ease, color 500ms ease, background 500ms ease; }
+.auth-visual-steps .auth-scene-step span { font-size: 11px; font-weight: 750; }
+.auth-visual-steps .auth-scene-step.active { width: 44px; flex-basis: 44px; border-radius: 99px; color: white; background: var(--auth-accent); box-shadow: 0 3px 10px var(--auth-accent-soft); }
 .auth-step-name { margin-left: 4px; color: #52637e; font-size: 11px; font-weight: 650; }
+.auth-motion-toggle { min-height: 36px; margin-left: auto; padding: 7px 12px; border: 1px solid #c5d2e5; border-radius: 99px; color: #294a95; background: #fff; font-size: 11px; font-weight: 650; cursor: pointer; }
+.auth-motion-toggle:focus-visible { outline: 2px solid var(--auth-accent); outline-offset: 3px; }
+.auth-motion-status { margin-left: auto; color: #52637e; font-size: 11px; }
 
 /* Scene changes form one narrative, moving the same source through each edit. */
 .auth-visual:not(.motion-paused) .auth-preview > img { transform: scale(1.09) translateX(-.4%); }
@@ -601,5 +604,9 @@
   .auth-visual-copy h2 { font-size: 28px; }
   .auth-visual-copy p { font-size: 12px; }
   .auth-step-name { font-size: 11px; }
+  .auth-visual-steps { gap: 5px; }
+  .auth-visual-steps .auth-scene-step { width: 36px; height: 36px; flex-basis: 36px; }
+  .auth-visual-steps .auth-scene-step.active { width: 36px; flex-basis: 36px; }
+  .auth-motion-toggle { min-height: 36px; padding-inline: 10px; }
 }
 }

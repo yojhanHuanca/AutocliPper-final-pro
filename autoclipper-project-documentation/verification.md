@@ -139,7 +139,7 @@ CI final comprobada para `7f860900bf5771eae6343440161e6aa3996cde56`: [run 391583
 
 ## Perfil exportable e inventario de privacidad
 
-[Alcance y límites](privacy-lifecycle.md): inventario de 55 tablas en seis bases, objetos/grants/colas/backups y decisiones de propiedad/retención. La nueva API entrega un aporte `identity-profile-v1` propio con contraseña/MFA/CSRF y snapshot/hash/idempotencia; solo guarda recibos y auditoría, sin persistir el JSON personal exportado. La solicitud global conserva su estado pendiente. No hay ejecutor de eliminación ni política de plazos inventada.
+[Alcance y límites](privacy-lifecycle.md): inventario de 57 tablas en seis bases, objetos/grants/colas/backups y decisiones de propiedad/retención. La nueva API entrega un aporte `identity-profile-v1` propio con contraseña/MFA/CSRF y snapshot/hash/idempotencia; solo guarda recibos y auditoría, sin persistir el JSON personal exportado. La solicitud global conserva su estado pendiente. No hay ejecutor de eliminación ni política de plazos inventada.
 
 `npm run verify` aprobó lint, compilación y 34 pruebas, cero fallos/omisiones. OpenAPI/SDK generados: una ruta nueva, cero rutas/esquemas anteriores alterados semánticamente. Se revisaron 488 archivos sin coincidencias con secretos locales antes de publicar. Las dos incidencias del fixture (SMTP_HOST requerido y clasificación del error 409) se corrigieron sin relajar controles; el runtime compartido no se migró/recreó para estas pruebas.
 

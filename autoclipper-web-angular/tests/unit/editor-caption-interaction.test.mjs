@@ -212,6 +212,20 @@ test('a reader can seek in the authorized current render; playback highlights ov
   } finally {TestBed.resetTestingModule();}
 });
 
+test('selected captions can seek the authorized original when no render is available',async()=>{
+  try {
+    const {state}=await setup();
+    state.selectCue(1);
+    assert.equal(state.selectedCueSeekTime(),null);
+    state.sourceDuration.set(21.735);
+    state.sourcePlaybackSession.set({token:7,uploadId:'upload-fixture',url:'https://media.example.test/source.mp4',expiresAt:Date.now()+120000});
+    assert.equal(state.selectedCueSeekTime(),12);
+    state.seekSelectedCue();
+    assert.deepEqual(state.sourceSeek(),{token:7,sequence:1,seconds:12});
+    assert.equal(state.previewSeek(),null);
+  } finally {TestBed.resetTestingModule();}
+});
+
 test('old or unidentified revisions and dirty forms never seek or highlight the current cues; save does not relabel an older render',async()=>{
   try {
     const {state}=await setup();state.selectCue(0);
@@ -453,4 +467,30 @@ test('the UTF-8 revision size limit is checked before saving or requesting any r
     state.touchForm();assert.equal(state.invalidCaptions(),false);await state.saveAndRender();
     assert.match(state.error(),/65 000 bytes/);assert.equal(state.dirty(),true);assert.equal(calls.writes.length,0);assert.equal(calls.renders.length,0);
   } finally {TestBed.resetTestingModule();}
+});
+
+test('a late original source authorization cannot replace the selected export', async () => {
+  try {
+    const {state, api} = await setup();
+    const item = videoExport();
+    state.exports.set([item]);
+    let authorizeSource;
+    api.sourcePlayback = () => new Promise(resolve => { authorizeSource = resolve; });
+    const sourceRequest = state.requestSourcePlayback();
+    assert.equal(state.sourcePlaybackStatus(), 'loading');
+    await state.preview(item);
+    authorizeSource({
+      url: 'https://media.example.test/original.mp4',
+      expiresInSeconds: 120,
+      contentType: 'video/mp4',
+      bytes: 64,
+      sha256: 'a'.repeat(64),
+    });
+    await sourceRequest;
+    assert.equal(state.previewSession()?.exportId, item.id);
+    assert.equal(state.sourcePlaybackSession(), null);
+    assert.equal(state.sourcePlaybackStatus(), 'idle');
+  } finally {
+    TestBed.resetTestingModule();
+  }
 });

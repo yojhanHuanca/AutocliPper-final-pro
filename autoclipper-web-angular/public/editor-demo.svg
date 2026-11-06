@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#274ea9"/><stop offset=".58" stop-color="#9ab8ed"/><stop offset="1" stop-color="#f0a27e"/></linearGradient>
+    <linearGradient id="hill" x2="0" y2="1"><stop stop-color="#203455"/><stop offset="1" stop-color="#111b2f"/></linearGradient>
+  </defs>
+  <rect width="720" height="1280" fill="url(#sky)"/>
+  <circle cx="518" cy="365" r="142" fill="#ffdba1" opacity=".94"/>
+  <path d="M0 720 Q145 580 292 715 T720 660 V1280 H0Z" fill="#556d91" opacity=".72"/>
+  <path d="M0 850 Q170 690 350 840 T720 770 V1280 H0Z" fill="url(#hill)"/>
+  <path d="M0 1000 Q210 840 390 970 T720 920 V1280 H0Z" fill="#111923"/>
+  <path d="M0 1120 Q150 1030 310 1095 T720 1050 V1280 H0Z" fill="#0c141d"/>
+  <g fill="#111820">
+    <path d="M260 1030 Q280 867 351 844 Q412 828 457 866 Q487 893 504 1030Z"/>
+    <rect x="321" y="670" width="112" height="220" rx="50"/>
+    <circle cx="376" cy="620" r="72"/>
+    <path d="M310 616 Q318 513 388 523 Q431 529 452 589 Q410 575 385 598 Q351 628 310 616Z"/>
+  </g>
+  <g fill="#fff" opacity=".78"><circle cx="95" cy="224" r="3"/><circle cx="587" cy="180" r="2"/><circle cx="580" cy="594" r="3"/><circle cx="160" cy="455" r="2"/></g>
+</svg>

@@ -19,6 +19,7 @@ import {
   ApiTags,
   ApiExcludeEndpoint,
   ApiOkResponse,
+  ApiResponse,
   ApiAcceptedResponse,
   ApiHeader,
 } from "@nestjs/swagger";
@@ -38,11 +39,14 @@ import {
   SessionListResponseDto,
   SecurityEventListResponseDto,
   PrivacyListResponseDto,
+  PrivacyDeletionStatusDto,
   PrivacyProfileProofDto,
   PrivacyProfileExportDto,
   PrivacyWorkspaceExportDto,
   PrivacyProjectExportDto,
   PrivacyBillingExportDto,
+  PrivacyMediaExportDto,
+  PrivacyAnalysisExportDto,
   PrivacyRequestManifestDto,
 } from "@autoclipper/api-contracts";
 class RegistrationDto {
@@ -110,8 +114,22 @@ class ResetDto extends TokenDto {
 export class IdentityController {
   constructor(@Inject(IdentityService) readonly service: IdentityService) {}
   @Get("auth/providers")
-  @ApiOkResponse({schema:{type:"object",required:["google"],properties:{google:{type:"object",required:["configured"],properties:{configured:{type:"boolean"}}}}}})
+  @ApiOkResponse({schema:{type:"object",required:["google","twitch"],properties:{google:{type:"object",required:["configured"],properties:{configured:{type:"boolean"}}},twitch:{type:"object",required:["configured"],properties:{configured:{type:"boolean"}}}}}})
   providers() { return this.service.providers(); }
+  @Post("auth/twitch/link") @HttpCode(200) @ApiOkResponse({schema:{type:"object",required:["authorizationUrl","expiresInSeconds","scope"],properties:{authorizationUrl:{type:"string",format:"uri"},expiresInSeconds:{type:"integer",example:300},scope:{type:"string",example:"editor:manage:clips channel:manage:clips",description:"Only these clip-download scopes are requested. Authorize the scope matching the linked broadcaster/editor role."}}}})
+  linkTwitch(@Req()req:Request,@Res({passthrough:true})res:Response){return this.service.linkTwitch(req,res);}
+  @Get("auth/twitch/link") @ApiOkResponse({schema:{type:"object",required:["configured","linked","account"],properties:{configured:{type:"boolean"},linked:{type:"boolean"},account:{type:"object",nullable:true,properties:{id:{type:"string"},login:{type:"string"}}}}}})
+  twitchLinkStatus(@Req()req:Request){return this.service.twitchLinkStatus(req);}
+  @Get("auth/twitch/callback") @ApiResponse({status:303,description:"OAuth callback; successful links redirect to the configured first-party web origin."})
+  async twitchCallback(@Req()req:Request,@Res()res:Response){await this.service.twitchCallback(req,res);return res.redirect(303,new URL("/app/settings?provider=twitch&status=linked",this.service.config.CORS_ORIGIN).toString());}
+  @Delete("auth/twitch/link") @HttpCode(200) @ApiOkResponse({schema:{type:"object",required:["unlinked"],properties:{unlinked:{type:"boolean"}}}})
+  unlinkTwitch(@Req()req:Request){return this.service.unlinkTwitch(req);}
+  @Post("internal/twitch/clip-download") @HttpCode(200) @ApiExcludeEndpoint()
+  internalTwitchClipDownload(@Req()req:Request,@Body()input:unknown){return this.service.internalTwitchClipDownload(req,input);}
+  @Post("internal/twitch/vod-clip-create") @HttpCode(200) @ApiExcludeEndpoint()
+  internalTwitchVodClipCreate(@Req()req:Request,@Body()input:unknown){return this.service.internalTwitchVodClipCreate(req,input);}
+  @Post("internal/twitch/source-capabilities") @HttpCode(200) @ApiExcludeEndpoint()
+  internalTwitchSourceCapabilities(@Req()req:Request,@Body()input:unknown){return this.service.internalTwitchSourceCapabilities(req,input);}
   @Post("auth/google/challenge")
   @HttpCode(200)
   @ApiBody({type:GoogleChallengeDto})
@@ -228,16 +246,44 @@ export class IdentityController {
     res.setHeader('Cache-Control','private, no-store');
     return this.service.privacyBillingExport(req,uuid(id),input,String(res.locals['correlationId']));
   }
+  @Post('auth/privacy-requests/:id/media-export')
+  @HttpCode(200)
+  @ApiHeader({name:'Idempotency-Key',required:true,description:'UUID for this Media task attribution snapshot.'})
+  @ApiBody({type:PrivacyProfileProofDto})
+  @ApiOkResponse({type:PrivacyMediaExportDto,description:'Partial Media task attribution; legacy unattributed tasks block preparation.'})
+  privacyMediaExport(@Req()req:Request,@Param('id')id:string,@Body()input:PrivacyProfileProofDto,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyMediaExport(req,uuid(id),input,String(res.locals['correlationId']));
+  }
+  @Post('auth/privacy-requests/:id/analysis-export')
+  @HttpCode(200)
+  @ApiHeader({name:'Idempotency-Key',required:true,description:'UUID for this Analysis job attribution snapshot.'})
+  @ApiBody({type:PrivacyProfileProofDto})
+  @ApiOkResponse({type:PrivacyAnalysisExportDto,description:'Partial Analysis job attribution; no transcript or selection payload.'})
+  privacyAnalysisExport(@Req()req:Request,@Param('id')id:string,@Body()input:PrivacyProfileProofDto,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyAnalysisExport(req,uuid(id),input,String(res.locals['correlationId']));
+  }
   @Post('internal/privacy-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
   privacyWorkspaceAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyWorkspaceAuthority(req,input);}
   @Post('internal/privacy-project-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
   privacyProjectAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyProjectAuthority(req,input);}
   @Post('internal/privacy-billing-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
   privacyBillingAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyBillingAuthority(req,input);}
+  @Post('internal/privacy-media-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
+  privacyMediaAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyMediaAuthority(req,input);}
+  @Post('internal/privacy-analysis-export-authorize')@HttpCode(200)@ApiExcludeEndpoint()
+  privacyAnalysisAuthority(@Req()req:Request,@Body()input:unknown){return this.service.privacyAnalysisAuthority(req,input);}
   @Get("auth/privacy-requests")
   @ApiOkResponse({ type: PrivacyListResponseDto })
   privacyRequests(@Req() req: Request) {
     return this.service.privacyRequests(req);
+  }
+  @Get('auth/privacy-requests/:id/status')
+  @ApiOkResponse({type:PrivacyDeletionStatusDto,description:'Own deletion-request status only. Fulfillment remains pending; this endpoint does not claim or perform a purge.'})
+  privacyDeletionStatus(@Req()req:Request,@Param('id')id:string,@Res({passthrough:true})res:Response){
+    res.setHeader('Cache-Control','private, no-store');
+    return this.service.privacyDeletionStatus(req,uuid(id));
   }
   @Get('auth/privacy-requests/:id/manifest')
   @ApiOkResponse({type:PrivacyRequestManifestDto,description:'Owner scope reconciliation only; no data payload and no global export or deletion claim.'})

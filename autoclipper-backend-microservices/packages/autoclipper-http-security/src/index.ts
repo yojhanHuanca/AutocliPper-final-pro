@@ -151,6 +151,7 @@ export async function internalJson<T>(
   config: Pick<ServiceConfig, "INTERNAL_TOKEN">,
   data: unknown,
   preserveRateLimit = false,
+  timeoutMs = 5000,
 ): Promise<T> {
   let response: globalThis.Response;
   try {
@@ -161,7 +162,7 @@ export async function internalJson<T>(
         "x-service-token": config.INTERNAL_TOKEN,
       },
       body: JSON.stringify(data),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new ServiceUnavailableException();

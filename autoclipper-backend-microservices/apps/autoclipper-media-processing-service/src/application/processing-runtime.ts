@@ -12,7 +12,7 @@ import {InspectionError,type MediaMetadata} from "../domain/inspection.js";
 import {validateProcessingSource,outputFiles,outputPrefix} from "../domain/processing.js";
 
 export const PROCESSING_QUEUE="media-derivatives-v1";
-type Task={id:string;workspace_id:string;inspection_id:string;spec:ValidatedProcessingSpec;request_hash:string;status:ProcessingStatus["status"];correlation_id:string;attempts:number;cancel_requested:boolean;cleanup_pending:boolean;result:ProcessingStatus["result"];error_code:string|null;started_at:Date|null;finished_at:Date|null};
+type Task={id:string;workspace_id:string;creator_id:string|null;inspection_id:string;spec:ValidatedProcessingSpec;request_hash:string;status:ProcessingStatus["status"];correlation_id:string;attempts:number;cancel_requested:boolean;cleanup_pending:boolean;result:ProcessingStatus["result"];error_code:string|null;started_at:Date|null;finished_at:Date|null};
 type Source={id:string;workspace_id:string;object_key:string;expected_bytes:number;expected_etag:string;expected_sha256:string|null;status:string;result:MediaMetadata};
 @Injectable()
 export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
@@ -38,7 +38,7 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
       if(!this.stopping&&!this.working)this.working=this.dispatch().catch(()=>logger.warn({code:"PROCESSING_DISPATCH_RETRY"})).finally(()=>{this.working=undefined;});
     },1000);this.timer.unref();
   }
-  async submit(data:{id:string;workspaceId:string;inspectionId:string;spec:unknown;correlationId:string;cancelRequested?:boolean}) {
+  async submit(data:{id:string;workspaceId:string;creatorId:string;inspectionId:string;spec:unknown;correlationId:string;cancelRequested?:boolean}) {
     const parsed=internalProcessingSpec.safeParse(data.spec);if(!parsed.success)throw new BadRequestException();
     const hash=digest(JSON.stringify({inspectionId:data.inspectionId,spec:parsed.data}));
     const source=(await this.pool.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[data.inspectionId,data.workspaceId])).rows[0];
@@ -49,9 +49,9 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
     const client=await this.pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("INSERT INTO processing_tasks(id,workspace_id,inspection_id,spec,request_hash,correlation_id,cancel_requested,secondary_inspection_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING",[data.id,data.workspaceId,data.inspectionId,parsed.data,hash,data.correlationId,data.cancelRequested??false,secondary?.id??null]);
+      await client.query("INSERT INTO processing_tasks(id,workspace_id,inspection_id,spec,request_hash,correlation_id,cancel_requested,secondary_inspection_id,creator_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT DO NOTHING",[data.id,data.workspaceId,data.inspectionId,parsed.data,hash,data.correlationId,data.cancelRequested??false,secondary?.id??null,data.creatorId]);
       const current=(await client.query<Task>("SELECT * FROM processing_tasks WHERE id=$1",[data.id])).rows[0];
-      if(!current||current.workspace_id!==data.workspaceId||current.request_hash!==hash)throw new ConflictException();
+      if(!current||current.workspace_id!==data.workspaceId||current.creator_id!==data.creatorId||current.request_hash!==hash)throw new ConflictException();
       if(data.cancelRequested)await client.query("UPDATE processing_tasks SET cancel_requested=true WHERE id=$1 AND status IN ('queued','running')",[data.id]);
       await client.query("INSERT INTO processing_outbox(task_id) VALUES($1) ON CONFLICT DO NOTHING",[data.id]);
       await client.query("COMMIT");
@@ -111,6 +111,7 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
       if(!locked)throw new Error("JOB_LEASE_BUSY");
       const task=(await lease.query<Task>("SELECT * FROM processing_tasks WHERE id=$1",[id])).rows[0];
       if(!task||!["queued","running"].includes(task.status))return;
+      const recoveringInterruptedAttempt=task.status==="running";
       const attempt=task.attempts+1;
       const abort=new AbortController();this.active.set(id,abort);
       let checking=false;
@@ -123,7 +124,10 @@ export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
       try {
         if(task.cancel_requested)throw new InspectionError("CANCELLED",false);
         if(attempt>3)throw new InspectionError("RECOVERY_RETRIES_EXHAUSTED",false);
-        if(task.cleanup_pending)await this.cleanup(task);
+        // A process crash can leave task-scoped objects while the row remains
+        // running and cleanup_pending=false. The advisory lock proves the old
+        // worker no longer owns this task, so clear those outputs before retry.
+        if(task.cleanup_pending||recoveringInterruptedAttempt)await this.cleanup(task);
         const source=(await lease.query<Source>("SELECT * FROM inspection_tasks WHERE id=$1 AND workspace_id=$2 AND status='succeeded'",[task.inspection_id,task.workspace_id])).rows[0];
         if(!source?.expected_sha256)throw new InspectionError("SOURCE_NOT_VALIDATED",false);
         const spec=internalProcessingSpec.parse(task.spec);

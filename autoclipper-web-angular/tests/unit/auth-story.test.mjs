@@ -1,7 +1,8 @@
 import '@angular/compiler';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, createAuthStoryCycle } from '../../.local/tests/client.mjs';
+import { signal } from '@angular/core';
+import { AUTH_STORY_ACCENTS, AUTH_STORY_SCENES, AuthComponent, createAuthStoryCycle } from '../../.local/tests/client.mjs';
 
 test('login story has five concrete, honest stages and coordinated accents', () => {
   assert.deepEqual(AUTH_STORY_SCENES.map(({ label }) => label), [
@@ -39,4 +40,18 @@ test('login story advances every three seconds, pauses, resets for reduced motio
   cycle.configure(false, false); assert.equal(active, 1);
   cycle.destroy(); assert.equal(active, 0);
   cycle.configure(false, false); assert.equal(active, 0);
+});
+
+test('choosing a login story scene pauses autoplay until the user resumes it', () => {
+  const story = Object.create(AuthComponent.prototype);
+  story.stepIndex = signal(0);
+  story.storyPaused = signal(false);
+  story.scenes = AUTH_STORY_SCENES;
+  story.selectStoryStep(3);
+  assert.equal(story.stepIndex(),3);
+  assert.equal(story.storyPaused(),true);
+  story.toggleStoryPause(); assert.equal(story.storyPaused(),false);
+  story.selectStoryStep(-1);
+  assert.equal(story.stepIndex(),3,'Invalid scene indexes do not move the story.');
+  assert.equal(story.storyPaused(),false,'Invalid scene indexes do not change autoplay state.');
 });

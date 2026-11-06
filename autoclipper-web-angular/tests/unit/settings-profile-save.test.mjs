@@ -25,7 +25,7 @@ test('profile settings save API-backed interface preferences from the version-on
       locale: 'es',
       timezone: 'America/Lima',
       emailNotifications: true,
-      theme: 'light',
+      theme: 'dark',
     },
   };
   const sessionUser = signal({ id: profile.id, name: profile.name });
@@ -51,6 +51,8 @@ test('profile settings save API-backed interface preferences from the version-on
   try {
     const state = TestBed.inject(SettingsComponent);
     await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(state.theme, 'light', 'a legacy dark profile uses the restored white panel by default');
+    assert.equal(state.profileThemeMatches(), true, 'legacy normalization is not presented as an unsaved edit');
     state.name = 'Updated creator';
     state.locale = 'en';
     state.theme = 'dark';
