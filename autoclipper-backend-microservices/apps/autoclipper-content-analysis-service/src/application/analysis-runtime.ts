@@ -7,12 +7,13 @@ import {Queue,Worker,UnrecoverableError,type Job} from "bullmq";
 import {Redis} from "ioredis";
 import {HeadBucketCommand} from "@aws-sdk/client-s3";
 import {z} from "zod";
-import {analysisSpec,LOCAL_TRANSCRIPTION_MAX_SECONDS,type AnalysisSpec} from "@autoclipper/api-contracts";
+import {analysisSpec,LOCAL_TRANSCRIPTION_MAX_SECONDS,type AnalysisSpec, MAX_AUDIO_BYTES } from "@autoclipper/api-contracts";
 import {digest,body} from "@autoclipper/http-security";
 import {logger,recordAnalysisAttempt} from "@autoclipper/observability";
 import {analysisConfig,analysisS3,redisConnection} from "../infrastructure/connections.js";
 import {withAudio,type AudioSource} from "../infrastructure/audio.js";
 import {WhisperProvider} from "../infrastructure/whisper.js";
+import {GroqSelector,GroqTranscriber,groqEnabled} from "../infrastructure/groq.js";
 import {DeepgramProvider} from "../infrastructure/deepgram.js";
 import {OpenAISelector} from "../infrastructure/openai-selector.js";
 import {reserveOpenAIInvocation} from "../infrastructure/openai-invocation-budget.js";
@@ -22,20 +23,21 @@ import {LOCAL_SELECTION_REVISION,selectLocalSegments,validateSelection} from "..
 
 const queueName="content-analysis-v1";
 export function selectionProviderFromEnvironment(value=process.env["AI_ANALYSIS_PROVIDER"]){return value?.trim()||"openai";}
-export const sourceSchema=z.object({audioProcessingId:z.uuid(),objectKey:z.string().max(512),expectedBytes:z.number().int().positive().max(134217728),expectedEtag:z.string().min(1).max(200),expectedSha256:z.string().regex(/^[a-f0-9]{64}$/),durationSeconds:z.number().finite().positive().max(LOCAL_TRANSCRIPTION_MAX_SECONDS)}).strict();
+export const sourceSchema=z.object({audioProcessingId:z.uuid(),objectKey:z.string().max(512),expectedBytes:z.number().int().positive().max(MAX_AUDIO_BYTES),expectedEtag:z.string().min(1).max(200),expectedSha256:z.string().regex(/^[a-f0-9]{64}$/),durationSeconds:z.number().finite().positive().max(LOCAL_TRANSCRIPTION_MAX_SECONDS)}).strict();
 type Row={id:string;workspace_id:string;creator_id:string;source:AudioSource;spec:AnalysisSpec;request_hash:string;transcription_revision:string;selection_revision:string|null;status:string;attempts:number;cancel_requested:boolean;provider_outcome_unknown:boolean;correlation_id:string;error_code:string|null;started_at:Date|null;finished_at:Date|null};
 type Saved={id:string;data:Transcript;input_sha256:string};
 @Injectable()
 export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
   readonly config=analysisConfig();
-  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:2000,statement_timeout:5000});
+  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:15000,statement_timeout:5000});
   readonly s3=analysisS3(this.config);
   readonly redis=new Redis({...redisConnection(this.config.REDIS_URL),lazyConnect:true,maxRetriesPerRequest:1,commandTimeout:2000,retryStrategy:()=>null});
   readonly queue=new Queue(queueName,{connection:{...redisConnection(this.config.REDIS_URL),maxRetriesPerRequest:1,enableOfflineQueue:false}});
-  readonly whisper=new WhisperProvider();readonly deepgram=new DeepgramProvider();readonly openaiSelector=new OpenAISelector(fetch,()=>reserveOpenAIInvocation(this.redis));readonly geminiSelector=new GeminiSelector();
+  /** Con GROQ_API_KEY, Whisper large-v3 en Groq ocupa el lugar del whisper.cpp local. */
+  readonly whisper:WhisperProvider|GroqTranscriber=groqEnabled()?new GroqTranscriber():new WhisperProvider();readonly deepgram=new DeepgramProvider();readonly openaiSelector=new OpenAISelector(fetch,()=>reserveOpenAIInvocation(this.redis));readonly geminiSelector=new GeminiSelector();readonly groqSelector=new GroqSelector();
   readonly localAISelector=new LocalAISelector();
   readonly selectionProvider=selectionProviderFromEnvironment();
-  readonly selector=this.selectionProvider==="openai"?this.openaiSelector:this.selectionProvider==="gemini"?this.geminiSelector:this.selectionProvider==="local_ai"?this.localAISelector:undefined;
+  readonly selector=this.selectionProvider==="openai"?this.openaiSelector:this.selectionProvider==="gemini"?this.geminiSelector:this.selectionProvider==="local_ai"?this.localAISelector:this.selectionProvider==="groq"?this.groqSelector:undefined;
   readonly providers:Record<AnalysisSpec["provider"],TranscriptionProvider>={whisper_cpp:this.whisper,deepgram:this.deepgram};
   private worker:Worker|undefined;private timer:NodeJS.Timeout|undefined;private working:Promise<void>|undefined;private stopping=false;private cursor:string|undefined;
   private readonly active=new Map<string,AbortController>();
@@ -50,7 +52,7 @@ export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
     const missing=new Set(selection.missingSettings??[]),blockers:string[]=[];
     if(missing.has("PAID_AI_ENABLED"))blockers.push("PAID_AI_DISABLED");
     if(missing.has("AI_MAX_ESTIMATED_USD_PER_JOB"))blockers.push(selection.status==="budget_too_low"?"AI_JOB_LIMIT_BELOW_ESTIMATE":"AI_JOB_LIMIT_NOT_POSITIVE_OR_INVALID");
-    const credentialSetting=this.selectionProvider==="gemini"?"GEMINI_API_KEY":"OPENAI_API_KEY";
+    const credentialSetting=this.selectionProvider==="gemini"?"GEMINI_API_KEY":this.selectionProvider==="groq"?"GROQ_API_KEY":"OPENAI_API_KEY";
     if(missing.has(credentialSetting))blockers.push("PROVIDER_CREDENTIAL_MISSING");
     if(!selection.configured&&!blockers.length)blockers.push(selection.code??"SELECTION_CONFIGURATION_INCOMPLETE");
     const disabled=blockers.some(code=>code==="PAID_AI_DISABLED"||code==="AI_JOB_LIMIT_BELOW_ESTIMATE"||code==="AI_JOB_LIMIT_NOT_POSITIVE_OR_INVALID");
@@ -61,6 +63,7 @@ export class AnalysisRuntime implements OnModuleInit,OnModuleDestroy {
     if(this.selectionProvider==="local_ai")return this.localAISelector.diagnostics();
     if(this.selectionProvider==="openai")return this.openaiSelector.diagnostics();
     if(this.selectionProvider==="gemini")return this.geminiSelector.diagnostics();
+    if(this.selectionProvider==="groq")return this.groqSelector.diagnostics();
     return{configured:false,status:"unsupported" as const,code:"SELECTION_PROVIDER_NOT_SUPPORTED",missingSettings:["AI_ANALYSIS_PROVIDER"],nextSteps:["Set AI_ANALYSIS_PROVIDER to openai (default) or gemini. Ollama is not supported."],provider:this.selectionProvider};
   }
   async preflight(spec:AnalysisSpec,duration:number){

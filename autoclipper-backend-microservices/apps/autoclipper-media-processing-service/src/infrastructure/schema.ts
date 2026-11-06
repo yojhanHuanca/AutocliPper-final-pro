@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
+import { bigint,
   pgTable,
   pgEnum,
   uuid,
@@ -26,7 +26,7 @@ export const inspectionTasks = pgTable(
     workspaceId: uuid("workspace_id").notNull(),
     creatorId: uuid('creator_id'),
     objectKey: text("object_key").notNull(),
-    expectedBytes: integer("expected_bytes").notNull(),
+    expectedBytes: bigint("expected_bytes", { mode: "number" }).notNull(),
     expectedEtag: text("expected_etag").notNull(),
     expectedSha256: text("expected_sha256"),
     status: taskStatus().notNull().default("queued"),

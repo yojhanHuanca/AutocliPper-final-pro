@@ -39,7 +39,7 @@ import {
   SourceLinkResolutionDto,
   YoutubeVideoMetadataDto,
   SourceLinkCapabilitiesDto,
-} from "@autoclipper/api-contracts";
+, MAX_UPLOAD_BYTES } from "@autoclipper/api-contracts";
 import { uuid } from "@autoclipper/http-security";
 import { ProjectService } from "../application/project.service.js";
 class ProjectDto {
@@ -51,7 +51,7 @@ class UpdateProjectDto {
   @ApiProperty({ minimum: 1 }) version!: number;
 }
 class UploadDto {
-  @ApiProperty({ minimum: 1, maximum: 104857600 }) bytes!: number;
+  @ApiProperty({ minimum: 1, maximum: MAX_UPLOAD_BYTES }) bytes!: number;
   @ApiProperty({ pattern: "^[a-f0-9]{64}$" }) sha256!: string;
   @ApiProperty({
     enum: ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"],

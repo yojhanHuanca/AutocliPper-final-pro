@@ -1,7 +1,8 @@
 import {z} from "zod";
 import {ApiProperty,ApiPropertyOptional,getSchemaPath} from "@nestjs/swagger";
+import { MAX_SOURCE_SECONDS, MAX_TRANSCRIPT_SEGMENTS } from "./limits.js";
 
-export const LOCAL_TRANSCRIPTION_MAX_SECONDS=7200;
+export const LOCAL_TRANSCRIPTION_MAX_SECONDS=MAX_SOURCE_SECONDS;
 export const contentType=z.enum(["general","tutorial","interview","gameplay","commentary","reaction"]);
 export const CURRENT_SELECTION_PROMPT_VERSION="segment-selection-v2" as const;
 export const selectionPromptVersion=z.enum(["segment-selection-v1",CURRENT_SELECTION_PROMPT_VERSION]);
@@ -20,7 +21,7 @@ export function selectionOutputForCount(count:number){
 }
 export type SegmentProposal=z.infer<typeof proposalSchema>;
 export const transcriptSegmentSchema=z.object({startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive(),text:z.string().trim().min(1).max(2000),speaker:z.number().int().nonnegative().optional()}).strict();
-export const transcriptDataSchema=z.object({language:z.string().min(2).max(16),languageSource:z.enum(["detected","requested"]),durationSeconds:z.number().finite().positive(),segments:z.array(transcriptSegmentSchema).min(1).max(20000),provider:z.enum(["whisper_cpp","deepgram"]),model:z.string().min(1).max(200),revision:z.string().min(1).max(200),engineVersion:z.string().max(100),modelSha256:z.string().regex(/^[a-f0-9]{64}$/).nullable(),requestId:z.string().max(200).nullable(),estimatedExternalCostUsd:z.number().finite().nonnegative(),diarization:z.boolean()}).strict();
+export const transcriptDataSchema=z.object({language:z.string().min(2).max(16),languageSource:z.enum(["detected","requested"]),durationSeconds:z.number().finite().positive(),segments:z.array(transcriptSegmentSchema).min(1).max(MAX_TRANSCRIPT_SEGMENTS),provider:z.enum(["whisper_cpp","deepgram","groq"]),model:z.string().min(1).max(200),revision:z.string().min(1).max(200),engineVersion:z.string().max(100),modelSha256:z.string().regex(/^[a-f0-9]{64}$/).nullable(),requestId:z.string().max(200).nullable(),estimatedExternalCostUsd:z.number().finite().nonnegative(),diarization:z.boolean()}).strict();
 const selectionResultBase=selectionOutput.extend({model:z.string().min(1).max(200),revision:z.string().regex(/^[a-f0-9]{64}$/),promptVersion:selectionPromptVersion,usage:z.object({inputTokens:z.number().int().nonnegative(),outputTokens:z.number().int().nonnegative()}).strict()});
 const localSelectionResult=selectionOutput.extend({provider:z.literal("local"),model:z.literal("deterministic-window-v1"),revision:z.string().regex(/^[a-f0-9]{64}$/),promptVersion:z.literal("segment-selection-local-v1"),usage:z.object({inputTokens:z.literal(0),outputTokens:z.literal(0)}).strict(),estimatedExternalCostUsd:z.literal(0)}).strict();
 export const selectionResultSchema=z.discriminatedUnion("provider",[
@@ -28,6 +29,7 @@ export const selectionResultSchema=z.discriminatedUnion("provider",[
   selectionResultBase.extend({provider:z.literal("ollama"),estimatedExternalCostUsd:z.literal(0)}).strict(),
   selectionResultBase.extend({provider:z.literal("openai"),estimatedExternalCostUsd:z.number().finite().nonnegative()}).strict(),
   selectionResultBase.extend({provider:z.literal("gemini"),estimatedExternalCostUsd:z.number().finite().nonnegative()}).strict(),
+  selectionResultBase.extend({provider:z.literal("groq"),estimatedExternalCostUsd:z.number().finite().nonnegative()}).strict(),
 ]);
 export const analysisStatus=z.object({id:z.uuid(),status:z.enum(["queued","transcribing","selecting","succeeded","failed","cancelled"]),attempts:z.number().int().nonnegative(),errorCode:z.string().max(100).nullable(),startedAt:z.iso.datetime().nullable(),finishedAt:z.iso.datetime().nullable(),transcript:transcriptDataSchema.extend({id:z.uuid()}).nullable(),selection:selectionResultSchema.nullable(),providerOutcomeUnknown:z.boolean(),phases:z.array(z.object({phase:z.enum(["transcribing","selecting"]),attempt:z.number().int().positive(),startedAt:z.iso.datetime(),finishedAt:z.iso.datetime().nullable(),errorCode:z.string().max(100).nullable()}).strict()).max(6)}).strict();
 export type AnalysisStatus=z.infer<typeof analysisStatus>;

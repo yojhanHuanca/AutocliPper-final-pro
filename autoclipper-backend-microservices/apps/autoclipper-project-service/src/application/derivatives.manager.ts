@@ -6,14 +6,15 @@ import {z} from "zod";
 import {GetObjectCommand,HeadObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import {body,digest,uuid,authenticatedUser,requireCsrf,requireManualProcessingAdmission,internalJson,type ServiceConfig} from "@autoclipper/http-security";
-import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,LOCAL_TRANSCRIPTION_MAX_SECONDS,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {processingSpec,internalProcessingSpec,processingStatus,splitSourceError,LOCAL_TRANSCRIPTION_MAX_SECONDS,type ProcessingStatus,type ValidatedProcessingSpec, MAX_AUDIO_BYTES, MAX_SOURCE_SECONDS } from "@autoclipper/api-contracts";
 import {logger} from "@autoclipper/observability";
+import { WORKSPACE_STORAGE_LIMIT_BYTES } from "./storage-limit.js";
 
 type Upload={id:string;project_id:string;workspace_id:string;state:string;expected_bytes:number;object_key:string;etag:string|null;sha256:string;content_type:string};
 type Row={editor_revision_id:string|null;id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:ValidatedProcessingSpec;reservation_bytes:number;status:ProcessingStatus["status"];attempts:number;error_code:string|null;result:ProcessingStatus["result"];started_at:Date|null;finished_at:Date|null;cleanup_pending:boolean;delivered_at:Date|null;cancel_requested:boolean;cancel_delivered_at:Date|null;settled_at:Date|null};
 const terminal=(status:string)=>["succeeded","failed","cancelled"].includes(status);
 const inspectionStatusSchema=z.object({id:z.uuid(),status:z.enum(["queued","running","succeeded","failed"]),result:z.unknown().optional()});
-const inspectedMediaSchema=z.object({durationSeconds:z.number().finite().positive().max(14400),width:z.number().int().positive().max(7680),height:z.number().int().positive().max(7680),audioCodec:z.string().min(1).max(128).nullable()});
+const inspectedMediaSchema=z.object({durationSeconds:z.number().finite().positive().max(MAX_SOURCE_SECONDS),width:z.number().int().positive().max(7680),height:z.number().int().positive().max(7680),audioCodec:z.string().min(1).max(128).nullable()});
 type InspectedMedia=z.infer<typeof inspectedMediaSchema>;
 export class DerivativesManager {
   private cursor:string|undefined;
@@ -72,7 +73,7 @@ export class DerivativesManager {
     const metadata=await this.inspectedMedia(upload);
     if(metadata.width>3840||metadata.height>3840||(spec.kind==="clip"&&spec.endSeconds>metadata.durationSeconds)||(spec.kind==="audio"&&(!metadata.audioCodec||metadata.durationSeconds>LOCAL_TRANSCRIPTION_MAX_SECONDS)))throw new BadRequestException();
     if(spec.kind==="clip")await this.validateEditorSplit(req,{upload,metadata},spec);
-    const reservation=spec.kind==="audio"?134217728:68157440;
+    const reservation=spec.kind==="audio"?MAX_AUDIO_BYTES:68157440;
     return this.tx(async client=>{
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${user.id}:${key}`]);
       const prior=(await client.query<Row>("SELECT * FROM processing_requests WHERE creator_id=$1 AND idempotency_key=$2",[user.id,key])).rows[0];
@@ -81,7 +82,7 @@ export class DerivativesManager {
       if(!quota.rows[0])throw new ConflictException();
       const count=(await client.query<{count:string}>("SELECT count(*) FROM processing_requests WHERE workspace_id=$1 AND settled_at IS NULL",[upload.workspace_id])).rows[0];
       if(Number(count?.count??0)>=4)throw new ConflictException();
-      const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,upload.workspace_id,Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824)]);
+      const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,upload.workspace_id,WORKSPACE_STORAGE_LIMIT_BYTES]);
       if(!reserved.rows[0])throw new ConflictException();
       const id=randomUUID();
       await client.query("INSERT INTO processing_requests(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,reservation_bytes,correlation_id,editor_revision_id,secondary_upload_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",[id,upload.id,upload.project_id,upload.workspace_id,user.id,key,hash,spec,reservation,correlationId,editorRevisionId??null,spec.kind==="clip"?spec.splitScreen?.secondaryUploadId??null:null]);

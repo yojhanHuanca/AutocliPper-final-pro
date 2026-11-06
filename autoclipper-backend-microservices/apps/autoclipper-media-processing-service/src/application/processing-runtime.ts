@@ -6,6 +6,7 @@ import {logger,recordDerivativeAttempt} from "@autoclipper/observability";
 import {Queue,Worker,UnrecoverableError,type Job} from "bullmq";
 import {DeleteObjectCommand} from "@aws-sdk/client-s3";
 import pg from "pg";
+import type { CustomTypesConfig } from "pg";
 import {createS3,redisConnection} from "../infrastructure/connections.js";
 import {produceDerivative} from "../infrastructure/renderer.js";
 import {InspectionError,type MediaMetadata} from "../domain/inspection.js";
@@ -17,7 +18,7 @@ type Source={id:string;workspace_id:string;object_key:string;expected_bytes:numb
 @Injectable()
 export class ProcessingRuntime implements OnModuleInit,OnModuleDestroy {
   readonly config=loadMediaConfig();
-  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:2000,statement_timeout:5000});
+  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,types:{getTypeParser:((oid:number,format?:"text"|"binary")=>{if(format==="binary")return pg.types.getTypeParser(oid,"binary");if(oid===20)return (value:string)=>Number(value);return pg.types.getTypeParser(oid,"text");}) as CustomTypesConfig["getTypeParser"]},max:5,connectionTimeoutMillis:15000,statement_timeout:5000});
   readonly s3=createS3(this.config);
   readonly queue=new Queue(PROCESSING_QUEUE,{connection:{...redisConnection(this.config.REDIS_URL),maxRetriesPerRequest:1,enableOfflineQueue:false}});
   private worker:Worker|undefined;

@@ -118,7 +118,7 @@ export class LandingComponent implements AfterViewInit {
     {
       title: "Trae tu historia.",
       copy: "Elige un archivo local. Comprobamos su formato y duración antes de procesarlo.",
-      detail: "Carga privada · hasta 100 MiB",
+      detail: "Carga privada · hasta 30 GB y 10 horas",
     },
     {
       title: "Cada palabra, en su lugar.",

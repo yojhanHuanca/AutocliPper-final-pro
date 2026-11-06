@@ -13,6 +13,7 @@ import { Queue, Worker, UnrecoverableError, type Job } from "bullmq";
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import { Redis } from "ioredis";
 import pg from "pg";
+import type { CustomTypesConfig } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq, isNull, inArray, gt, asc } from "drizzle-orm";
 import { execFile } from "node:child_process";
@@ -26,9 +27,11 @@ import { InspectionError } from "../domain/inspection.js";
 export class InspectionRuntime implements OnModuleInit, OnModuleDestroy {
   readonly config = loadMediaConfig();
   readonly pool = new pg.Pool({
+    // expected_bytes es bigint (videos > 2 GiB): pg lo devuelve como texto por defecto.
+    types:{getTypeParser:((oid:number,format?:"text"|"binary")=>{if(format==="binary")return pg.types.getTypeParser(oid,"binary");if(oid===20)return (value:string)=>Number(value);return pg.types.getTypeParser(oid,"text");}) as CustomTypesConfig["getTypeParser"]},
     connectionString: this.config.DATABASE_URL,
     max: 5,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 15000,
     statement_timeout: 5000,
   });
   readonly db = drizzle(this.pool);

@@ -11,7 +11,8 @@ export async function withAudio<T>(s3:S3Client,bucket:string,tempRoot:string,wor
   if(source.objectKey!==`workspaces/${workspaceId}/media/derivatives/${source.audioProcessingId}/audio.wav`)throw new AnalysisError("INVALID_AUDIO_SCOPE");
   await mkdir(tempRoot,{recursive:true});const directory=await mkdtemp(join(tempRoot,"analysis-"));await chmod(directory,0o700);
   try{
-    const abort=AbortSignal.any([signal,AbortSignal.timeout(30000)]);
+    // Audio de 10 h pesa ~1 GiB: el plazo de descarga crece con el tamaño.
+    const abort=AbortSignal.any([signal,AbortSignal.timeout(30000+Math.ceil(source.expectedBytes/5242880)*1000)]);
     const actual=await s3.send(new HeadObjectCommand({Bucket:bucket,Key:source.objectKey}),{abortSignal:abort});
     if(actual.ContentLength!==source.expectedBytes||actual.ETag!==source.expectedEtag)throw new AnalysisError("AUDIO_OBJECT_CHANGED");
     const object=await s3.send(new GetObjectCommand({Bucket:bucket,Key:source.objectKey,IfMatch:source.expectedEtag}),{abortSignal:abort});

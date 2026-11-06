@@ -67,7 +67,7 @@ export class IdentityService implements OnModuleInit, OnModuleDestroy {
   readonly pool = new pg.Pool({
     connectionString: this.config.DATABASE_URL,
     max: 8,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 15000,
     statement_timeout: 5000,
   });
   readonly redis = new Redis(process.env["REDIS_URL"] ?? "", {

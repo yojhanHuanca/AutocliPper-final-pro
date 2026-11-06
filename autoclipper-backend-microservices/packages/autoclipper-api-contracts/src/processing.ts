@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { MAX_AUDIO_BYTES, MAX_SOURCE_SECONDS, MAX_UPLOAD_BYTES } from "./limits.js";
 
-const seconds = z.number().finite().min(0).max(14400);
+const seconds = z.number().finite().min(0).max(MAX_SOURCE_SECONDS);
 const cue = z.object({
   startSeconds: seconds,
   endSeconds: seconds,
@@ -31,14 +32,14 @@ export type ValidatedProcessingSpec=z.infer<typeof internalProcessingSpec>;
 type SplitMetadata={durationSeconds:number;width:number;height:number;audioCodec:string|null};
 export function splitSourceError(spec:Extract<ValidatedProcessingSpec,{kind:"clip"}>,primary:SplitMetadata,secondary:SplitMetadata,primaryBytes:number,secondaryBytes:number){
   const split=spec.splitScreen;if(!split)return;
-  if(primaryBytes+secondaryBytes>104857600||[primary,secondary].some(source=>source.width>1920||source.height>1920||source.width*source.height>2073600))return "SPLIT_INPUT_LIMIT";
+  if(primaryBytes+secondaryBytes>2*MAX_UPLOAD_BYTES||[primary,secondary].some(source=>source.width>1920||source.height>1920||source.width*source.height>2073600))return "SPLIT_INPUT_LIMIT";
   const remaining=secondary.durationSeconds-split.startSeconds;
   if(remaining<0.1)return "SECONDARY_TIMESTAMP_OUT_OF_RANGE";
   if(split.shortInput==="reject"&&remaining<spec.endSeconds-spec.startSeconds)return "SECONDARY_TOO_SHORT";
   if((split.audio==="primary"&&!primary.audioCodec)||(split.audio==="secondary"&&!secondary.audioCodec))return "NO_SELECTED_AUDIO";
   return;
 }
-export const artifactSchema = z.object({kind:z.enum(["video","audio","srt","vtt"]),objectKey:z.string().max(512),bytes:z.number().int().positive().max(134217728),sha256:z.string().regex(/^[a-f0-9]{64}$/),etag:z.string().min(1).max(200),contentType:z.enum(["video/mp4","audio/wav","application/x-subrip","text/vtt"])}).strict();
+export const artifactSchema = z.object({kind:z.enum(["video","audio","srt","vtt"]),objectKey:z.string().max(512),bytes:z.number().int().positive().max(MAX_AUDIO_BYTES),sha256:z.string().regex(/^[a-f0-9]{64}$/),etag:z.string().min(1).max(200),contentType:z.enum(["video/mp4","audio/wav","application/x-subrip","text/vtt"])}).strict();
 export type ProcessingArtifact = z.infer<typeof artifactSchema>;
 export const processingStatus = z.object({id:z.uuid(),status:z.enum(["queued","running","succeeded","failed","cancelled"]),attempts:z.number().int().nonnegative(),errorCode:z.string().nullable(),startedAt:z.string().nullable(),finishedAt:z.string().nullable(),cleanupPending:z.boolean(),result:z.object({artifacts:z.array(artifactSchema).max(3),durationSeconds:z.number().positive(),width:z.number().int().positive().optional(),height:z.number().int().positive().optional(),sampleRate:z.number().int().positive().optional()}).strict().nullable()}).strict();
 export type ProcessingStatus = z.infer<typeof processingStatus>;
@@ -56,7 +57,7 @@ export class SplitScreenDto {
   @ApiProperty({format:"uuid",description:"Confirmed inspected upload in the same authorized workspace; no external URLs."}) secondaryUploadId!:string;
   @ApiProperty({enum:["side_by_side","stacked"]}) layout!:string;
   @ApiProperty({minimum:0.2,maximum:0.8,description:"Primary panel fraction; panel dimensions round to even pixels."}) primaryRatio!:number;
-  @ApiProperty({minimum:0,maximum:14400,description:"Start time in the secondary source."}) startSeconds!:number;
+  @ApiProperty({minimum:0,maximum:MAX_SOURCE_SECONDS,description:"Start time in the secondary source."}) startSeconds!:number;
   @ApiProperty({enum:["reject","freeze"],description:"Long sources are trimmed. Short sources are rejected or freeze their last frame; audio is padded with silence."}) shortInput!:string;
   @ApiProperty({enum:["primary","secondary","none"],description:"Exactly one audio source or silence; no implicit mixing."}) audio!:string;
   @ApiPropertyOptional({type:FramingDto}) framing?:FramingDto;

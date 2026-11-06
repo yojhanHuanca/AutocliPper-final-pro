@@ -13,7 +13,7 @@ import type { Request } from "express";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { body, requireInternal, internalJson } from "@autoclipper/http-security";
-import {privacyOwnerRequest,privacyMediaAuthority} from '@autoclipper/api-contracts';
+import {privacyOwnerRequest,privacyMediaAuthority, MAX_UPLOAD_BYTES } from '@autoclipper/api-contracts';
 import {prepareMediaExport} from '../application/privacy-exports.js';
 import { InspectionRuntime } from "../application/inspection-runtime.js";
 import { inspectionTasks, inspectionOutbox } from "../infrastructure/schema.js";
@@ -40,7 +40,7 @@ export class InspectionController {
           workspaceId: z.uuid(),
           creatorId: z.uuid(),
           objectKey: z.string().max(512),
-          expectedBytes: z.number().int().positive().max(104857600),
+          expectedBytes: z.number().int().positive().max(MAX_UPLOAD_BYTES),
           expectedEtag: z.string().min(1).max(200),
           expectedSha256: z.string().regex(/^[a-f0-9]{64}$/),
           correlationId: z.uuid(),

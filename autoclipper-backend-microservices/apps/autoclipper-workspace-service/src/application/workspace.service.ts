@@ -47,7 +47,7 @@ export class WorkspaceService implements OnModuleInit, OnModuleDestroy {
   readonly pool = new pg.Pool({
     connectionString: this.config.DATABASE_URL,
     max: 5,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 15000,
     statement_timeout: 5000,
   });
   private async tx<T>(work: (c: pg.PoolClient) => Promise<T>) {

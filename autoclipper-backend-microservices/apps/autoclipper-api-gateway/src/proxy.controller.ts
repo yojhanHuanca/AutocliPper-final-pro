@@ -63,7 +63,7 @@ export class ProxyController {
     headers["x-correlation-id"] = String(res.locals["correlationId"]);
     let upstream: globalThis.Response;
     try {
-      const timeoutMs = req.method === "POST" && /^\/v1\/projects\/[0-9a-f-]+\/source-links\/import$/u.test(raw) ? 330000 : 20000;
+      const timeoutMs = req.method === "POST" && /^\/v1\/projects\/[0-9a-f-]+\/source-links\/import$/u.test(raw) ? 330000 : req.method === "POST" && /^\/v1\/uploads\/[^/]+\/confirm$/u.test(raw) ? 600000 : 20000;
       upstream = await fetch(new URL(req.originalUrl, base), {
         method: req.method,
         headers,

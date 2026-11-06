@@ -10,3 +10,4 @@ coverage/
 *.log
 *.tsbuildinfo
 autoclipper-infrastructure/backups/
+setup.err

@@ -427,7 +427,7 @@ export class ProjectComponent {
   manualIntervalAvailable(): boolean { return this.sourceOriginProvider() !== 'twitch'; }
   automaticProviderMismatch(): boolean {
     const status = this.providerStatus();
-    return !!status && !['openai','gemini','local_ai'].includes(status.selection?.provider ?? '');
+    return !!status && !['openai','gemini','local_ai','groq'].includes(status.selection?.provider ?? '');
   }
   localAutomaticSelectionReady(): boolean {
     const status = this.providerStatus();

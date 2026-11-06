@@ -3,7 +3,7 @@ import type {Request} from "express";
 import type pg from "pg";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
-import {analysisStatus,LOCAL_TRANSCRIPTION_MAX_SECONDS,pipelineSpec,type AnalysisStatus,type PipelineSpec,type ProcessingStatus,type ValidatedProcessingSpec} from "@autoclipper/api-contracts";
+import {analysisStatus,LOCAL_TRANSCRIPTION_MAX_SECONDS,pipelineSpec,type AnalysisStatus,type PipelineSpec,type ProcessingStatus,type ValidatedProcessingSpec, MAX_AUDIO_BYTES } from "@autoclipper/api-contracts";
 import {authenticatedUser,body,digest,internalJson,requireCsrf,uuid,workspaceAccess,type ServiceConfig} from "@autoclipper/http-security";
 import {logger} from "@autoclipper/observability";
 import type {DerivativesManager} from "./derivatives.manager.js";
@@ -11,8 +11,9 @@ import {transcriptClip} from "./transcript-clip.js";
 import type {UsageManager} from "./usage.manager.js";
 import type {UsageReservation} from "@autoclipper/api-contracts";
 import {aggregateClipOutcome,pipelineStorageReservation} from "./pipeline-clips.js";
+import { WORKSPACE_STORAGE_LIMIT_BYTES } from "./storage-limit.js";
 
-const AUDIO_BYTES=134217728,RENDER_BYTES=68157440;
+const AUDIO_BYTES=MAX_AUDIO_BYTES,RENDER_BYTES=68157440;
 type Status="queued"|"audio"|"analysis"|"render"|"stopping"|"succeeded"|"partial_failed"|"failed"|"cancelled";
 type Row={id:string;upload_id:string;project_id:string;workspace_id:string;creator_id:string;request_hash:string;spec:PipelineSpec;correlation_id:string;status:Status;version:number;remaining_reservation_bytes:number;cancel_requested:boolean;error_code:string|null;created_at:Date;deadline_at:Date;finished_at:Date|null;usage_state:"legacy"|"pending"|"accepted"|"rejected";usage_spec:UsageReservation|null;usage_error:string|null};
 type Processing={id:string;status:string;settled_at:Date|null;error_code?:string|null;result:ProcessingStatus["result"]};
@@ -49,7 +50,7 @@ export class PipelineManager {
       const quota=(await client.query("SELECT workspace_id FROM workspace_storage WHERE workspace_id=$1 FOR UPDATE",[source.upload.workspace_id])).rows[0];if(!quota)throw new ConflictException();
       const count=(await client.query<{count:string}>("SELECT count(*) FROM pipelines WHERE workspace_id=$1 AND finished_at IS NULL",[source.upload.workspace_id])).rows[0];if(Number(count?.count??0)>=4)throw new ConflictException();
       const renderCount=spec.version===1?1:spec.clipCount,reservation=pipelineStorageReservation(spec);
-      const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,source.upload.workspace_id,Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824)]);if(!reserved.rows[0])throw new ConflictException();
+      const reserved=await client.query("UPDATE workspace_storage SET reserved_bytes=reserved_bytes+$1 WHERE workspace_id=$2 AND used_bytes+reserved_bytes+$1<=$3 RETURNING workspace_id",[reservation,source.upload.workspace_id,WORKSPACE_STORAGE_LIMIT_BYTES]);if(!reserved.rows[0])throw new ConflictException();
       const id=randomUUID(),clipSeconds=spec.version===1?spec.endSeconds-spec.startSeconds:Math.min(source.metadata.durationSeconds,renderCount*(spec.maxDurationSeconds??120)),created=(await client.query<Row>("INSERT INTO pipelines(id,upload_id,project_id,workspace_id,creator_id,idempotency_key,request_hash,spec,correlation_id,remaining_reservation_bytes,usage_spec) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *",[id,uploadId,source.upload.project_id,source.upload.workspace_id,user.id,key,hash,spec,correlationId,reservation,{version:1,pipelineId:id,workspaceId:source.upload.workspace_id,creatorId:user.id,sourceSeconds:source.metadata.durationSeconds,clipSeconds}])).rows[0]!;
       await client.query("INSERT INTO pipeline_events(pipeline_id,version,status) VALUES($1,1,'queued')",[id]);return created;
     });return this.present(row);

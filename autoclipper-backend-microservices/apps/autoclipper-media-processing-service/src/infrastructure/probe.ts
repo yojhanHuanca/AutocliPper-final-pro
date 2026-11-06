@@ -91,7 +91,11 @@ export async function withInspectedSource<T>(
     throw new InspectionError("MEDIA_LIMIT_EXCEEDED", false);
   const abort = new AbortController();
   const combined = signal ? AbortSignal.any([abort.signal, signal]) : abort.signal;
-  const timer = setTimeout(() => abort.abort(), config.PROBE_TIMEOUT_MS);
+  // Copiar 30 GiB desde S3 toma minutos: el plazo crece con el tamaño del archivo.
+  const downloadMs =
+    config.PROBE_TIMEOUT_MS +
+    Math.ceil((task.expectedBytes / config.DOWNLOAD_MIN_BYTES_PER_SECOND) * 1000);
+  const timer = setTimeout(() => abort.abort(), downloadMs);
   let directory: string | undefined;
   try {
     const head = await s3.send(

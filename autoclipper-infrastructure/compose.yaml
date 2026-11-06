@@ -17,6 +17,8 @@ x-media-environment: &media-environment
   INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Run setup-local.mjs}
   TEMP_DIR: /tmp/media
   WORKER_CONCURRENCY: '2'
+  MAX_PROBE_BYTES: '32212254720'
+  MAX_VIDEO_SECONDS: '36000'
 
 services:
   postgres:
@@ -44,7 +46,9 @@ services:
       timeout: 3s
       retries: 15
     mem_limit: 512m
-    cpus: 1
+    # Que la IA (Whisper) no deje a la base de datos sin CPU.
+    cpus: 2
+    cpu_shares: 2048
     restart: unless-stopped
 
   redis:
@@ -107,7 +111,7 @@ services:
       <<: *media-environment
       PORT: 3005
       MEDIA_WORKERS: render
-      TEMP_DIR: /tmp/render
+      TEMP_DIR: /var/lib/autoclipper/work/render
     command: ['node','apps/autoclipper-media-processing-service/dist/main.js']
     depends_on:
       migrate-media: {condition: service_completed_successfully}
@@ -121,6 +125,8 @@ services:
     user: '1000:1000'
     read_only: true
     tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,uid=1000,gid=1000']
+    # Videos de varias horas no caben en RAM: temporales en disco.
+    volumes: ['render-work:/var/lib/autoclipper/work']
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
     pids_limit: 96
@@ -133,7 +139,9 @@ services:
     profiles: ['app']
     image: autoclipper-backend:0.2.0
     build: *backend-build
-    environment: *media-environment
+    environment:
+      <<: *media-environment
+      TEMP_DIR: /var/lib/autoclipper/work/media
     command: ['node', 'apps/autoclipper-media-processing-service/dist/main.js']
     ports: ['127.0.0.1:3001:3001']
     depends_on:
@@ -149,6 +157,7 @@ services:
     user: '1000:1000'
     read_only: true
     tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,uid=1000,gid=1000']
+    volumes: ['media-work:/var/lib/autoclipper/work']
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
     pids_limit: 96
@@ -211,6 +220,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  media-work:
+  render-work:
+  analysis-work:
   postgres-data:
   redis-data:
   storage-data:

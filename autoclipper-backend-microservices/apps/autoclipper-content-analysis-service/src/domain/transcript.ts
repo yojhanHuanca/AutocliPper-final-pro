@@ -23,7 +23,7 @@ export function validateTranscript(value:unknown,sourceDuration:number):Transcri
   result.durationSeconds=sourceDuration;return result;
 }
 export interface TranscriptionProvider {
-  readonly name:"whisper_cpp"|"deepgram";
+  readonly name:"whisper_cpp"|"deepgram"|"groq";
   configured():Promise<boolean>;
   transcribe(path:string,durationSeconds:number,language:"auto"|"es"|"en",signal:AbortSignal):Promise<Transcript>;
 }

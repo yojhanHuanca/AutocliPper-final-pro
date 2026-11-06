@@ -47,7 +47,7 @@ const analysisProvidersSchema = {
       type: "object",
       required: ["provider", "local", "ollama", "openai", "gemini"],
       properties: {
-        provider: { type: "string", enum: ["openai", "gemini", "ollama", "local_ai"] },
+        provider: { type: "string", enum: ["openai", "gemini", "ollama", "local_ai", "groq"] },
         local_ai: { type: "object", properties: { configured: { type: "boolean" }, model: { type: "string" } } },
         local: { type: "object", required: ["configured", "status", "algorithm", "externalCostUsd"], properties: { configured: { type: "boolean" }, status: { type: "string", enum: ["ready"] }, algorithm: { type: "string" }, externalCostUsd: { type: "number", enum: [0] } } },
         readiness: {

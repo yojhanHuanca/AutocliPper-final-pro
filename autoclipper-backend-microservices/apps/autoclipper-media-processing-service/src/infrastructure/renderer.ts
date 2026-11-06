@@ -5,7 +5,7 @@ import {join,resolve} from "node:path";
 import {createHash} from "node:crypto";
 import {PutObjectCommand,type S3Client} from "@aws-sdk/client-s3";
 import type {MediaConfig} from "@autoclipper/configuration";
-import {splitSourceError,type ValidatedProcessingSpec,type ProcessingArtifact,type ProcessingStatus} from "@autoclipper/api-contracts";
+import {splitSourceError,type ValidatedProcessingSpec,type ProcessingArtifact,type ProcessingStatus, MAX_AUDIO_BYTES, MAX_UPLOAD_BYTES } from "@autoclipper/api-contracts";
 import {InspectionError} from "../domain/inspection.js";
 import {validateProcessingSource,subtitles,outputPrefix} from "../domain/processing.js";
 import {videoFilter} from "../domain/video-filter.js";
@@ -17,7 +17,7 @@ type RenderJob={id:string;workspaceId:string;spec:ValidatedProcessingSpec};
 type InspectedSource=Parameters<typeof withInspectedSource>[2];
 export async function produceDerivative(s3:S3Client,config:MediaConfig,job:RenderJob,source:InspectedSource,signal:AbortSignal,secondary?:InspectedSource):Promise<NonNullable<ProcessingStatus["result"]>> {
   if(source.workspaceId!==job.workspaceId||(secondary&&secondary.workspaceId!==job.workspaceId))throw new InspectionError("INVALID_SOURCE_WORKSPACE",false);
-  if(job.spec.kind==="clip"&&job.spec.splitScreen&&(!secondary?.expectedSha256||!source.expectedSha256||source.expectedBytes+secondary.expectedBytes>104857600))throw new InspectionError("SPLIT_INPUT_LIMIT",false);
+  if(job.spec.kind==="clip"&&job.spec.splitScreen&&(!secondary?.expectedSha256||!source.expectedSha256||source.expectedBytes+secondary.expectedBytes>2*MAX_UPLOAD_BYTES))throw new InspectionError("SPLIT_INPUT_LIMIT",false);
   return withInspectedSource(s3,config,source,async(_path,directory,metadata)=>{
     validateProcessingSource(job.spec,metadata);
     if(job.spec.kind==="clip"&&job.spec.splitScreen){
@@ -34,7 +34,7 @@ export async function produceDerivative(s3:S3Client,config:MediaConfig,job:Rende
 }
 async function renderInspected(s3:S3Client,config:MediaConfig,job:RenderJob,directory:string,metadata:Awaited<ReturnType<typeof probeLocal>>,signal:AbortSignal,secondary?:{path:string;metadata:Awaited<ReturnType<typeof probeLocal>>}):Promise<NonNullable<ProcessingStatus["result"]>>{
     const spec=job.spec;
-    const limit=spec.kind==="audio"?134217728:67108864;
+    const limit=spec.kind==="audio"?MAX_AUDIO_BYTES:67108864;
     const output=spec.kind==="audio"?"audio.wav":"clip.mp4";
     const common=["-hide_banner","-loglevel","error","-nostdin","-y","-max_alloc","67108864","-threads","1","-filter_threads","1","-protocol_whitelist","file","-format_whitelist","mov,matroska,webm","-i","source.media","-map_metadata","-1"];
     let args:string[];

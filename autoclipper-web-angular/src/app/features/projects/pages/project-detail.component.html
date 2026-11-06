@@ -146,7 +146,7 @@
     <h2>Elige el video que quieres convertir.</h2>
       <p>Sube un MP4, importa un video de YouTube o un clip de Twitch autorizado. Después eliges cuántos clips preparar y su duración máxima; la selección automática usa la capacidad real disponible en el servidor.</p>
     <div class="source-mode-picker" role="group" aria-label="Cómo añadir tu video">
-      <button id="source-mode-file" type="button" [attr.aria-pressed]="sourceMode() === 'file'" aria-controls="source-file-content" [disabled]="busy()" (click)="showSource('file')"><ac-icon name="upload" /><span><strong>Archivo de video</strong><small>MP4, WebM, MOV o MKV · hasta 100 MiB</small></span></button>
+      <button id="source-mode-file" type="button" [attr.aria-pressed]="sourceMode() === 'file'" aria-controls="source-file-content" [disabled]="busy()" (click)="showSource('file')"><ac-icon name="upload" /><span><strong>Archivo de video</strong><small>MP4, WebM, MOV o MKV · hasta 30 GB</small></span></button>
         <button id="source-mode-link" type="button" [attr.aria-pressed]="sourceMode() === 'link'" aria-controls="source-link-content" [disabled]="busy() || (!design && !canEdit())" (click)="showSource('link')"><ac-icon name="link" /><span><strong>Pegar enlace</strong><small>YouTube: importar video · Twitch: clips autorizados · Kick: vista previa</small></span></button>
     </div>
     <div id="source-link-content" [hidden]="sourceMode() !== 'link'">
@@ -160,13 +160,13 @@
         (imported)="onSourceImported($event)" />
     </div>
     <div id="source-file-content" [hidden]="sourceMode() !== 'file'">
-    <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 100 MiB; medimos su duración antes de habilitar el intervalo.</p>
+    <p id="upload-file-help">El archivo se carga de forma privada. Aceptamos MP4, WebM, MOV y MKV de hasta 30 GB y 10 horas; medimos su duración antes de habilitar el intervalo.</p>
     <label class="upload-drop" [hidden]="!!file || processingSourceReady()" [class.dragging]="draggingFile()"
       (dragover)="onFileDragOver($event)" (dragleave)="onFileDragLeave($event)" (drop)="onFileDrop($event, sourceFileInput)"
       ><ac-icon name="upload" /><strong>{{
         draggingFile() ? 'Suelta el video aquí' : file?.name ?? 'Selecciona o arrastra tu video'
       }}</strong
-      ><span>Un archivo MP4, WebM, MOV o MKV · máximo 100 MiB</span
+      ><span>Un archivo MP4, WebM, MOV o MKV · máximo 30 GB y 10 horas</span
       ><input #sourceFileInput
         type="file"
         aria-label="Seleccionar video de origen" aria-describedby="upload-file-help selected-video-feedback" [attr.aria-invalid]="selectionError() ? 'true' : null"

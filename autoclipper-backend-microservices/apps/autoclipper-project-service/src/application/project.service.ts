@@ -13,6 +13,7 @@ import type { Request } from "express";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import pg from "pg";
+import type { CustomTypesConfig } from "pg";
 import { z } from "zod";
 import {
   S3Client,
@@ -21,6 +22,7 @@ import {
   CreateMultipartUploadCommand,
   UploadPartCommand,
   ListPartsCommand,
+  type Part,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
   DeleteObjectCommand,
@@ -48,11 +50,12 @@ import { EditorManager } from "./editor.manager.js";
 import { CollaborationManager } from "./collaboration.manager.js";
 import { PipelineManager } from "./pipeline.manager.js";
 import { UsageManager } from "./usage.manager.js";
-import {adminOwnerRequest,adminAuthority,adminJobsPage,privacyProjectOwnerRequest,privacyProjectAuthority,twitchSourceCapabilityStatus as twitchSourceCapabilityStatusSchema,type TwitchSourceCapabilityStatus} from "@autoclipper/api-contracts";
+import {adminOwnerRequest,adminAuthority,adminJobsPage,privacyProjectOwnerRequest,privacyProjectAuthority,twitchSourceCapabilityStatus as twitchSourceCapabilityStatusSchema,type TwitchSourceCapabilityStatus, MAX_UPLOAD_BYTES } from "@autoclipper/api-contracts";
 import { prepareProjectExport } from "./privacy-exports.js";
 import { buildSourceLinkCapabilities, downloadTwitchClipAsset, resolveSourceLink, sourceLinkGuidance, TWITCH_CLIP_IMPORT_MAX_BYTES } from "./source-link.js";
 import { cleanupExpiredFailedSourceImports, FAILED_SOURCE_IMPORT_CLEANUP_INTERVAL_MS } from "./source-import-retention.js";
 import { YoutubeMetadataClient } from "./youtube-metadata.js";
+import { WORKSPACE_STORAGE_LIMIT_BYTES } from "./storage-limit.js";
 
 type Project = {
   id: string;
@@ -92,7 +95,7 @@ const createProject = z
   .strict();
 const uploadSchema = z
   .object({
-    bytes: z.number().int().min(1).max(104857600),
+    bytes: z.number().int().min(1).max(MAX_UPLOAD_BYTES),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     contentType: z.enum([
       "video/mp4",
@@ -151,9 +154,13 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
   readonly config = loadServiceConfig();
   readonly pool = new pg.Pool({
     connectionString: this.config.DATABASE_URL,
-    max: 8,
-    connectionTimeoutMillis: 2000,
-    statement_timeout: 5000,
+    // Tamaños en bytes son bigint (videos > 2 GiB): devolverlos como number.
+    types:{getTypeParser:((oid:number,format?:"text"|"binary")=>{if(format==="binary")return pg.types.getTypeParser(oid,"binary");if(oid===20)return (value:string)=>Number(value);return pg.types.getTypeParser(oid,"text");}) as CustomTypesConfig["getTypeParser"]},
+    // El frontend consulta estados cada pocos segundos durante pipelines largos.
+    max: 20,
+    // Con Whisper/FFmpeg saturando CPU, Postgres tarda más en entregar conexiones.
+    connectionTimeoutMillis: 15000,
+    statement_timeout: 15000,
   });
   readonly bucket = process.env["S3_BUCKET"] ?? "";
   readonly mediaUrl = process.env["MEDIA_URL"] ?? "http://127.0.0.1:3001";
@@ -321,7 +328,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
       version: project.version,
     };
   }
-  async storage(req:Request,workspaceId:string){const user=await authenticatedUser(req,this.config);await workspaceAccess(this.config,user.id,workspaceId);const row=(await this.pool.query<{used_bytes:string;reserved_bytes:string}>('SELECT used_bytes,reserved_bytes FROM workspace_storage WHERE workspace_id=$1',[workspaceId])).rows[0];return {workspaceId,usedBytes:Number(row?.used_bytes??0),reservedBytes:Number(row?.reserved_bytes??0),limitBytes:Number(process.env['WORKSPACE_STORAGE_LIMIT_BYTES']??1073741824)};}
+  async storage(req:Request,workspaceId:string){const user=await authenticatedUser(req,this.config);await workspaceAccess(this.config,user.id,workspaceId);const row=(await this.pool.query<{used_bytes:string;reserved_bytes:string}>('SELECT used_bytes,reserved_bytes FROM workspace_storage WHERE workspace_id=$1',[workspaceId])).rows[0];return {workspaceId,usedBytes:Number(row?.used_bytes??0),reservedBytes:Number(row?.reserved_bytes??0),limitBytes:WORKSPACE_STORAGE_LIMIT_BYTES};}
   async update(req: Request, id: string, input: unknown) {
     requireCsrf(req, this.config);
     await this.project(req, id, "editor");
@@ -381,7 +388,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
     return body(twitchVodClipCreateSchema,await internalJson(this.config.IDENTITY_URL,"/v1/internal/twitch/vod-clip-create",this.config,{userId:user.id,...input},false,35000));
   }
   private async sourceImportAvailableBytes(workspaceId:string) {
-    const limit=Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"]??1073741824);
+    const limit=WORKSPACE_STORAGE_LIMIT_BYTES;
     if(!Number.isSafeInteger(limit)||limit<1)throw new ServiceUnavailableException({code:"STORAGE_QUOTA_UNAVAILABLE"});
     const row=(await this.pool.query<{used_bytes:string;reserved_bytes:string}>("SELECT used_bytes,reserved_bytes FROM workspace_storage WHERE workspace_id=$1",[workspaceId])).rows[0];
     const used=Number(row?.used_bytes??0),reserved=Number(row?.reserved_bytes??0);
@@ -577,7 +584,7 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
         [
           data.bytes,
           project.workspace_id,
-          Number(process.env["WORKSPACE_STORAGE_LIMIT_BYTES"] ?? 1073741824),
+          WORKSPACE_STORAGE_LIMIT_BYTES,
         ],
       );
       if (!quota.rows.length) throw new HttpException({code:"PROJECT_STORAGE_QUOTA_EXCEEDED"}, 409);
@@ -792,15 +799,23 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
         }
         if (!exists) {
           if (!upload.upload_id) throw new ConflictException();
-          const list = await this.s3.send(
-            new ListPartsCommand({
-              Bucket: this.bucket,
-              Key: upload.object_key,
-              UploadId: upload.upload_id,
-              MaxParts: 100,
-            }),
-          );
-          const parts = list.Parts ?? [];
+          // Un video de 30 GiB tiene miles de partes: paginar ListParts.
+          const parts: Part[] = [];
+          let marker: string | undefined;
+          for (;;) {
+            const list = await this.s3.send(
+              new ListPartsCommand({
+                Bucket: this.bucket,
+                Key: upload.object_key,
+                UploadId: upload.upload_id,
+                MaxParts: 1000,
+                ...(marker ? { PartNumberMarker: marker } : {}),
+              }),
+            );
+            parts.push(...(list.Parts ?? []));
+            if (!list.IsTruncated || !list.NextPartNumberMarker) break;
+            marker = String(list.NextPartNumberMarker);
+          }
           const signedParts = (
             await c.query<{ part_number: number; sha256: string }>(
               "SELECT part_number,sha256 FROM upload_parts WHERE upload_id=$1",
@@ -832,7 +847,8 @@ export class ProjectService implements OnModuleInit, OnModuleDestroy {
             )
           )
             throw new BadRequestException();
-          await this.s3.send(
+          // Ensamblar miles de partes excede el timeout corto normal.
+          await this.importS3.send(
             new CompleteMultipartUploadCommand({
               Bucket: this.bucket,
               Key: upload.object_key,

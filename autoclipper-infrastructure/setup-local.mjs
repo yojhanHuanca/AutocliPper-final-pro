@@ -102,7 +102,7 @@ const media = [
   `REDIS_URL=redis://:${values.get('REDIS_PASSWORD')}@127.0.0.1:16379/0`,
   'S3_ENDPOINT=http://127.0.0.1:19000', 'S3_REGION=us-east-1', 'S3_BUCKET=autoclipper-media', 'S3_FORCE_PATH_STYLE=true',
   `S3_ACCESS_KEY=${values.get('S3_ACCESS_KEY')}`, `S3_SECRET_KEY=${values.get('S3_SECRET_KEY')}`, `INTERNAL_TOKEN=${values.get('INTERNAL_TOKEN')}`,
-  'TEMP_DIR=.local/tmp', 'WORKER_CONCURRENCY=2', 'MAX_PROBE_BYTES=104857600', 'MAX_VIDEO_SECONDS=3600', 'PROBE_TIMEOUT_MS=30000',
+  'TEMP_DIR=.local/tmp', 'WORKER_CONCURRENCY=2', 'MAX_PROBE_BYTES=32212254720', 'MAX_VIDEO_SECONDS=36000', 'PROBE_TIMEOUT_MS=120000',
 ];
 await ensureEntries(new URL('../autoclipper-backend-microservices/.env.media', directory), toEntries(media), { rejectEmpty: true });
 

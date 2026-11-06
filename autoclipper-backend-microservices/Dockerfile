@@ -6,35 +6,42 @@ RUN npm ci && npm run build && npm run openapi:export && npm prune --omit=dev
 
 FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
 WORKDIR /app
-RUN printf '%s\n' \
-      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261013T000000Z bookworm main' \
-      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20261013T000000Z bookworm-security main' \
-      > /etc/apt/sources.list \
-    && rm /etc/apt/sources.list.d/debian.sources \
+# USE_SNAPSHOT=true (por defecto, CI) fija paquetes en snapshot.debian.org para builds reproducibles.
+# En desarrollo local los .cmd pasan USE_SNAPSHOT=false: espejo normal, mucho más rápido.
+ARG USE_SNAPSHOT=true
+RUN if [ "$USE_SNAPSHOT" = "true" ]; then \
+      printf '%s\n' \
+        'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261013T000000Z bookworm main' \
+        'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20261013T000000Z bookworm-security main' \
+        > /etc/apt/sources.list && rm /etc/apt/sources.list.d/debian.sources; \
+      FFMPEG=ffmpeg=7:5.1.9-0+deb12u1; FONTS=fonts-dejavu-core=2.37-6; \
+    else FFMPEG=ffmpeg; FONTS=fonts-dejavu-core; fi \
     && apt-get update -o APT::Update::Error-Mode=any \
-    && apt-get install --yes --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 python3 ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-RUN apt-get update -o APT::Update::Error-Mode=any \
-    && apt-get install --yes --no-install-recommends fonts-dejavu-core=2.37-6 \
+    && apt-get install --yes --no-install-recommends "$FFMPEG" "$FONTS" python3 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/apps ./apps
 COPY --from=build --chown=node:node /app/packages ./packages
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/package.json ./package.json
+# Temporales de videos grandes (volúmenes en disco); el volumen hereda este dueño.
+RUN mkdir -p /var/lib/autoclipper/work && chown node:node /var/lib/autoclipper/work
 ENV NODE_ENV=production HOST=0.0.0.0 NODE_OPTIONS=--max-old-space-size=256
 ADD --checksum=sha256:e51e69e89489f199530f13d32a4342da3ddb2cf34842f364603a066db05afbf3 --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp /usr/local/bin/yt-dlp
 USER node
 CMD ["node", "apps/autoclipper-api-gateway/dist/main.js"]
 
 FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS whisper-build
-RUN printf '%s\n' \
-      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261013T000000Z bookworm main' \
-      'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20261013T000000Z bookworm-security main' \
-      > /etc/apt/sources.list \
-    && rm /etc/apt/sources.list.d/debian.sources \
+ARG USE_SNAPSHOT=true
+RUN if [ "$USE_SNAPSHOT" = "true" ]; then \
+      printf '%s\n' \
+        'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20261013T000000Z bookworm main' \
+        'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20261013T000000Z bookworm-security main' \
+        > /etc/apt/sources.list && rm /etc/apt/sources.list.d/debian.sources; \
+      PKGS="cmake=3.25.1-1 g++=4:12.2.0-3 make=4.3-4.1"; \
+    else PKGS="cmake g++ make"; fi \
     && apt-get update -o APT::Update::Error-Mode=any \
-    && apt-get install --yes --no-install-recommends cmake=3.25.1-1 g++=4:12.2.0-3 make=4.3-4.1 ca-certificates \
+    && apt-get install --yes --no-install-recommends $PKGS ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 ADD --checksum=sha256:645445da884df6dbd52b30f82d7be7c01d1767c938714e477e786b88d529e9f4 https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/d1be6fde11ac6e0407606b4e42fe72d34add8037 /src/whisper.tar.gz
 RUN tar -xzf /src/whisper.tar.gz -C /src \

@@ -28,11 +28,11 @@ export class BillingService implements OnModuleInit,OnModuleDestroy {
     const items=rows.slice(0,query.limit).map(row=>({id:row.workspace_id,unit:"material_seconds_per_stage",planKind:row.kind,planVersion:row.version,periodStart:period.start.toISOString(),periodEnd:period.end.toISOString(),budgetSeconds:row.budget,consumedSeconds:row.consumed,reservedSeconds:row.reserved}));return body(adminConsumptionPage,{items,nextBeforeId:rows.length>query.limit?items.at(-1)!.id:null});
   }
   readonly config=loadServiceConfig();
-  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:2000,statement_timeout:5000});
+  readonly pool=new pg.Pool({connectionString:this.config.DATABASE_URL,max:5,connectionTimeoutMillis:15000,statement_timeout:5000});
   private plan:Plan|undefined;
   async onModuleInit(){
     this.pool.on("error",()=>logger.error({code:"BILLING_DATABASE_ERROR"}));
-    const parsed=z.object({DEV_PROCESSING_SECONDS_PER_MONTH:z.coerce.number().int().min(1).max(100000000).default(3600),DEV_ACTIVE_PIPELINES:z.coerce.number().int().min(1).max(4).default(4)}).safeParse(process.env);
+    const parsed=z.object({DEV_PROCESSING_SECONDS_PER_MONTH:z.coerce.number().int().min(1).max(100000000).default(360000),DEV_ACTIVE_PIPELINES:z.coerce.number().int().min(1).max(4).default(4)}).safeParse(process.env);
     if(!parsed.success)throw new Error("Invalid development consumption limits");
     const limits=parsed.data,version=digest(JSON.stringify({kind:"development",unit:"material_seconds_per_stage",policy:"successful-material-v1",...limits}));
     await this.pool.query("INSERT INTO plan_versions(id,version,kind,label,processing_seconds_per_month,active_pipelines) VALUES($1,$2,'development','Local development allocation; not a commercial offer',$3,$4) ON CONFLICT(version) DO NOTHING",[randomUUID(),version,limits.DEV_PROCESSING_SECONDS_PER_MONTH,limits.DEV_ACTIVE_PIPELINES]);

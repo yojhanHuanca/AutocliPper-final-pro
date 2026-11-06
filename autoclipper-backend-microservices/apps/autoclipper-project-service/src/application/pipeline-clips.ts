@@ -1,6 +1,6 @@
-import type { PipelineSpec } from "@autoclipper/api-contracts";
+import { MAX_AUDIO_BYTES, type PipelineSpec } from "@autoclipper/api-contracts";
 
-export const PIPELINE_AUDIO_RESERVATION_BYTES = 134217728;
+export const PIPELINE_AUDIO_RESERVATION_BYTES = MAX_AUDIO_BYTES;
 export const PIPELINE_RENDER_RESERVATION_BYTES = 68157440;
 
 export function pipelineStorageReservation(spec: PipelineSpec) {
