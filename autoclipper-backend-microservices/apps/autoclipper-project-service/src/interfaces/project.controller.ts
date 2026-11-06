@@ -39,7 +39,7 @@ import {
   SourceLinkResolutionDto,
   YoutubeVideoMetadataDto,
   SourceLinkCapabilitiesDto,
-, MAX_UPLOAD_BYTES } from "@autoclipper/api-contracts";
+MAX_UPLOAD_BYTES } from "@autoclipper/api-contracts";
 import { uuid } from "@autoclipper/http-security";
 import { ProjectService } from "../application/project.service.js";
 class ProjectDto {
